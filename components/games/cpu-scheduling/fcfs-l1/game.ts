@@ -4,12 +4,17 @@ interface FoodOrder {
   id: string;
   orderNumber: number;
   customerName: string;
-  orderTime: number;
-  prepTime: number;
+  arrivalTime: number; // When customer arrived
+  burstTime: number; // Cooking time
+  startTime?: number; // When chef started cooking
+  completionTime?: number; // When cooking finished
+  waitingTime?: number; // completionTime - arrivalTime - burstTime
+  turnaroundTime?: number; // completionTime - arrivalTime
   dishType: 'burger' | 'pizza' | 'sandwich' | 'mushroom' | 'chicken';
-  completionTime?: number;
   isCompleted: boolean;
   isDelivered: boolean;
+  isCooking: boolean;
+  orderContainer?: Phaser.GameObjects.Container;
 }
 
 interface Customer {
@@ -23,15 +28,27 @@ interface Customer {
   y: number;
   tableNumber: number;
   moodIcon: Phaser.GameObjects.Text;
+  tooltip?: Phaser.GameObjects.Container;
+}
+
+interface GanttChartEntry {
+  order: FoodOrder;
+  startTime: number;
+  endTime: number;
+  x: number;
+  width: number;
 }
 
 export class FCFSGame extends Phaser.Scene {
   // Game State
-  private gamePhase: 'intro' | 'waiter-collecting' | 'chef-cooking' | 'user-delivery' | 'complete' = 'intro';
+  private gamePhase: 'intro' | 'arrival' | 'cooking' | 'serving' | 'results' = 'intro';
   private customers: Customer[] = [];
   private orders: FoodOrder[] = [];
+  private readyQueue: FoodOrder[] = []; // FIFO queue
   private completedOrders: FoodOrder[] = [];
-  private currentOrderBeingMade: number = 0;
+  private currentCookingOrder?: FoodOrder;
+  private gameStartTime: number = 0;
+  private currentTime: number = 0;
   
   // Sprites & Objects
   private waiterSprite!: Phaser.GameObjects.Sprite;
@@ -39,6 +56,8 @@ export class FCFSGame extends Phaser.Scene {
   private orderBoard!: Phaser.GameObjects.Image;
   private orderBoardTexts: Phaser.GameObjects.Container[] = [];
   private waiterFoodSprite?: Phaser.GameObjects.Sprite;
+  private dispatchButton?: Phaser.GameObjects.Container;
+  private dispatchButtonText?: Phaser.GameObjects.Text;
 
   // UI Elements
   private instructionText!: Phaser.GameObjects.Text;
@@ -47,14 +66,16 @@ export class FCFSGame extends Phaser.Scene {
   private progressBarBg!: Phaser.GameObjects.Graphics;
   private currentProgress: number = 0;
   private scoreText!: Phaser.GameObjects.Text;
+  private timeText!: Phaser.GameObjects.Text;
   
-  // Positions - Kitchen at bottom floor parallel to customers
+  // Positions
   private readonly CHEF_HOME_X = 1200;
   private readonly CHEF_HOME_Y = 500;
-  private readonly WAITER_HOME_X = 200;
-  private readonly WAITER_HOME_Y = 520;
+  // Place waiter near bottom-left wall for less clutter and clear pathing
+  private readonly WAITER_HOME_X = 110;
+  private readonly WAITER_HOME_Y = 900;
   private readonly ORDER_BOARD_X = 300;
-  private readonly ORDER_BOARD_Y = 250;
+  private readonly ORDER_BOARD_Y = 220;
   
   // Game scoring
   private totalScore: number = 0;
@@ -63,12 +84,17 @@ export class FCFSGame extends Phaser.Scene {
   // Game Data
   private readonly CUSTOMER_NAMES = ['Alice', 'Bob', 'Carol', 'Dave', 'Emma'];
   private readonly DISH_CONFIGS = {
-    burger: { name: 'Burger', emoji: '🍔', prepTime: 4, asset: 'burger' },
-    pizza: { name: 'Pizza', emoji: '🍕', prepTime: 6, asset: 'pizza' },
-    sandwich: { name: 'Sandwich', emoji: '🥪', prepTime: 3, asset: 'sandwich' },
-    mushroom: { name: 'Mushroom Soup', emoji: '🍄', prepTime: 5, asset: 'mashroom' },
-    chicken: { name: 'Fried Chicken', emoji: '🍗', prepTime: 5, asset: 'chicken' }
+    burger: { name: 'Burger', emoji: '🍔', burstTime: 4, asset: 'burger' },
+    pizza: { name: 'Pizza', emoji: '🍕', burstTime: 6, asset: 'pizza' },
+    sandwich: { name: 'Sandwich', emoji: '🥪', burstTime: 3, asset: 'sandwich' },
+    mushroom: { name: 'Mushroom Soup', emoji: '🍄', burstTime: 5, asset: 'mashroom' },
+    chicken: { name: 'Fried Chicken', emoji: '🍗', burstTime: 5, asset: 'chicken' }
   };
+
+  // Timing
+  private arrivalIntervals: number[] = [0, 2, 4, 6, 8]; // Staggered arrivals
+  private arrivalIndex: number = 0;
+  private timeEvent?: Phaser.Time.TimerEvent;
 
   constructor() {
     super({ key: 'FCFSGame' });
@@ -97,18 +123,16 @@ export class FCFSGame extends Phaser.Scene {
   create() {
     const { width, height } = this.sys.game.canvas;
     
-    // Full screen background - cover entire screen without black bars
+    // Full screen background
     const bgImage = this.add.image(width / 2, height / 2, 'bg-restaurant');
     const scaleX = width / bgImage.width;
     const scaleY = height / bgImage.height;
-    // Use Math.max to ensure no black bars appear
     const scale = Math.max(scaleX, scaleY);
     bgImage.setScale(scale);
-    bgImage.setDepth(-100); // Ensure background is behind everything
+    bgImage.setDepth(-100);
 
     // Setup game elements
     this.createKitchenStation(width, height);
-    this.createCustomers(width, height);
     this.createWaiter();
     this.createChef();
     this.createOrderBoard();
@@ -119,222 +143,97 @@ export class FCFSGame extends Phaser.Scene {
   }
 
   private createKitchenStation(width: number, height: number) {
-    // Kitchen equipment moved to bottom-left (in front of chef)
     const equipment = this.add.image(this.CHEF_HOME_X, this.CHEF_HOME_Y, 'station-equipment');
     equipment.setScale(0.5);
     equipment.setAlpha(0.9);
-    equipment.setDepth(1); // Kitchen table in front
-  }
-
-  private createCustomers(width: number, height: number) {
-    // Customers positioned in 2 rows like hotel seating
-    const numCustomers = 5;
-    const customersPerRow = 3; // First row has 3 customers
-    const row1Y = height - 190; // First row (top)
-    const row2Y = height - 100; // Second row (bottom)
-    
-    const rowSpacing = width * 0.18; // Spacing between customers in a row
-    const row1StartX = width * 0.2; // First row starts more to the right
-    const row2StartX = width * 0.25; // Second row starts slightly left
-
-    const dishTypes: Array<keyof typeof this.DISH_CONFIGS> = ['burger', 'pizza', 'sandwich', 'mushroom', 'chicken'];
-    
-    // Customer images to randomly select from
-    const customerImages = ['customer', 'customer2'];
-
-    for (let i = 0; i < numCustomers; i++) {
-      // Determine row and position
-      const isFirstRow = i < customersPerRow;
-      const posInRow = isFirstRow ? i : i - customersPerRow;
-      const customerY = isFirstRow ? row1Y : row2Y;
-      const startX = isFirstRow ? row1StartX : row2StartX;
-      const x = startX + (posInRow * rowSpacing);
-      
-      // Randomly select customer image
-      const customerImage = customerImages[Math.floor(Math.random() * customerImages.length)];
-      const customerSprite = this.add.sprite(x, customerY, customerImage);
-      customerSprite.setScale(0.25);
-      customerSprite.setDepth(2); // Customers in front
-
-      const name = this.CUSTOMER_NAMES[i];
-      const nameText = this.add.text(x, customerY + 45, name, {
-        fontSize: '16px',
-      color: '#FFFFFF',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 3
-    }).setOrigin(0.5);
-
-      const moodIcon = this.add.text(x, customerY - 40, '😊', {
-        fontSize: '24px'
-    }).setOrigin(0.5);
-
-      // Create order
-      const dishType = dishTypes[i];
-      const order: FoodOrder = {
-        id: `order-${i + 1}`,
-        orderNumber: i + 1,
-        customerName: name,
-        orderTime: i,
-        prepTime: this.DISH_CONFIGS[dishType].prepTime,
-        dishType: dishType,
-        isCompleted: false,
-        isDelivered: false
-      };
-
-      const customer: Customer = {
-        id: `customer-${i + 1}`,
-        name: name,
-        sprite: customerSprite,
-        nameText: nameText,
-        order: order,
-        x: x,
-        y: customerY,
-        tableNumber: i + 1,
-        moodIcon: moodIcon
-      };
-
-      this.customers.push(customer);
-      this.orders.push(order);
-    }
+    equipment.setDepth(-10);
   }
 
   private createWaiter() {
     this.waiterSprite = this.add.sprite(this.WAITER_HOME_X, this.WAITER_HOME_Y, 'waiter');
     this.waiterSprite.setScale(0.22);
-    this.waiterSprite.setDepth(2); // Waiter in front of everything
+    this.waiterSprite.setDepth(-10);
   }
 
   private createChef() {
     this.chefSprite = this.add.sprite(this.CHEF_HOME_X, this.CHEF_HOME_Y, 'chef-standing');
     this.chefSprite.setScale(0.25);
-    this.chefSprite.setDepth(0); // Chef behind the kitchen table
+    this.chefSprite.setDepth(-10);
   }
 
   private createOrderBoard() {
-    // Create the order board background
     this.orderBoard = this.add.image(this.ORDER_BOARD_X, this.ORDER_BOARD_Y, 'order-board-bg');
-    this.orderBoard.setScale(1.0); // Increased scale for better visibility
-    this.orderBoard.setAlpha(1); // Make board visible from start
-    this.orderBoard.setDepth(10); // Order board in front of everything
+    this.orderBoard.setScale(1.0);
+    this.orderBoard.setAlpha(1);
+    this.orderBoard.setDepth(-10);
     
-    // Add a subtle shadow effect
     const shadow = this.add.image(this.ORDER_BOARD_X + 5, this.ORDER_BOARD_Y + 5, 'order-board-bg');
     shadow.setScale(1.0);
     shadow.setAlpha(0.3);
     shadow.setTint(0x000000);
-    shadow.setDepth(9); // Shadow behind the board
+    shadow.setDepth(-10);
     
-    // Add title to order board
-    const boardTitle = this.add.text(this.ORDER_BOARD_X, this.ORDER_BOARD_Y - 80, '📋 ORDER BOARD 📋', {
-      fontSize: '22px',
+    const boardTitle = this.add.text(this.ORDER_BOARD_X, this.ORDER_BOARD_Y - 80, '📋 READY QUEUE (FIFO) 📋', {
+      fontSize: '20px',
       color: '#FF6B35',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 4,
+      strokeThickness: 3,
       backgroundColor: '#000000AA',
       padding: { x: 10, y: 5 }
     }).setOrigin(0.5);
-    boardTitle.setDepth(11);
-  }
-  private addOrderToBoard(order: FoodOrder) {
-    // Calculate position for this order on the board
-    const startY = this.ORDER_BOARD_Y - 40; // Start from top of the board
-    const lineHeight = 35; // Space between orders
-    const orderIndex = this.orderBoardTexts.length;
-    
-    const dishConfig = this.DISH_CONFIGS[order.dishType];
-    
-    console.log(`Adding order to board: ${order.orderNumber}. ${dishConfig.name} at index ${orderIndex}`);
-    
-    // Create a container for this order - positioned at the board center
-    const orderContainer = this.add.container(this.ORDER_BOARD_X, startY + (orderIndex * lineHeight));
-    orderContainer.setDepth(15); // Increased depth to be above the board image
-    
-    // Background for order - white rounded rectangle
-    const orderBg = this.add.graphics();
-    orderBg.fillStyle(0xFFFFFF, 1.0); // Fully opaque white
-    orderBg.fillRoundedRect(-105, -15, 210, 30, 8);
-    orderBg.lineStyle(3, 0x000000, 1); // Black border
-    orderBg.strokeRoundedRect(-105, -15, 210, 30, 8);
-    orderContainer.add(orderBg);
-    
-    // Order number - larger and bolder
-    const orderNumber = this.add.text(-95, 0, `${order.orderNumber}.`, {
-      fontSize: '18px',
-      color: '#FF6B35',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 2
-    }).setOrigin(0, 0.5);
-    orderContainer.add(orderNumber);
-    
-    // Food emoji - larger
-    const foodEmoji = this.add.text(-68, 0, dishConfig.emoji, {
-      fontSize: '20px'
-    }).setOrigin(0, 0.5);
-    orderContainer.add(foodEmoji);
-    
-    // Food name - larger and bolder
-    const foodName = this.add.text(-35, 0, dishConfig.name, {
-      fontSize: '15px',
-      color: '#000000',
-      fontStyle: 'bold'
-    }).setOrigin(0, 0.5);
-    orderContainer.add(foodName);
-    
-    // Prep time
-    const prepTime = this.add.text(80, 0, `(${order.prepTime}s)`, {
-      fontSize: '14px',
-      color: '#333333',
-      fontStyle: 'italic',
-      stroke: '#FFFFFF',
-      strokeThickness: 1
-    }).setOrigin(0, 0.5);
-    orderContainer.add(prepTime);
-    
-    // Animate the order appearing on the board
-    orderContainer.setAlpha(0);
-    orderContainer.setY(orderContainer.y - 20); // Start above final position
-    this.tweens.add({
-      targets: orderContainer,
-      alpha: 1,
-      y: startY + (orderIndex * lineHeight),
-      duration: 500,
-      ease: 'Back.out'
-    });
-    
-    // Store reference for later updates
-    this.orderBoardTexts.push(orderContainer);
+    boardTitle.setDepth(-10);
+    boardTitle.setData('isBoardTitle', true);
   }
 
   private createUI(width: number, height: number) {
-    // Title
-    this.add.text(width / 2, 40, '🍽️ Kitchen FCFS - First Come First Served 🍽️', {
-      fontSize: '32px',
+    // Title (smaller, with subtle background for contrast)
+    const titleText = this.add.text(width / 2, 40, '🍽️ FCFS CPU Scheduling Simulator 🍽️', {
+      fontSize: '28px',
       color: '#FFD700',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 5
+      strokeThickness: 4,
+      backgroundColor: '#00000099',
+      padding: { x: 12, y: 6 }
     }).setOrigin(0.5);
+    titleText.setDepth(12);
 
     // Phase indicator
-    this.phaseText = this.add.text(width / 2, 85, 'Phase: Intro', {
-      fontSize: '20px',
+    this.phaseText = this.add.text(width / 2, 88, 'Phase: Intro', {
+      fontSize: '18px',
       color: '#00FF00',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3
+      strokeThickness: 3,
+      backgroundColor: '#00000099',
+      padding: { x: 10, y: 4 }
     }).setOrigin(0.5);
+    this.phaseText.setDepth(12);
 
     // Score display
-    this.scoreText = this.add.text(width - 150, 85, 'Score: 0', {
-      fontSize: '18px',
+    this.scoreText = this.add.text(width - 150, 90, 'Score: 0', {
+      fontSize: '16px',
       color: '#FFD700',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3
+      strokeThickness: 3,
+      backgroundColor: '#00000099',
+      padding: { x: 8, y: 4 }
     });
+    this.scoreText.setDepth(12);
+
+    // Time display
+    this.timeText = this.add.text(170, 90, 'Time: 0s', {
+      fontSize: '16px',
+      color: '#00FFFF',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
+      backgroundColor: '#00000099',
+      padding: { x: 8, y: 4 }
+    });
+    this.timeText.setDepth(12);
 
     // Instruction text at bottom
     this.instructionText = this.add.text(width / 2, height - 40, '', {
@@ -363,68 +262,73 @@ export class FCFSGame extends Phaser.Scene {
     overlay.fillStyle(0x000000, 0.85);
     overlay.fillRect(0, 0, width, height);
 
-    // Scenario box - Modern design
-    const boxWidth = 750;
-    const boxHeight = 480;
+    // Scenario box
+    const boxWidth = 700;
+    const boxHeight = 460;
     const boxX = width / 2 - boxWidth / 2;
     const boxY = height / 2 - boxHeight / 2;
 
-    // Create modern card design
     const scenarioBox = this.add.graphics();
     scenarioBox.fillStyle(0x1a1a2e, 0.98);
     scenarioBox.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 25);
     scenarioBox.lineStyle(4, 0xFFD700, 1);
     scenarioBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 25);
 
-    // Add gradient effect
     const gradientBox = this.add.graphics();
     gradientBox.fillGradientStyle(0xFFD700, 0xFFA500, 0xFF8C00, 0xFF4500, 0.1);
     gradientBox.fillRoundedRect(boxX + 5, boxY + 5, boxWidth - 10, boxHeight - 10, 20);
 
-    // Title - Clean and modern
-    const title = this.add.text(width / 2, boxY + 50, '🎯 MISSION BRIEFING', {
-      fontSize: '42px',
+    const title = this.add.text(width / 2, boxY + 50, '🎯 FCFS CPU SCHEDULING', {
+      fontSize: '36px',
       color: '#FFD700',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3
     }).setOrigin(0.5);
 
-    // Subtitle
-    const subtitle = this.add.text(width / 2, boxY + 95, 'Welcome to Kitchen Rush!', {
-      fontSize: '22px',
+    const subtitle = this.add.text(width / 2, boxY + 95, 'First Come First Served Algorithm', {
+      fontSize: '20px',
       color: '#FFFFFF',
       fontStyle: 'normal'
     }).setOrigin(0.5);
 
-    // Scenario text - Cleaner formatting
-    const scenarioText = `You are managing a busy kitchen that follows the 
-FCFS (First Come First Served) scheduling algorithm.
+    const scenarioText = `📚 LEARNING OBJECTIVES:
+• Understand FCFS scheduling algorithm
+• Visualize FIFO queue behavior
+• Learn about convoy effect
+• Calculate waiting & turnaround times
 
-📋 YOUR MISSION:
-1️⃣ Waiter will collect orders from customers (in order)
-2️⃣ Chef will prepare all orders (in FCFS sequence)  
-3️⃣ YOU must deliver completed orders to customers
-4️⃣ Deliver in FCFS order - earliest customer first!
+🎮 GAMEPLAY:
+1️⃣ Customers arrive with orders (jobs)
+2️⃣ Orders enqueue in FIFO order
+3️⃣ Click DISPATCH to send order to chef (CPU)
+4️⃣ Chef cooks one order at a time (non-preemptive)
+5️⃣ Deliver completed orders to customers
 
-⚠️ WARNING: Wrong delivery = FAILED ORDER!
+⚠️ FCFS RULES:
+• No skipping orders in queue
+• First order arrives = First to be served
+• Long orders can delay short ones (convoy effect)
 
-Remember: FCFS means the FIRST customer to order 
-gets served FIRST, no matter what they ordered!`;
+🎯 METRICS TO TRACK:
+• Waiting Time = Start Time - Arrival Time
+• Turnaround Time = Completion Time - Arrival Time
+• Average Waiting Time
+• Average Turnaround Time`;
 
-    const text = this.add.text(width / 2, boxY + 250, scenarioText, {
-      fontSize: '18px',
+    const text = this.add.text(width / 2, boxY + 270, scenarioText, {
+      fontSize: '15px',
       color: '#FFFFFF',
       fontStyle: 'normal',
       align: 'center',
-      lineSpacing: 6
+      lineSpacing: 3
     }).setOrigin(0.5);
 
-    // Modern start button
+    // Start button
     const buttonWidth = 250;
     const buttonHeight = 60;
     const buttonX = width / 2 - buttonWidth / 2;
-    const buttonY = boxY + boxHeight - 80;
+    const buttonY = boxY + boxHeight - 70;
 
     const startButton = this.add.graphics();
     startButton.fillStyle(0xFFD700, 1);
@@ -432,13 +336,12 @@ gets served FIRST, no matter what they ordered!`;
     startButton.lineStyle(3, 0xFF8C00, 1);
     startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
 
-    const buttonText = this.add.text(width / 2, buttonY + 30, '🚀 START GAME', {
+    const buttonText = this.add.text(width / 2, buttonY + 30, '🚀 START SIMULATION', {
       fontSize: '24px',
       color: '#000000',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    // Hover effects
     startButton.setInteractive(
       new Phaser.Geom.Rectangle(buttonX, buttonY, buttonWidth, buttonHeight),
       Phaser.Geom.Rectangle.Contains
@@ -460,7 +363,6 @@ gets served FIRST, no matter what they ordered!`;
       startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
     });
 
-    // Click to start
     startButton.on('pointerdown', () => {
       overlay.destroy();
       scenarioBox.destroy();
@@ -471,148 +373,385 @@ gets served FIRST, no matter what they ordered!`;
       startButton.destroy();
       buttonText.destroy();
       
-      // Start the game
-      this.time.delayedCall(2000, () => {
-        this.startWaiterCollecting();
-      });
-      
-      this.instructionText.setText('Customers are waiting... Waiter will arrive soon!');
+      this.showGameElements();
+      this.startArrivalPhase();
     });
   }
 
-  private startWaiterCollecting() {
-    this.gamePhase = 'waiter-collecting';
-    this.phaseText.setText('Phase: Taking Orders');
-    this.instructionText.setText('Waiter is collecting orders from customers...');
+  private showGameElements() {
+    // Show customers (will be populated as they arrive)
+    // Show waiter and chef
+    this.waiterSprite.setDepth(2);
+    this.chefSprite.setDepth(0);
     
-    this.collectOrdersSequentially(0);
+    // Show order board
+    this.orderBoard.setDepth(10);
+    this.children.list.forEach(child => {
+      if (child.name === 'shadow' && 'setDepth' in child) {
+        (child as any).setDepth(9);
+      }
+    });
+    
+    this.children.list.forEach(child => {
+      if (child.getData('isBoardTitle') && 'setDepth' in child) {
+        (child as any).setDepth(11);
+      }
+    });
   }
 
-  private collectOrdersSequentially(customerIndex: number) {
-    if (customerIndex >= this.customers.length) {
-      // All orders collected, waiter goes to chef
-      this.waiterGoesToChef();
+  private startArrivalPhase() {
+    this.gamePhase = 'arrival';
+    this.gameStartTime = this.time.now;
+    this.currentTime = 0;
+    this.phaseText.setText('Phase: Customer Arrival');
+    this.instructionText.setText('⏳ Customers arriving with orders...');
+    
+    // Start clock
+    this.timeEvent = this.time.addEvent({
+      delay: 100,
+      callback: this.updateClock,
+      callbackScope: this,
+      loop: true
+    });
+    
+    // Schedule customer arrivals
+    this.scheduleCustomerArrivals();
+  }
+
+  private scheduleCustomerArrivals() {
+    if (this.arrivalIndex >= this.arrivalIntervals.length) {
+      // All customers arrived, wait a bit then move to cooking phase
+      this.time.delayedCall(2000, () => {
+        this.startCookingPhase();
+      });
       return;
     }
 
-    const customer = this.customers[customerIndex];
-    const waiterDelay = 1500;
+    const arrivalDelay = this.arrivalIntervals[this.arrivalIndex] * 1000;
     
-    // Waiter walks to customer
-    this.tweens.add({
-      targets: this.waiterSprite,
-      x: customer.x,
-      y: customer.y,
-      duration: waiterDelay,
-      ease: 'Power2',
-      onComplete: () => {
-        // Show what customer ordered
-        const dishConfig = this.DISH_CONFIGS[customer.order.dishType];
-        customer.orderText = this.add.text(
-          customer.x,
-          customer.y - 60,
-          `${dishConfig.emoji} ${dishConfig.name}`,
-          {
-            fontSize: '14px',
-            color: '#FFD700',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 2,
-            backgroundColor: '#000000',
-            padding: { x: 8, y: 4 }
-          }
-        ).setOrigin(0.5);
-        
-        // Add the order to the order board immediately
-        this.addOrderToBoard(customer.order);
-
-        // Wait a moment, then move to next customer
-        this.time.delayedCall(1000, () => {
-          this.collectOrdersSequentially(customerIndex + 1);
-        });
-      }
+    this.time.delayedCall(arrivalDelay, () => {
+      this.arriveCustomer(this.arrivalIndex);
+      this.arrivalIndex++;
+      this.scheduleCustomerArrivals();
     });
   }
 
-  private waiterGoesToChef() {
-    this.instructionText.setText('Waiter is delivering orders to the chef...');
+  private arriveCustomer(customerIndex: number) {
+    const { width, height } = this.sys.game.canvas;
     
-    // Waiter walks to chef
+    // Position customer
+    const numCustomers = 5;
+    const customersPerRow = 3;
+    const row1Y = height - 190;
+    const row2Y = height - 100;
+    const rowSpacing = width * 0.18;
+    const row1StartX = width * 0.2;
+    const row2StartX = width * 0.25;
+
+    const isFirstRow = customerIndex < customersPerRow;
+    const posInRow = isFirstRow ? customerIndex : customerIndex - customersPerRow;
+    const customerY = isFirstRow ? row1Y : row2Y;
+    const startX = isFirstRow ? row1StartX : row2StartX;
+    const x = startX + (posInRow * rowSpacing);
+
+    const customerImages = ['customer', 'customer2'];
+    const customerImage = customerImages[Math.floor(Math.random() * customerImages.length)];
+    const customerSprite = this.add.sprite(x, customerY, customerImage);
+    customerSprite.setScale(0.25);
+    customerSprite.setDepth(2);
+
+    const name = this.CUSTOMER_NAMES[customerIndex];
+    const nameText = this.add.text(x, customerY + 45, name, {
+      fontSize: '16px',
+      color: '#FFFFFF',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+    nameText.setDepth(2);
+
+    const moodIcon = this.add.text(x, customerY - 40, '😊', {
+      fontSize: '24px'
+    }).setOrigin(0.5);
+    moodIcon.setDepth(2);
+
+    // Create order
+    const dishTypes: Array<keyof typeof this.DISH_CONFIGS> = ['burger', 'pizza', 'sandwich', 'mushroom', 'chicken'];
+    const dishType = dishTypes[customerIndex];
+    const dishConfig = this.DISH_CONFIGS[dishType];
+    
+    const order: FoodOrder = {
+      id: `order-${customerIndex + 1}`,
+      orderNumber: customerIndex + 1,
+      customerName: name,
+      arrivalTime: this.currentTime,
+      burstTime: dishConfig.burstTime,
+      dishType: dishType,
+      isCompleted: false,
+      isDelivered: false,
+      isCooking: false
+    };
+
+    const customer: Customer = {
+      id: `customer-${customerIndex + 1}`,
+      name: name,
+      sprite: customerSprite,
+      nameText: nameText,
+      order: order,
+      x: x,
+      y: customerY,
+      tableNumber: customerIndex + 1,
+      moodIcon: moodIcon
+    };
+
+    this.customers.push(customer);
+    this.orders.push(order);
+    this.readyQueue.push(order);
+
+    // Add order to board
+    this.addOrderToBoard(order);
+
+    // Show arrival notification
+    this.showArrivalNotification(customer, order);
+  }
+
+  private showArrivalNotification(customer: Customer, order: FoodOrder) {
+    const dishConfig = this.DISH_CONFIGS[order.dishType];
+    
+    const notification = this.add.text(customer.x, customer.y - 80, 
+      `📝 Order Arrived!\n${dishConfig.emoji} ${dishConfig.name}\nBurst: ${order.burstTime}s`, {
+      fontSize: '14px',
+      color: '#00FF00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
+      backgroundColor: '#000000AA',
+      padding: { x: 8, y: 4 },
+      align: 'center'
+    }).setOrigin(0.5);
+
     this.tweens.add({
-      targets: this.waiterSprite,
-      x: this.CHEF_HOME_X + 50,
-      y: this.CHEF_HOME_Y,
-      duration: 1500,
+      targets: notification,
+      alpha: 0,
+      y: customer.y - 120,
+      duration: 2000,
       ease: 'Power2',
-      onComplete: () => {
-        // Show order board with all orders
-        this.showOrderBoard();
-        
-        // Waiter returns home
-        this.tweens.add({
-          targets: this.waiterSprite,
-          x: this.WAITER_HOME_X,
-          y: this.WAITER_HOME_Y,
-          duration: 1200,
-          ease: 'Power2'
-        });
-      }
+      onComplete: () => notification.destroy()
     });
   }
 
-  private showOrderBoard() {
-    this.instructionText.setText('Chef received all orders! Starting to cook...');
+  private addOrderToBoard(order: FoodOrder) {
+    const startY = this.ORDER_BOARD_Y - 20;
+    const lineHeight = 28;
+    const orderIndex = this.orderBoardTexts.length;
     
-    // Orders are already on the board, just highlight the board briefly
+    const dishConfig = this.DISH_CONFIGS[order.dishType];
+    
+    const orderContainer = this.add.container(this.ORDER_BOARD_X, startY + (orderIndex * lineHeight));
+    orderContainer.setDepth(15);
+    orderContainer.setData('orderId', order.id);
+    
+    // Background
+    const orderBg = this.add.graphics();
+    orderBg.fillStyle(0xFFFFFF, 0.95);
+    orderBg.fillRoundedRect(-80, -12, 160, 24, 6);
+    orderBg.lineStyle(2, 0xFF6B35, 1);
+    orderBg.strokeRoundedRect(-80, -12, 160, 24, 6);
+    orderContainer.add(orderBg);
+    
+    // Order number
+    const orderNumber = this.add.text(-70, 0, `${order.orderNumber}.`, {
+      fontSize: '14px',
+      color: '#FF6B35',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0, 0.5);
+    orderContainer.add(orderNumber);
+    
+    // Food emoji
+    const foodEmoji = this.add.text(-50, 0, dishConfig.emoji, {
+      fontSize: '16px'
+    }).setOrigin(0, 0.5);
+    orderContainer.add(foodEmoji);
+    
+    // Food name
+    const foodName = this.add.text(-25, 0, dishConfig.name, {
+      fontSize: '12px',
+      color: '#000000',
+      fontStyle: 'bold'
+    }).setOrigin(0, 0.5);
+    orderContainer.add(foodName);
+    
+    // Arrival time
+    const arrivalTime = this.add.text(60, 0, `AT:${order.arrivalTime}s`, {
+      fontSize: '10px',
+      color: '#666666',
+      fontStyle: 'italic'
+    }).setOrigin(0, 0.5);
+    orderContainer.add(arrivalTime);
+    
+    // Make interactive for tooltip
+    orderContainer.setInteractive(new Phaser.Geom.Rectangle(-80, -12, 160, 24), Phaser.Geom.Rectangle.Contains);
+    orderContainer.on('pointerover', () => {
+      this.showOrderTooltip(order, orderContainer);
+    });
+    orderContainer.on('pointerout', () => {
+      this.hideOrderTooltip();
+    });
+    
+    // Animate appearance
+    orderContainer.setAlpha(0);
+    orderContainer.setY(orderContainer.y - 20);
     this.tweens.add({
-      targets: this.orderBoard,
-      scaleX: 0.85,
-      scaleY: 0.85,
-      duration: 300,
-      yoyo: true,
+      targets: orderContainer,
+      alpha: 1,
+      y: startY + (orderIndex * lineHeight),
+      duration: 500,
       ease: 'Back.out'
     });
+    
+    this.orderBoardTexts.push(orderContainer);
+    order.orderContainer = orderContainer;
+  }
 
-    // Start cooking after showing all orders
-    this.time.delayedCall(1500, () => {
-      this.startCooking();
+  private showOrderTooltip(order: FoodOrder, container: Phaser.GameObjects.Container) {
+    const tooltip = this.add.container(container.x, container.y - 40);
+    tooltip.setDepth(25);
+    
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.9);
+    bg.fillRoundedRect(-90, -35, 180, 35, 8);
+    bg.lineStyle(2, 0xFFD700, 1);
+    bg.strokeRoundedRect(-90, -35, 180, 35, 8);
+    tooltip.add(bg);
+    
+    const text = this.add.text(0, -18, `Arrival: ${order.arrivalTime}s | Burst: ${order.burstTime}s`, {
+      fontSize: '11px',
+      color: '#FFFFFF',
+      align: 'center'
+    }).setOrigin(0.5);
+    tooltip.add(text);
+    
+    const text2 = this.add.text(0, -2, order.isCooking ? '⚡ Cooking...' : '⏳ Waiting in queue', {
+      fontSize: '11px',
+      color: order.isCooking ? '#FFD700' : '#00FF00',
+      align: 'center'
+    }).setOrigin(0.5);
+    tooltip.add(text2);
+    
+    container.setData('tooltip', tooltip);
+  }
+
+  private hideOrderTooltip() {
+    this.orderBoardTexts.forEach(container => {
+      const tooltip = container.getData('tooltip');
+      if (tooltip) {
+        tooltip.destroy();
+        container.setData('tooltip', null);
+      }
     });
   }
 
-  private startCooking() {
-    this.gamePhase = 'chef-cooking';
-    this.phaseText.setText('Phase: Cooking Orders');
-    this.instructionText.setText(`Chef is cooking Order #${this.currentOrderBeingMade + 1}...`);
+  private startCookingPhase() {
+    this.gamePhase = 'cooking';
+    this.phaseText.setText('Phase: Cooking (FCFS)');
+    this.instructionText.setText('🎯 Click DISPATCH button to send orders to chef (CPU) - FCFS order enforced!');
+    
+    // Create dispatch button
+    this.createDispatchButton();
+  }
+
+  private createDispatchButton() {
+    const { width } = this.sys.game.canvas;
+    const buttonX = width - 180;
+    const buttonY = 780; // lower near right wall
+    const buttonWidth = 150;
+    const buttonHeight = 60;
+
+    this.dispatchButton = this.add.container(buttonX, buttonY);
+    this.dispatchButton.setDepth(20);
+    
+    const bg = this.add.graphics();
+    bg.fillStyle(0xFFD700, 1);
+    bg.fillRoundedRect(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight, 10);
+    bg.lineStyle(3, 0xFF8C00, 1);
+    bg.strokeRoundedRect(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight, 10);
+    this.dispatchButton.add(bg);
+    
+    this.dispatchButtonText = this.add.text(0, 0, '⚡ DISPATCH', {
+      fontSize: '18px',
+      color: '#000000',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.dispatchButton.add(this.dispatchButtonText);
+    
+    this.dispatchButton.setInteractive(new Phaser.Geom.Rectangle(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight), Phaser.Geom.Rectangle.Contains);
+    
+    this.dispatchButton.on('pointerover', () => {
+      if (this.readyQueue.length > 0) {
+        bg.clear();
+        bg.fillStyle(0xFFA500, 1);
+        bg.fillRoundedRect(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight, 10);
+        bg.lineStyle(3, 0xFF8C00, 1);
+        bg.strokeRoundedRect(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight, 10);
+      }
+    });
+    
+    this.dispatchButton.on('pointerout', () => {
+      bg.clear();
+      bg.fillStyle(0xFFD700, 1);
+      bg.fillRoundedRect(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight, 10);
+      bg.lineStyle(3, 0xFF8C00, 1);
+      bg.strokeRoundedRect(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight, 10);
+    });
+    
+    this.dispatchButton.on('pointerdown', () => {
+      this.dispatchNextOrder();
+    });
+  }
+
+  private dispatchNextOrder() {
+    if (this.readyQueue.length === 0) {
+      this.showMessage('⚠️ No orders in queue!', '#FF0000');
+      return;
+    }
+
+    if (this.currentCookingOrder) {
+      this.showMessage('⚠️ Chef is busy! Wait for current order to finish.', '#FF0000');
+      return;
+    }
+
+    // Get first order from queue (FCFS)
+    const order = this.readyQueue.shift()!;
+    this.currentCookingOrder = order;
+    order.isCooking = true;
+    order.startTime = this.currentTime;
+    
+    // Update order board visual
+    this.updateOrderBoardVisuals();
+    
+    // Start cooking
+    this.cookOrder(order);
+  }
+
+  private cookOrder(order: FoodOrder) {
+    const dishConfig = this.DISH_CONFIGS[order.dishType];
+    
+    this.instructionText.setText(`👨‍🍳 Chef is cooking Order #${order.orderNumber}: ${dishConfig.name} (${order.burstTime}s)`);
     
     // Show progress bar
     this.progressBarBg.setVisible(true);
     this.progressBar.setVisible(true);
     
-    // Change chef to cutting animation
+    // Change chef animation
     this.chefSprite.setTexture('chef-cutting');
-    
-    this.cookNextOrder();
-  }
-
-  private cookNextOrder() {
-    if (this.currentOrderBeingMade >= this.orders.length) {
-      // All orders cooked!
-      this.startUserDeliveryPhase();
-      return;
-    }
-
-    const order = this.orders[this.currentOrderBeingMade];
-    const cookTime = order.prepTime * 1000; // Convert to milliseconds
-    this.currentProgress = 0;
-
-    this.instructionText.setText(
-      `Chef is cooking Order #${order.orderNumber}: ${this.DISH_CONFIGS[order.dishType].name}...`
-    );
-
-    // Add realistic chef cooking animation
     this.addChefCookingAnimation();
-
-    // Animate progress bar
+    
+    // Cooking progress
+    const cookTime = order.burstTime * 1000;
+    this.currentProgress = 0;
+    
     const progressTween = this.tweens.add({
       targets: this,
       currentProgress: 1,
@@ -622,78 +761,57 @@ gets served FIRST, no matter what they ordered!`;
         this.updateProgressBar();
       },
       onComplete: () => {
-        // Stop cooking animation
         this.stopChefCookingAnimation();
+        this.chefSprite.setTexture('chef-standing');
         
         // Mark as completed
         order.isCompleted = true;
+        order.completionTime = this.currentTime;
+        order.turnaroundTime = order.completionTime - order.arrivalTime;
+        order.waitingTime = order.turnaroundTime - order.burstTime;
+        
         this.completedOrders.push(order);
+        this.currentCookingOrder = undefined;
         
-        // Update order board with checkmark
-        const orderContainer = this.orderBoardTexts[this.currentOrderBeingMade];
+        // Hide progress bar
+        this.progressBarBg.setVisible(false);
+        this.progressBar.setVisible(false);
         
-        // Add checkmark
-        const checkmark = this.add.text(
-          orderContainer.x + 75,
-          orderContainer.y,
-          '✅',
-          {
-            fontSize: '20px'
-          }
-        ).setOrigin(0.5);
+        // Update order board
+        this.updateOrderBoardVisuals();
         
-        // Fade out the order container and fade in with green tint
-    this.tweens.add({
-          targets: orderContainer,
-          alpha: 0.7,
-          tint: 0x90EE90,
-          duration: 500
-        });
-
-        // Move to next order
-        this.currentOrderBeingMade++;
+        // Show completion message
+        this.showMessage(`✅ Order #${order.orderNumber} completed!`, '#00FF00');
         
-        if (this.currentOrderBeingMade < this.orders.length) {
-          this.time.delayedCall(800, () => {
-            this.cookNextOrder();
+        // Check if all orders done
+        if (this.completedOrders.length === this.orders.length) {
+          this.time.delayedCall(1500, () => {
+            this.startServingPhase();
           });
         } else {
-          // All done cooking
-          this.time.delayedCall(1000, () => {
-            this.startUserDeliveryPhase();
-          });
+          this.instructionText.setText('🎯 Click DISPATCH to send next order to chef (FCFS)!');
         }
       }
     });
   }
 
   private addChefCookingAnimation() {
-    // Change chef to cutting sprite
-    this.chefSprite.setTexture('chef-cutting');
-      
-      // Add bobbing animation for active cooking
-      this.tweens.add({
+    this.tweens.add({
       targets: this.chefSprite,
       y: this.chefSprite.y - 8,
       duration: 600,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
     
-    // Add steam effect
     this.addSteamEffect();
   }
 
   private stopChefCookingAnimation() {
-    // Stop bobbing animation
     this.tweens.killTweensOf(this.chefSprite);
-    
-    // Reset chef position and texture
-    this.chefSprite.setTexture('chef-standing');
     this.chefSprite.y = this.CHEF_HOME_Y;
     
-    // Remove steam effect
     this.children.list.forEach(child => {
       if (child.name === 'steam') {
         child.destroy();
@@ -702,7 +820,6 @@ gets served FIRST, no matter what they ordered!`;
   }
 
   private addSteamEffect() {
-    // Create steam particles
     for (let i = 0; i < 3; i++) {
       const steam = this.add.circle(
         this.chefSprite.x + Phaser.Math.Between(-20, 20),
@@ -713,7 +830,6 @@ gets served FIRST, no matter what they ordered!`;
       );
       steam.setName('steam');
       
-      // Animate steam
       this.tweens.add({
         targets: steam,
         y: steam.y - 40,
@@ -722,9 +838,7 @@ gets served FIRST, no matter what they ordered!`;
         scaleY: 1.5,
         duration: 2000,
         ease: 'Power2',
-        onComplete: () => {
-          steam.destroy();
-        }
+        onComplete: () => steam.destroy()
       });
     }
   }
@@ -738,24 +852,44 @@ gets served FIRST, no matter what they ordered!`;
     this.progressBar.fillRoundedRect(width / 2 - 200, 115, barWidth, 20, 10);
   }
 
-  private updateScoreDisplay() {
-    if (this.scoreText) {
-      this.scoreText.setText(`Score: ${Math.max(0, this.totalScore)}`);
-    }
+  private updateOrderBoardVisuals() {
+    this.orderBoardTexts.forEach(container => {
+      const orderId = container.getData('orderId');
+      const order = this.orders.find(o => o.id === orderId);
+      
+      if (!order) return;
+      
+      if (order.isCompleted) {
+        // Add checkmark
+        const checkmark = this.add.text(container.x + 75, container.y, '✅', {
+          fontSize: '16px'
+        }).setOrigin(0.5);
+        checkmark.setDepth(16);
+        
+        // Fade and tint green
+        this.tweens.add({
+          targets: container,
+          alpha: 0.7,
+          tint: 0x90EE90,
+          duration: 500
+        });
+      } else if (order.isCooking) {
+        // Highlight cooking order
+        this.tweens.add({
+          targets: container,
+          tint: 0xFFD700,
+          duration: 500
+        });
+      }
+    });
   }
 
-  private startUserDeliveryPhase() {
-    this.gamePhase = 'user-delivery';
-    this.phaseText.setText('Phase: YOUR TURN - Deliver Orders!');
-    this.chefSprite.setTexture('chef-standing');
+  private startServingPhase() {
+    this.gamePhase = 'serving';
+    this.phaseText.setText('Phase: Delivery');
+    this.instructionText.setText('🎯 Click WAITER to pick up food, then click CUSTOMER to deliver!');
     
-    // Hide progress bar
-    this.progressBarBg.setVisible(false);
-    this.progressBar.setVisible(false);
-    
-    this.instructionText.setText('🎯 Click the WAITER to pick up food, then click CUSTOMER to deliver (FCFS order!)');
-    
-    // Make waiter interactive (waiter delivers, not chef)
+    // Make waiter interactive
     this.waiterSprite.setInteractive({ useHandCursor: true });
     this.waiterSprite.on('pointerdown', () => {
       this.pickUpNextOrder();
@@ -763,33 +897,33 @@ gets served FIRST, no matter what they ordered!`;
   }
 
   private pickUpNextOrder() {
-    // Find next undelivered order
     const nextOrder = this.completedOrders.find(o => !o.isDelivered);
     
     if (!nextOrder) {
-      this.instructionText.setText('All orders delivered! Great job!');
+      this.instructionText.setText('All orders delivered! Calculating results...');
       this.time.delayedCall(2000, () => {
-        this.showCompletionScreen();
+        this.showResults();
       });
       return;
     }
 
-    // Waiter picks up food from chef
-    this.waiterSprite.setTexture('waiter');
-    
-    // Show food sprite in waiter's hands (more realistic)
     const dishConfig = this.DISH_CONFIGS[nextOrder.dishType];
+    
+    // Show food sprite
     this.waiterFoodSprite = this.add.sprite(
       this.waiterSprite.x + 8,
       this.waiterSprite.y - 20,
       dishConfig.asset
     );
     this.waiterFoodSprite.setScale(0.15);
-    this.waiterFoodSprite.setDepth(3); // Food in front of waiter
+    this.waiterFoodSprite.setDepth(3);
+    
+    // Find target customer
+    const targetCustomer = this.customers.find(c => c.order.id === nextOrder.id);
     
     this.instructionText.setText(
-      `Waiter is holding Order #${nextOrder.orderNumber}: ${dishConfig.name}\n` +
-      `Deliver to: ${nextOrder.customerName} (Click on customer!)`
+      `Waiter holding Order #${nextOrder.orderNumber}: ${dishConfig.name}\n` +
+      `Deliver to: ${nextOrder.customerName}`
     );
     
     // Make customers clickable
@@ -801,36 +935,28 @@ gets served FIRST, no matter what they ordered!`;
     });
   }
 
-  private deliverToCustomer(customer: Customer, orderBeingDelivered: FoodOrder) {
-    // Check if this is the correct customer (FCFS order)
-    const correctOrder = this.completedOrders.find(o => !o.isDelivered);
-    
-    if (orderBeingDelivered.id !== correctOrder?.id || customer.order.id !== orderBeingDelivered.id) {
-      // Wrong customer!
+  private deliverToCustomer(customer: Customer, order: FoodOrder) {
+    if (customer.order.id !== order.id) {
       this.showError(customer);
       return;
     }
 
-    // Correct delivery!
-    this.performDelivery(customer, orderBeingDelivered);
+    this.performDelivery(customer, order);
   }
 
   private showError(customer: Customer) {
-    // Deduct points for wrong attempt
     this.totalScore -= 10;
     this.wrongAttempts++;
     this.updateScoreDisplay();
     
-    // Shake camera
     this.cameras.main.shake(300, 0.01);
     
-    // Show error message with point deduction
     const errorText = this.add.text(
       customer.x,
       customer.y - 100,
-      `❌ WRONG ORDER!\nFollow FCFS!\n-10 Points`,
+      `❌ WRONG CUSTOMER!\nFollow FCFS order!\n-10 Points`,
       {
-        fontSize: '18px',
+        fontSize: '16px',
         color: '#FF0000',
         fontStyle: 'bold',
         stroke: '#000000',
@@ -841,11 +967,9 @@ gets served FIRST, no matter what they ordered!`;
       }
     ).setOrigin(0.5);
 
-    // Update customer mood to angry
     customer.moodIcon.setText('😡');
     
-    // Add angry customer animation
-      this.tweens.add({
+    this.tweens.add({
       targets: customer.sprite,
       x: customer.x + 5,
       duration: 100,
@@ -854,29 +978,27 @@ gets served FIRST, no matter what they ordered!`;
       ease: 'Power2'
     });
     
-          this.tweens.add({
+    this.tweens.add({
       targets: errorText,
       alpha: 0,
       y: customer.y - 150,
       duration: 2000,
-            ease: 'Power2',
-            onComplete: () => {
+      ease: 'Power2',
+      onComplete: () => {
         errorText.destroy();
         customer.moodIcon.setText('😊');
       }
     });
 
-    this.instructionText.setText(`⚠️ Wrong customer! Deliver to the FIRST customer who ordered! (-10 points)`);
+    this.instructionText.setText(`⚠️ Wrong customer! Deliver in FCFS order! (-10 points)`);
   }
 
   private performDelivery(customer: Customer, order: FoodOrder) {
-    // Remove customer interactivity
     this.customers.forEach(c => {
       c.sprite.removeInteractive();
       c.sprite.off('pointerdown');
     });
 
-    // Walk to customer
     const deliveryDuration = 1500;
     
     this.tweens.add({
@@ -886,28 +1008,24 @@ gets served FIRST, no matter what they ordered!`;
       duration: deliveryDuration,
       ease: 'Power2',
       onComplete: () => {
-        // Delivery complete!
         order.isDelivered = true;
-        this.totalScore += 100; // Award points for correct delivery
+        this.totalScore += 100;
         this.updateScoreDisplay();
         
-        // Remove food sprite
         if (this.waiterFoodSprite) {
           this.waiterFoodSprite.destroy();
           this.waiterFoodSprite = undefined;
         }
         
-        // Customer is happy and starts eating animation
         customer.moodIcon.setText('😍');
         this.addCustomerEatingAnimation(customer);
         
-        // Show success message
         const successText = this.add.text(
           customer.x,
           customer.y - 100,
           `✅ Correct!\n+100 Points\nTotal: ${this.totalScore}`,
           {
-            fontSize: '18px',
+            fontSize: '16px',
             color: '#00FF00',
             fontStyle: 'bold',
             stroke: '#000000',
@@ -927,7 +1045,6 @@ gets served FIRST, no matter what they ordered!`;
           onComplete: () => successText.destroy()
         });
         
-        // Return waiter to kitchen
         this.time.delayedCall(1000, () => {
           this.tweens.add({
             targets: this.waiterSprite,
@@ -938,13 +1055,12 @@ gets served FIRST, no matter what they ordered!`;
             onComplete: () => {
               this.waiterSprite.setTexture('waiter');
               
-              // Check if more orders to deliver
               const remainingOrders = this.completedOrders.filter(o => !o.isDelivered);
               if (remainingOrders.length > 0) {
-                this.instructionText.setText('🎯 Click WAITER again to pick up the next order!');
+                this.instructionText.setText('🎯 Click WAITER again to pick up next order!');
               } else {
                 this.time.delayedCall(1000, () => {
-                  this.showCompletionScreen();
+                  this.showResults();
                 });
               }
             }
@@ -955,7 +1071,6 @@ gets served FIRST, no matter what they ordered!`;
   }
 
   private addCustomerEatingAnimation(customer: Customer) {
-    // Happy eating animation - bobbing up and down
     this.tweens.add({
       targets: customer.sprite,
       y: customer.y - 5,
@@ -965,7 +1080,6 @@ gets served FIRST, no matter what they ordered!`;
       ease: 'Sine.easeInOut'
     });
     
-    // Also animate the mood icon
     this.tweens.add({
       targets: customer.moodIcon,
       scaleX: 1.2,
@@ -977,81 +1091,87 @@ gets served FIRST, no matter what they ordered!`;
     });
   }
 
-  private showCompletionScreen() {
-    this.gamePhase = 'complete';
-    this.phaseText.setText('Phase: COMPLETE!');
+  private showResults() {
+    this.gamePhase = 'results';
+    this.phaseText.setText('Phase: Results & Analysis');
     
     const { width, height } = this.sys.game.canvas;
 
     // Overlay
     const overlay = this.add.graphics();
-    overlay.fillStyle(0x000000, 0.8);
+    overlay.fillStyle(0x000000, 0.9);
     overlay.fillRect(0, 0, width, height);
 
     // Results box
-    const boxWidth = 600;
-    const boxHeight = 400;
+    const boxWidth = 900;
+    const boxHeight = 700;
     const boxX = width / 2 - boxWidth / 2;
     const boxY = height / 2 - boxHeight / 2;
 
     const box = this.add.graphics();
-    box.fillStyle(0x1a1a2e, 0.95);
+    box.fillStyle(0x1a1a2e, 0.98);
     box.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     box.lineStyle(4, 0x00FF00, 1);
     box.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
 
     // Title
-    this.add.text(width / 2, boxY + 50, '🎉 LEVEL COMPLETE! 🎉', {
-      fontSize: '40px',
+    this.add.text(width / 2, boxY + 40, '📊 FCFS SIMULATION RESULTS', {
+      fontSize: '36px',
       color: '#00FF00',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 4
     }).setOrigin(0.5);
 
-    // Calculate final score and rating
-    const perfectScore = this.orders.length * 100;
-    const finalScore = Math.max(0, this.totalScore);
-    const scorePercentage = Math.round((finalScore / perfectScore) * 100);
-    
-    let stars = '';
-    let rating = '';
-    
-    if (scorePercentage >= 90) {
-      stars = '⭐⭐⭐';
-      rating = 'Perfect!';
-    } else if (scorePercentage >= 70) {
-      stars = '⭐⭐';
-      rating = 'Good!';
-    } else if (scorePercentage >= 50) {
-      stars = '⭐';
-      rating = 'Okay!';
-    } else {
-      stars = '';
-      rating = 'Try Again!';
-    }
+    // Calculate metrics
+    const avgWaitingTime = this.orders.reduce((sum, o) => sum + (o.waitingTime || 0), 0) / this.orders.length;
+    const avgTurnaroundTime = this.orders.reduce((sum, o) => sum + (o.turnaroundTime || 0), 0) / this.orders.length;
+    const throughput = this.orders.length / (this.currentTime / 1000);
 
-    // Success message with actual scoring
-    const successMsg = `Congratulations!
+    // Gantt Chart
+    this.drawGanttChart(boxX + 50, boxY + 120, boxWidth - 100);
 
-You successfully delivered all orders following
-the FCFS (First Come First Served) algorithm!
+    // Metrics Table
+    const metricsY = boxY + 380;
+    this.add.text(boxX + 50, metricsY, '📈 PERFORMANCE METRICS', {
+      fontSize: '20px',
+      color: '#FFD700',
+      fontStyle: 'bold'
+    });
 
-✅ Orders delivered: ${this.orders.length}
-❌ Wrong attempts: ${this.wrongAttempts}
-💰 Points earned: ${finalScore} / ${perfectScore}
+    const metricsText = `Average Waiting Time: ${avgWaitingTime.toFixed(2)}s
+Average Turnaround Time: ${avgTurnaroundTime.toFixed(2)}s
+Throughput: ${throughput.toFixed(2)} processes/second
+Total Time: ${(this.currentTime / 1000).toFixed(1)}s`;
 
-Score: ${scorePercentage}%
-${stars} ${rating}`;
-
-    this.add.text(width / 2, boxY + 200, successMsg, {
-      fontSize: '18px',
+    this.add.text(boxX + 50, metricsY + 40, metricsText, {
+      fontSize: '16px',
       color: '#FFFFFF',
-      align: 'center',
       lineSpacing: 8
-    }).setOrigin(0.5);
+    });
 
-    // Next level button
+    // Individual Order Details
+    const detailsY = boxY + 480;
+    this.add.text(boxX + 50, detailsY, '📋 ORDER DETAILS', {
+      fontSize: '20px',
+      color: '#FFD700',
+      fontStyle: 'bold'
+    });
+
+    let detailsText = 'Order | Arrival | Burst | Start | Complete | Wait | Turnaround\n';
+    detailsText += '─'.repeat(80) + '\n';
+    
+    this.orders.forEach(order => {
+      detailsText += `${order.orderNumber}      ${order.arrivalTime}       ${order.burstTime}       ${order.startTime}        ${order.completionTime}          ${order.waitingTime}      ${order.turnaroundTime}\n`;
+    });
+
+    this.add.text(boxX + 50, detailsY + 40, detailsText, {
+      fontSize: '12px',
+      color: '#FFFFFF',
+      fontFamily: 'monospace'
+    });
+
+    // Next Level button
     const buttonWidth = 200;
     const buttonHeight = 50;
     const buttonX = width / 2 - buttonWidth / 2;
@@ -1090,21 +1210,106 @@ ${stars} ${rating}`;
     });
 
     button.on('pointerdown', () => {
-      // Restart or go to next level
       this.scene.restart();
     });
   }
 
+  private drawGanttChart(x: number, y: number, width: number) {
+    // Title
+    this.add.text(x + width / 2, y, '📊 GANTT CHART (Execution Timeline)', {
+      fontSize: '18px',
+      color: '#FFD700',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // Calculate positions
+    const maxTime = Math.max(...this.orders.map(o => o.completionTime || 0));
+    const scale = (width - 100) / maxTime;
+    
+    let currentX = x + 50;
+    const barHeight = 30;
+    const barY = y + 40;
+    const spacing = 10;
+
+    this.orders.forEach((order, index) => {
+      const barWidth = (order.completionTime! - order.startTime!) * scale;
+      
+      // Bar background
+      const bar = this.add.graphics();
+      bar.fillStyle(0x4CAF50, 1);
+      bar.fillRect(currentX, barY, barWidth, barHeight);
+      bar.lineStyle(2, 0x000000, 1);
+      bar.strokeRect(currentX, barY, barWidth, barHeight);
+      
+      // Order number
+      const orderText = this.add.text(currentX + barWidth / 2, barY + barHeight / 2, 
+        `P${order.orderNumber}`, {
+        fontSize: '14px',
+        color: '#FFFFFF',
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+      
+      // Time labels
+      const startLabel = this.add.text(currentX, barY + barHeight + 5, 
+        `${order.startTime}`, {
+        fontSize: '11px',
+        color: '#FFFFFF'
+      }).setOrigin(0.5);
+      
+      const endLabel = this.add.text(currentX + barWidth, barY + barHeight + 5,
+        `${order.completionTime}`, {
+        fontSize: '11px',
+        color: '#FFFFFF'
+      }).setOrigin(0.5);
+      
+      currentX += barWidth + spacing;
+    });
+  }
+
+  private updateClock() {
+    this.currentTime = (this.time.now - this.gameStartTime) / 1000;
+    this.timeText.setText(`Time: ${this.currentTime.toFixed(1)}s`);
+  }
+
+  private updateScoreDisplay() {
+    if (this.scoreText) {
+      this.scoreText.setText(`Score: ${Math.max(0, this.totalScore)}`);
+    }
+  }
+
+  private showMessage(text: string, color: string) {
+    const { width, height } = this.sys.game.canvas;
+    
+    const message = this.add.text(width / 2, height / 2, text, {
+      fontSize: '24px',
+      color: color,
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+      backgroundColor: '#000000AA',
+      padding: { x: 20, y: 10 }
+    }).setOrigin(0.5);
+    message.setDepth(30);
+    
+    this.tweens.add({
+      targets: message,
+      alpha: 0,
+      y: message.y - 50,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => message.destroy()
+    });
+  }
+
   update() {
-    // Update food sprite position to follow waiter if it exists
-    if (this.waiterFoodSprite && this.gamePhase === 'user-delivery') {
+    if (this.waiterFoodSprite && this.gamePhase === 'serving') {
       this.waiterFoodSprite.x = this.waiterSprite.x + 8;
       this.waiterFoodSprite.y = this.waiterSprite.y - 20;
     }
   }
 }
 
-// Export config for easy importing
+// Export config
 export const FCFSGameConfig = {
   type: Phaser.AUTO,
   scale: {
