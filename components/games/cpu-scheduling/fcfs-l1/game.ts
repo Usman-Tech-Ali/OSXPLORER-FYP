@@ -49,12 +49,12 @@ export class FCFSGame extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   
   // Positions - Kitchen at bottom floor parallel to customers
-  private readonly CHEF_HOME_X = 150;
-  private readonly CHEF_HOME_Y = 450;
+  private readonly CHEF_HOME_X = 1200;
+  private readonly CHEF_HOME_Y = 500;
   private readonly WAITER_HOME_X = 200;
   private readonly WAITER_HOME_Y = 520;
-  private readonly ORDER_BOARD_X = 180;
-  private readonly ORDER_BOARD_Y = 120;
+  private readonly ORDER_BOARD_X = 300;
+  private readonly ORDER_BOARD_Y = 250;
   
   // Game scoring
   private totalScore: number = 0;
@@ -86,6 +86,7 @@ export class FCFSGame extends Phaser.Scene {
     this.load.image('chef-serving', `${assetPath}chef_with food_in_hand.png`);
     this.load.image('waiter', `${assetPath}waiter.png`);
     this.load.image('customer', `${assetPath}customer.png`);
+    this.load.image('customer2', `${assetPath}customer2.png`);
     this.load.image('burger', `${assetPath}burger.png`);
     this.load.image('pizza', `${assetPath}pizza.png`);
     this.load.image('sandwich', `${assetPath}sandwich.png`);
@@ -120,24 +121,38 @@ export class FCFSGame extends Phaser.Scene {
   private createKitchenStation(width: number, height: number) {
     // Kitchen equipment moved to bottom-left (in front of chef)
     const equipment = this.add.image(this.CHEF_HOME_X, this.CHEF_HOME_Y, 'station-equipment');
-    equipment.setScale(0.35);
+    equipment.setScale(0.5);
     equipment.setAlpha(0.9);
     equipment.setDepth(1); // Kitchen table in front
   }
 
   private createCustomers(width: number, height: number) {
-    // Customers positioned to be parallel with kitchen at bottom
+    // Customers positioned in 2 rows like hotel seating
     const numCustomers = 5;
-    const startX = width * 0.5;  // Moved further right to be parallel with kitchen
-    const endX = width * 0.9;    // Extend to the right edge
-    const spacing = (endX - startX) / (numCustomers - 1);
-    const customerY = height - 180;
+    const customersPerRow = 3; // First row has 3 customers
+    const row1Y = height - 190; // First row (top)
+    const row2Y = height - 100; // Second row (bottom)
+    
+    const rowSpacing = width * 0.18; // Spacing between customers in a row
+    const row1StartX = width * 0.2; // First row starts more to the right
+    const row2StartX = width * 0.25; // Second row starts slightly left
 
     const dishTypes: Array<keyof typeof this.DISH_CONFIGS> = ['burger', 'pizza', 'sandwich', 'mushroom', 'chicken'];
+    
+    // Customer images to randomly select from
+    const customerImages = ['customer', 'customer2'];
 
     for (let i = 0; i < numCustomers; i++) {
-      const x = startX + (i * spacing);
-      const customerSprite = this.add.sprite(x, customerY, 'customer');
+      // Determine row and position
+      const isFirstRow = i < customersPerRow;
+      const posInRow = isFirstRow ? i : i - customersPerRow;
+      const customerY = isFirstRow ? row1Y : row2Y;
+      const startX = isFirstRow ? row1StartX : row2StartX;
+      const x = startX + (posInRow * rowSpacing);
+      
+      // Randomly select customer image
+      const customerImage = customerImages[Math.floor(Math.random() * customerImages.length)];
+      const customerSprite = this.add.sprite(x, customerY, customerImage);
       customerSprite.setScale(0.25);
       customerSprite.setDepth(2); // Customers in front
 
@@ -197,18 +212,100 @@ export class FCFSGame extends Phaser.Scene {
   }
 
   private createOrderBoard() {
+    // Create the order board background
     this.orderBoard = this.add.image(this.ORDER_BOARD_X, this.ORDER_BOARD_Y, 'order-board-bg');
-    this.orderBoard.setScale(0.8);
-    this.orderBoard.setAlpha(0);
-    this.orderBoard.setTint(0xFFF8DC);
-    this.orderBoard.setDepth(1); // Order board in front
+    this.orderBoard.setScale(1.0); // Increased scale for better visibility
+    this.orderBoard.setAlpha(1); // Make board visible from start
+    this.orderBoard.setDepth(10); // Order board in front of everything
     
     // Add a subtle shadow effect
-    const shadow = this.add.image(this.ORDER_BOARD_X + 3, this.ORDER_BOARD_Y + 3, 'order-board-bg');
-    shadow.setScale(0.8);
-    shadow.setAlpha(0.2);
+    const shadow = this.add.image(this.ORDER_BOARD_X + 5, this.ORDER_BOARD_Y + 5, 'order-board-bg');
+    shadow.setScale(1.0);
+    shadow.setAlpha(0.3);
     shadow.setTint(0x000000);
-    shadow.setDepth(0); // Shadow behind the board
+    shadow.setDepth(9); // Shadow behind the board
+    
+    // Add title to order board
+    const boardTitle = this.add.text(this.ORDER_BOARD_X, this.ORDER_BOARD_Y - 80, '📋 ORDER BOARD 📋', {
+      fontSize: '22px',
+      color: '#FF6B35',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+      backgroundColor: '#000000AA',
+      padding: { x: 10, y: 5 }
+    }).setOrigin(0.5);
+    boardTitle.setDepth(11);
+  }
+  private addOrderToBoard(order: FoodOrder) {
+    // Calculate position for this order on the board
+    const startY = this.ORDER_BOARD_Y - 40; // Start from top of the board
+    const lineHeight = 35; // Space between orders
+    const orderIndex = this.orderBoardTexts.length;
+    
+    const dishConfig = this.DISH_CONFIGS[order.dishType];
+    
+    console.log(`Adding order to board: ${order.orderNumber}. ${dishConfig.name} at index ${orderIndex}`);
+    
+    // Create a container for this order - positioned at the board center
+    const orderContainer = this.add.container(this.ORDER_BOARD_X, startY + (orderIndex * lineHeight));
+    orderContainer.setDepth(15); // Increased depth to be above the board image
+    
+    // Background for order - white rounded rectangle
+    const orderBg = this.add.graphics();
+    orderBg.fillStyle(0xFFFFFF, 1.0); // Fully opaque white
+    orderBg.fillRoundedRect(-105, -15, 210, 30, 8);
+    orderBg.lineStyle(3, 0x000000, 1); // Black border
+    orderBg.strokeRoundedRect(-105, -15, 210, 30, 8);
+    orderContainer.add(orderBg);
+    
+    // Order number - larger and bolder
+    const orderNumber = this.add.text(-95, 0, `${order.orderNumber}.`, {
+      fontSize: '18px',
+      color: '#FF6B35',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0, 0.5);
+    orderContainer.add(orderNumber);
+    
+    // Food emoji - larger
+    const foodEmoji = this.add.text(-68, 0, dishConfig.emoji, {
+      fontSize: '20px'
+    }).setOrigin(0, 0.5);
+    orderContainer.add(foodEmoji);
+    
+    // Food name - larger and bolder
+    const foodName = this.add.text(-35, 0, dishConfig.name, {
+      fontSize: '15px',
+      color: '#000000',
+      fontStyle: 'bold'
+    }).setOrigin(0, 0.5);
+    orderContainer.add(foodName);
+    
+    // Prep time
+    const prepTime = this.add.text(80, 0, `(${order.prepTime}s)`, {
+      fontSize: '14px',
+      color: '#333333',
+      fontStyle: 'italic',
+      stroke: '#FFFFFF',
+      strokeThickness: 1
+    }).setOrigin(0, 0.5);
+    orderContainer.add(prepTime);
+    
+    // Animate the order appearing on the board
+    orderContainer.setAlpha(0);
+    orderContainer.setY(orderContainer.y - 20); // Start above final position
+    this.tweens.add({
+      targets: orderContainer,
+      alpha: 1,
+      y: startY + (orderIndex * lineHeight),
+      duration: 500,
+      ease: 'Back.out'
+    });
+    
+    // Store reference for later updates
+    this.orderBoardTexts.push(orderContainer);
   }
 
   private createUI(width: number, height: number) {
@@ -425,6 +522,9 @@ gets served FIRST, no matter what they ordered!`;
             padding: { x: 8, y: 4 }
           }
         ).setOrigin(0.5);
+        
+        // Add the order to the order board immediately
+        this.addOrderToBoard(customer.order);
 
         // Wait a moment, then move to next customer
         this.time.delayedCall(1000, () => {
@@ -463,83 +563,18 @@ gets served FIRST, no matter what they ordered!`;
   private showOrderBoard() {
     this.instructionText.setText('Chef received all orders! Starting to cook...');
     
-    // Make sure order board is visible and positioned correctly
-    this.orderBoard.setAlpha(1);
-    this.orderBoard.setVisible(true);
-    
-    // Fade in order board with animation
+    // Orders are already on the board, just highlight the board briefly
     this.tweens.add({
       targets: this.orderBoard,
-      alpha: 1,
-      scaleX: 0.8,
-      scaleY: 0.8,
-      duration: 800,
+      scaleX: 0.85,
+      scaleY: 0.85,
+      duration: 300,
+      yoyo: true,
       ease: 'Back.out'
     });
 
-    // Display orders on board with modern styling
-    const startY = this.ORDER_BOARD_Y - 35;
-    const lineHeight = 28;
-
-    this.orders.forEach((order, index) => {
-      const dishConfig = this.DISH_CONFIGS[order.dishType];
-      
-      // Create a container for each order
-      const orderContainer = this.add.container(this.ORDER_BOARD_X - 70, startY + (index * lineHeight));
-      
-      // Background for order
-      const orderBg = this.add.graphics();
-      orderBg.fillStyle(0xFFFFFF, 0.9);
-      orderBg.fillRoundedRect(-90, -12, 180, 24, 12);
-      orderBg.lineStyle(2, 0x333333, 0.3);
-      orderBg.strokeRoundedRect(-90, -12, 180, 24, 12);
-      orderContainer.add(orderBg);
-      
-      // Order number
-      const orderNumber = this.add.text(-75, 0, `${order.orderNumber}.`, {
-        fontSize: '14px',
-        color: '#FF6B35',
-        fontStyle: 'bold'
-      }).setOrigin(0, 0.5);
-      orderContainer.add(orderNumber);
-      
-      // Food emoji
-      const foodEmoji = this.add.text(-50, 0, dishConfig.emoji, {
-        fontSize: '16px'
-      }).setOrigin(0, 0.5);
-      orderContainer.add(foodEmoji);
-      
-      // Food name
-      const foodName = this.add.text(-25, 0, dishConfig.name, {
-        fontSize: '13px',
-        color: '#333333',
-        fontStyle: 'bold'
-      }).setOrigin(0, 0.5);
-      orderContainer.add(foodName);
-      
-      // Prep time
-      const prepTime = this.add.text(65, 0, `(${order.prepTime}s)`, {
-        fontSize: '12px',
-        color: '#666666',
-        fontStyle: 'italic'
-      }).setOrigin(0, 0.5);
-      orderContainer.add(prepTime);
-      
-      orderContainer.setAlpha(0);
-      this.tweens.add({
-        targets: orderContainer,
-        alpha: 1,
-        duration: 400,
-        delay: index * 250,
-        ease: 'Back.out'
-      });
-      
-      // Store reference for later updates
-      this.orderBoardTexts.push(orderContainer);
-    });
-
     // Start cooking after showing all orders
-    this.time.delayedCall(2500, () => {
+    this.time.delayedCall(1500, () => {
       this.startCooking();
     });
   }

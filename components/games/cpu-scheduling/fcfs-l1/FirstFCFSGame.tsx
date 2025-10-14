@@ -9,34 +9,36 @@ export default function FirstFCFSGame() {
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !gameRef.current) {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
       gameRef.current = new Phaser.Game({
         type: Phaser.AUTO,
         scale: {
-          mode: Phaser.Scale.FIT,
+          mode: Phaser.Scale.ENVELOP, // fills screen while maintaining aspect ratio
           autoCenter: Phaser.Scale.CENTER_BOTH,
-          width: 1600,
-          height: 1000,
-          min: {
-            width: 1200,
-            height: 800
-          },
-          max: {
-            width: 1920,
-            height: 1080
-          }
+          width,
+          height,
         },
         backgroundColor: '#181c24',
         parent: 'game-container',
         scene: FCFSGame,
       });
-    }
 
-    return () => {
-      if (gameRef.current) {
-        gameRef.current.destroy(true);
+      // Handle resizing dynamically
+      const handleResize = () => {
+        if (gameRef.current) {
+          gameRef.current.scale.resize(window.innerWidth, window.innerHeight);
+        }
+      };
+
+      window.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        gameRef.current?.destroy(true);
         gameRef.current = null;
-      }
-    };
+      };
+    }
   }, []);
 
   return (
@@ -49,6 +51,7 @@ export default function FirstFCFSGame() {
         alignItems: 'center',
         justifyContent: 'center',
         background: '#181c24',
+        overflow: 'hidden',
       }}
     />
   );
