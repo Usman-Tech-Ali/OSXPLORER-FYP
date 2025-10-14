@@ -11,7 +11,7 @@ export default function GamePage() {
   const params = useParams()
   const { moduleId, gameId } = params
 
-  // Only show the game for first-fit-l1 (Basic Allocation)
+  // Check which game to show
   const isFirstFitBasic = moduleId === "memory-management" && gameId === "first-fit-l1"
   const isFCFSBasic = moduleId === "cpu-scheduling" && gameId === "fcfs-l1"
   const isCSBasic = moduleId === "process-synchronization" && gameId === "critical-section-l1"

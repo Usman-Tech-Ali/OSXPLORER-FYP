@@ -1,48 +1,57 @@
-import React, { useEffect, useRef } from 'react';
-import Phaser from 'phaser';
-import { FirstFitGameConfig } from './game';
+'use client';
 
-export default function FirstFitGame() {
-  const gameRef = useRef<HTMLDivElement>(null);
-  const phaserGameRef = useRef<Phaser.Game | null>(null);
+import { useEffect, useRef } from 'react';
+import Phaser from 'phaser';
+import { FirstFitGame } from './game';
+
+export default function FirstFitGameComponent() {
+  const gameRef = useRef<Phaser.Game | null>(null);
 
   useEffect(() => {
-    if (gameRef.current && !phaserGameRef.current) {
-      const config = {
-        ...FirstFitGameConfig,
-        parent: gameRef.current,
+    if (typeof window !== 'undefined' && !gameRef.current) {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      gameRef.current = new Phaser.Game({
+        type: Phaser.AUTO,
         scale: {
-          mode: Phaser.Scale.RESIZE,
-          parent: gameRef.current,
-          width: '100%',
-          height: '100%',
+          mode: Phaser.Scale.ENVELOP,
           autoCenter: Phaser.Scale.CENTER_BOTH,
+          width,
+          height,
         },
+        backgroundColor: '#181c24',
+        parent: 'game-container',
+        scene: FirstFitGame,
+      });
+
+      // Handle resizing dynamically
+      const handleResize = () => {
+        if (gameRef.current) {
+          gameRef.current.scale.resize(window.innerWidth, window.innerHeight);
+        }
       };
-      
-      phaserGameRef.current = new Phaser.Game(config);
+
+      window.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        gameRef.current?.destroy(true);
+        gameRef.current = null;
+      };
     }
-    
-    return () => {
-      if (phaserGameRef.current) {
-        phaserGameRef.current.destroy(true);
-        phaserGameRef.current = null;
-      }
-    };
   }, []);
 
   return (
     <div
-      ref={gameRef}
+      id="game-container"
       style={{
         width: '100vw',
         height: '100vh',
-        background: '#0f0f23',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#181c24',
         overflow: 'hidden',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        zIndex: 10
       }}
     />
   );

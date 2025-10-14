@@ -1,1003 +1,940 @@
 import Phaser from 'phaser';
 
-// ===== SOUND EFFECTS (Simple Audio Context) =====
-function playSuccessSound() {
-  if (typeof window !== 'undefined' && window.AudioContext) {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-      oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
-      
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
-    } catch (e) {
-      // Fallback: no sound if AudioContext fails
-    }
-  }
-}
-
-function playErrorSound() {
-  if (typeof window !== 'undefined' && window.AudioContext) {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(220, audioContext.currentTime); // A3
-      oscillator.type = 'sawtooth';
-      
-      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.2);
-    } catch (e) {
-      // Fallback: no sound if AudioContext fails
-    }
-  }
-}
-
-export const FirstFitGameConfig: Phaser.Types.Core.GameConfig = {
-  type: Phaser.AUTO,
-  width: '100%',
-  height: '100%',
-  backgroundColor: '#0f0f23',
-  scale: {
-    mode: Phaser.Scale.RESIZE,
-    parent: 'phaser-game',
-    width: '100%',
-    height: '100%',
-  },
-  scene: {
-    preload,
-    create,
-    update,
-  },
-  physics: {
-    default: 'arcade',
-    arcade: {
-      gravity: { x: 0, y: 0 },
-      debug: false,
-    },
-  },
-};
-
-// ===== GAME CONSTANTS =====
-const GAME_CONFIG = {
-  RAM_TOTAL_SIZE: 512, // Total RAM in MB
-  RAM_BLOCK_WIDTH: 150,
-  RAM_BLOCK_MIN_HEIGHT: 40,
-  PROCESS_BLOCK_WIDTH: 140,
-  PROCESS_BLOCK_HEIGHT: 50,
-  ANIMATION_DURATION: 300,
-  SUCCESS_FLASH_DURATION: 500,
-};
-
-const COLORS = {
-  RAM_BACKGROUND: 0x1a1a2e,
-  RAM_BORDER: 0x16213e,
-  RAM_USED: 0x4a90e2,
-  RAM_FREE: 0x2d3748,
-  RAM_HOVER: 0x805ad5,
-  PROCESS_COLORS: [0xe53e3e, 0x38a169, 0xd69e2e, 0x3182ce, 0x805ad5, 0xdd6b20],
-  SUCCESS: 0x38a169,
-  ERROR: 0xe53e3e,
-  TEXT_PRIMARY: '#ffffff',
-  TEXT_SECONDARY: '#a0aec0',
-  UI_BACKGROUND: 0x2d3748,
-};
-
-// ===== GAME STATE =====
-interface MemoryBlock {
-  start: number;
-  size: number;
-  isOccupied: boolean;
-  processId?: string;
-  color?: number;
-  graphics: Phaser.GameObjects.Graphics;
-  label: Phaser.GameObjects.Text;
-}
-
-interface Process {
+interface ParkingSlot {
   id: string;
-  name: string;
+  slotNumber: number;
+  size: number; // Size in units (50=small, 100=medium, 200=large)
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  occupied: boolean;
+  vehicle?: Vehicle;
+  slotBg?: Phaser.GameObjects.Graphics;
+  slotLabel?: Phaser.GameObjects.Text;
+  fragmentationOverlay?: Phaser.GameObjects.Graphics;
+  fragmentationText?: Phaser.GameObjects.Text;
+}
+
+interface Vehicle {
+  id: string;
+  type: 'bike' | 'car' | 'truck';
   size: number;
-  color: number;
-  graphics?: Phaser.GameObjects.Graphics;
-  label?: Phaser.GameObjects.Text;
-  allocated: boolean;
+  name: string;
+  sprite?: Phaser.GameObjects.Sprite;
+  sizeLabel?: Phaser.GameObjects.Text;
+  isOnRoad: boolean;
+  isParked: boolean;
+  assignedSlot?: ParkingSlot;
+  roadY: number; // Y position on the road
 }
 
-let gameState = {
-  memoryBlocks: [] as MemoryBlock[],
-  processQueue: [] as Process[],
-  currentProcessIndex: 0,
-  score: 0,
-  level: 1,
-  allocatedProcesses: 0,
-  gamePhase: 'playing', // 'playing', 'completed', 'failed'
-};
+export class FirstFitGame extends Phaser.Scene {
+  // Game State
+  private gamePhase: 'intro' | 'parking' | 'results' = 'intro';
+  private parkingSlots: ParkingSlot[] = [];
+  private vehicles: Vehicle[] = [];
+  private currentVehicleIndex: number = 0;
+  private selectedVehicle?: Vehicle;
+  private totalFragmentation: number = 0;
+  private totalAllocated: number = 0;
+  private totalSlotSpace: number = 0;
+  private score: number = 0;
+  private wrongAttempts: number = 0;
 
-let gameObjects = {
-  ramContainer: null as Phaser.GameObjects.Container | null,
-  queueContainer: null as Phaser.GameObjects.Container | null,
-  uiContainer: null as Phaser.GameObjects.Container | null,
-  draggedProcess: null as { graphics: Phaser.GameObjects.Graphics, label: Phaser.GameObjects.Text } | null,
-  hoverBlock: null as MemoryBlock | null,
-  feedbackText: null as Phaser.GameObjects.Text | null,
-  scoreText: null as Phaser.GameObjects.Text | null,
-  instructionText: null as Phaser.GameObjects.Text | null,
-  completionPanel: null as Phaser.GameObjects.Container | null,
-};
+  // UI Elements
+  private instructionText!: Phaser.GameObjects.Text;
+  private phaseText!: Phaser.GameObjects.Text;
+  private scoreText!: Phaser.GameObjects.Text;
+  private fragmentationText!: Phaser.GameObjects.Text;
+  private efficiencyText!: Phaser.GameObjects.Text;
 
-let scene: Phaser.Scene;
+  // Layout constants
+  private readonly PARKING_AREA_X = 150; // Left side - parking area
+  private readonly ROAD_START_X = 900; // Right side - road area
+  private readonly ROAD_END_X = 1500; // End of visible road
+  private readonly ROAD_Y = 750; // Y position of the road (ground level) - lowered to be on actual road
 
-// ===== PRELOAD FUNCTION =====
-function preload(this: Phaser.Scene) {
-  // No external assets needed - using graphics primitives
-}
-
-// ===== MAIN CREATE FUNCTION =====
-function create(this: Phaser.Scene) {
-  scene = this;
-  
-  // Initialize game state
-  initializeGame();
-  
-  // Create UI layout
-  createGameUI();
-  
-  // Create RAM visualization
-  createRAMVisualization();
-  
-  // Create process queue
-  createProcessQueue();
-  
-  // Add drag and drop functionality
-  setupDragAndDrop();
-  
-  // Create instruction overlay
-  createInstructions();
-}
-
-// ===== GAME INITIALIZATION =====
-function initializeGame() {
-  // Reset game state
-  gameState = {
-    memoryBlocks: [],
-    processQueue: [],
-    currentProcessIndex: 0,
-    score: 0,
-    level: 1,
-    allocatedProcesses: 0,
-    gamePhase: 'playing',
+  // Vehicle configurations with larger scales
+  private readonly VEHICLE_CONFIGS = {
+    bike: { 
+      name: 'Bike', 
+      size: 50, 
+      comingAsset: 'bike1-coming', 
+      parkedAsset: 'bike1-parked', 
+      emoji: '🏍️',
+      scale: 0.4 // Further increased scale
+    },
+    car: { 
+      name: 'Car', 
+      size: 100, 
+      comingAsset: 'orange-car-coming', 
+      parkedAsset: 'orange-car-parked', 
+      emoji: '🚗',
+      scale: 0.5 // Further increased scale
+    },
+    truck: { 
+      name: 'Truck', 
+      size: 200, 
+      comingAsset: 'truck1-coming', 
+      parkedAsset: 'truck-parked', 
+      emoji: '🚛',
+      scale: 0.6 // Further increased scale
+    }
   };
 
-  // Create initial RAM blocks (some pre-allocated, some free)
-  const initialBlocks = [
-    { start: 0, size: 64, isOccupied: true, processId: 'OS', color: COLORS.RAM_USED },
-    { start: 64, size: 96, isOccupied: false },
-    { start: 160, size: 48, isOccupied: true, processId: 'P0', color: COLORS.PROCESS_COLORS[0] },
-    { start: 208, size: 80, isOccupied: false },
-    { start: 288, size: 32, isOccupied: true, processId: 'P1', color: COLORS.PROCESS_COLORS[1] },
-    { start: 320, size: 192, isOccupied: false },
+  // Parking slots based on the actual "P" marks in the background image
+  private readonly PARKING_SLOTS_CONFIG = [
+    // Top row P marks - positioned to match the actual P marks in the image
+    { slotNumber: 1, size: 200, x: 180, y: 200 },   // Large slot (top left)
+    { slotNumber: 2, size: 100, x: 350, y: 200 },   // Medium slot (top center)
+    { slotNumber: 3, size: 50, x: 520, y: 200 },    // Small slot (top right)
+    
+    // Bottom row P marks - positioned to match the actual P marks in the image
+    { slotNumber: 4, size: 100, x: 180, y: 750 },   // Medium slot (bottom left)
+    { slotNumber: 5, size: 200, x: 350, y: 750 },   // Large slot (bottom center)
+    { slotNumber: 6, size: 50, x: 520, y: 750 },    // Small slot (bottom right)
   ];
 
-  initialBlocks.forEach(block => {
-    const memBlock: MemoryBlock = {
-      start: block.start,
-      size: block.size,
-      isOccupied: block.isOccupied,
-      processId: block.processId,
-      color: block.color || COLORS.RAM_FREE,
-      graphics: null as any,
-      label: null as any,
-    };
-    gameState.memoryBlocks.push(memBlock);
-  });
-
-  // Create process queue
-  const processes = [
-    { id: 'P2', name: 'Process P2', size: 72, color: COLORS.PROCESS_COLORS[2] },
-    { id: 'P3', name: 'Process P3', size: 45, color: COLORS.PROCESS_COLORS[3] },
-    { id: 'P4', name: 'Process P4', size: 128, color: COLORS.PROCESS_COLORS[4] },
-    { id: 'P5', name: 'Process P5', size: 36, color: COLORS.PROCESS_COLORS[5] },
+  // Vehicles that will arrive on the road sequentially
+  private readonly VEHICLES_CONFIG = [
+    { type: 'car' as const, id: 'v1' },
+    { type: 'truck' as const, id: 'v2' },
+    { type: 'bike' as const, id: 'v3' },
+    { type: 'car' as const, id: 'v4' }
   ];
 
-  processes.forEach(proc => {
-    gameState.processQueue.push({
-      id: proc.id,
-      name: proc.name,
-      size: proc.size,
-      color: proc.color,
-      allocated: false,
-    });
-  });
-}
+  constructor() {
+    super({ key: 'FirstFitGame' });
+  }
 
-// ===== UI CREATION =====
-function createGameUI() {
-  const width = scene.scale.width;
-  const height = scene.scale.height;
-
-  // Main title
-  scene.add.text(width / 2, 40, 'Memory Stackers: First Fit', {
-    fontSize: '28px',
-    color: COLORS.TEXT_PRIMARY,
-    fontFamily: 'Arial, sans-serif',
-    fontStyle: 'bold',
-  }).setOrigin(0.5);
-
-  // Subtitle
-  scene.add.text(width / 2, 75, 'Basic Allocation Strategy', {
-    fontSize: '16px',
-    color: COLORS.TEXT_SECONDARY,
-    fontFamily: 'Arial, sans-serif',
-  }).setOrigin(0.5);
-
-  // Score display
-  gameObjects.scoreText = scene.add.text(50, 50, 'Score: 0', {
-    fontSize: '18px',
-    color: COLORS.TEXT_PRIMARY,
-    fontFamily: 'Arial, sans-serif',
-    fontStyle: 'bold',
-  });
-
-  // Feedback area
-  gameObjects.feedbackText = scene.add.text(width / 2, height - 60, '', {
-    fontSize: '16px',
-    color: COLORS.TEXT_PRIMARY,
-    fontFamily: 'Arial, sans-serif',
-    align: 'center',
-    wordWrap: { width: width * 0.8 },
-  }).setOrigin(0.5);
-}
-
-// ===== RAM VISUALIZATION =====
-function createRAMVisualization() {
-  const width = scene.scale.width;
-  const height = scene.scale.height;
-  const ramHeight = height * 0.7;
-  const ramX = width * 0.1;
-  const ramY = height * 0.15;
-
-  // RAM container background
-  const ramBg = scene.add.graphics();
-  ramBg.fillStyle(COLORS.RAM_BACKGROUND, 1);
-  ramBg.lineStyle(3, COLORS.RAM_BORDER, 1);
-  ramBg.fillRoundedRect(ramX, ramY, GAME_CONFIG.RAM_BLOCK_WIDTH + 20, ramHeight, 10);
-  ramBg.strokeRoundedRect(ramX, ramY, GAME_CONFIG.RAM_BLOCK_WIDTH + 20, ramHeight, 10);
-
-  // RAM label
-  scene.add.text(ramX + (GAME_CONFIG.RAM_BLOCK_WIDTH + 20) / 2, ramY - 15, `RAM (${GAME_CONFIG.RAM_TOTAL_SIZE}MB)`, {
-    fontSize: '16px',
-    color: COLORS.TEXT_PRIMARY,
-    fontFamily: 'Arial, sans-serif',
-    fontStyle: 'bold',
-  }).setOrigin(0.5);
-
-  // Create visual blocks for each memory segment
-  let currentY = ramY + 10;
-  gameState.memoryBlocks.forEach((block, index) => {
-    const blockHeight = Math.max((block.size / GAME_CONFIG.RAM_TOTAL_SIZE) * (ramHeight - 20), GAME_CONFIG.RAM_BLOCK_MIN_HEIGHT);
+  preload() {
+    const assetPath = '/games/memory-management/';
     
-    // Create block graphics - Position the graphics object, then draw at (0,0)
-    block.graphics = scene.add.graphics();
-    block.graphics.x = ramX + 10;
-    block.graphics.y = currentY;
+    // Load backgrounds
+    this.load.image('bg-1', `${assetPath}background-1.png`);
+    this.load.image('bg-2', `${assetPath}background-2.png`);
     
-    block.graphics.fillStyle(block.color || COLORS.RAM_FREE, block.isOccupied ? 0.8 : 0.3);
-    block.graphics.lineStyle(2, 0xffffff, block.isOccupied ? 0.8 : 0.4);
-    block.graphics.fillRoundedRect(0, 0, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight, 5);
-    block.graphics.strokeRoundedRect(0, 0, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight, 5);
+    // Load vehicle sprites
+    this.load.image('bike1-coming', `${assetPath}bike1-coming.png`);
+    this.load.image('bike1-parked', `${assetPath}bike1-parked.png`);
+    this.load.image('bike2-coming', `${assetPath}bike2-coming.png`);
+    this.load.image('bike2-parked', `${assetPath}bike2-parked.png`);
+    this.load.image('orange-car-coming', `${assetPath}orange-car-coming.png`);
+    this.load.image('orange-car-parked', `${assetPath}orange-car-parked.png`);
+    this.load.image('orange2-car-coming', `${assetPath}orange2-car-coming.png`);
+    this.load.image('orange2-car-parked', `${assetPath}orange2-car-parked.png`);
+    this.load.image('truck1-coming', `${assetPath}truck1-coming.png`);
+    this.load.image('truck2-coming', `${assetPath}truck2-coming.png`);
+    this.load.image('truck-parked', `${assetPath}truck-parked.png`);
+  }
 
-    // Make free blocks interactive for drop zones
-    if (!block.isOccupied) {
-      block.graphics.setInteractive(
-        new Phaser.Geom.Rectangle(0, 0, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight),
-        Phaser.Geom.Rectangle.Contains
-      );
-      block.graphics.setData('memoryBlock', block);
-      block.graphics.setData('blockIndex', index);
-    }
-
-    // Create block label
-    const labelText = block.isOccupied ?
-      `${block.processId}\n${block.size}MB` :
-      `Free\n${block.size}MB`;
+  create() {
+    const { width, height } = this.sys.game.canvas;
     
-    block.label = scene.add.text(
-      ramX + 10 + GAME_CONFIG.RAM_BLOCK_WIDTH / 2,
-      currentY + blockHeight / 2,
-      labelText, {
-      fontSize: '12px',
-      color: block.isOccupied ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
-      fontFamily: 'Arial, sans-serif',
-      align: 'center',
-    }).setOrigin(0.5);
-
-    currentY += blockHeight + 5;
-  });
-}
-
-// ===== PROCESS QUEUE =====
-function createProcessQueue() {
-  const width = scene.scale.width;
-  const height = scene.scale.height;
-  const queueX = width * 0.7;
-  const queueStartY = height * 0.25;
-
-  // Queue title
-  scene.add.text(queueX, queueStartY - 60, 'Process Queue', {
-    fontSize: '18px',
-    color: COLORS.TEXT_PRIMARY,
-    fontFamily: 'Arial, sans-serif',
-    fontStyle: 'bold',
-  }).setOrigin(0.5);
-
-  // Queue instruction
-  scene.add.text(queueX, queueStartY - 35, 'Drag processes to RAM blocks\n(First available fit only!)', {
-    fontSize: '14px',
-    color: COLORS.TEXT_SECONDARY,
-    fontFamily: 'Arial, sans-serif',
-    align: 'center',
-  }).setOrigin(0.5);
-
-  // Create process blocks
-  gameState.processQueue.forEach((process, index) => {
-    const yPos = queueStartY + index * (GAME_CONFIG.PROCESS_BLOCK_HEIGHT + 15);
+    // Create dual background
+    this.createBackground(width, height);
     
-    // Process graphics - Position the graphics object, then draw at (0,0)
-    process.graphics = scene.add.graphics();
-    process.graphics.x = queueX - GAME_CONFIG.PROCESS_BLOCK_WIDTH / 2;
-    process.graphics.y = yPos;
+    // Create UI
+    this.createUI(width, height);
     
-    process.graphics.fillStyle(process.color, 0.9);
-    process.graphics.lineStyle(2, 0xffffff, 1);
-    process.graphics.fillRoundedRect(
-      0, 0,  // Draw at (0,0) relative to graphics object
-      GAME_CONFIG.PROCESS_BLOCK_WIDTH,
-      GAME_CONFIG.PROCESS_BLOCK_HEIGHT,
-      8
-    );
-    process.graphics.strokeRoundedRect(
-      0, 0,  // Draw at (0,0) relative to graphics object
-      GAME_CONFIG.PROCESS_BLOCK_WIDTH,
-      GAME_CONFIG.PROCESS_BLOCK_HEIGHT,
-      8
-    );
+    // Show intro
+    this.showIntroScenario(width, height);
+  }
 
-    // Process label - Position absolutely
-    process.label = scene.add.text(queueX, yPos + GAME_CONFIG.PROCESS_BLOCK_HEIGHT / 2, `${process.name}\n${process.size}MB`, {
-      fontSize: '12px',
-      color: COLORS.TEXT_PRIMARY,
-      fontFamily: 'Arial, sans-serif',
-      align: 'center',
+  private createBackground(width: number, height: number) {
+    // Background 1 (left half - parking area)
+    const bg1 = this.add.image(0, height / 2, 'bg-1');
+    bg1.setOrigin(0, 0.5);
+    const scale1X = (width / 2) / bg1.width;
+    const scale1Y = height / bg1.height;
+    const scale1 = Math.max(scale1X, scale1Y);
+    bg1.setScale(scale1);
+    bg1.setDepth(-100);
+
+    // Background 2 (right half - road area)
+    const bg2 = this.add.image(width / 2, height / 2, 'bg-2');
+    bg2.setOrigin(0, 0.5);
+    const scale2X = (width / 2) / bg2.width;
+    const scale2Y = height / bg2.height;
+    const scale2 = Math.max(scale2X, scale2Y);
+    bg2.setScale(scale2);
+    bg2.setDepth(-100);
+  }
+
+  private createUI(width: number, height: number) {
+    // Title with modern styling
+    const titleText = this.add.text(width / 2, 45, '🅿️ FIRST FIT Parking Allocator', {
+      fontSize: '36px',
+      color: '#00E5FF',
       fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 5,
+      backgroundColor: '#00000099',
+      padding: { x: 20, y: 10 },
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setOrigin(0.5);
+    titleText.setDepth(200);
 
-    // Make draggable only if it's the next process in queue
-    if (index === gameState.currentProcessIndex) {
-      makeProcessDraggable(process);
-    } else {
-      // Dim non-current processes
-      process.graphics!.setAlpha(0.5);
-      process.label!.setAlpha(0.5);
-    }
-  });
-}
+    // Phase indicator
+    this.phaseText = this.add.text(width / 2, 95, 'Phase: Intro', {
+      fontSize: '20px',
+      color: '#00FF88',
+      fontStyle: '600',
+      stroke: '#000000',
+      strokeThickness: 3,
+      backgroundColor: '#00000099',
+      padding: { x: 12, y: 6 },
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5);
+    this.phaseText.setDepth(200);
 
-// ===== DRAG AND DROP FUNCTIONALITY =====
-function makeProcessDraggable(process: Process) {
-  if (!process.graphics || !process.label || !scene.input) return;
+    // Score
+    this.scoreText = this.add.text(width - 200, 100, 'Score: 0', {
+      fontSize: '20px',
+      color: '#FFD700',
+      fontStyle: '600',
+      stroke: '#000000',
+      strokeThickness: 3,
+      backgroundColor: '#00000099',
+      padding: { x: 12, y: 6 },
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    });
+    this.scoreText.setDepth(200);
 
-  console.log('Making process draggable:', process.id);
+    // Fragmentation
+    this.fragmentationText = this.add.text(200, 100, 'Fragmentation: 0%', {
+      fontSize: '20px',
+      color: '#FF6B6B',
+      fontStyle: '600',
+      stroke: '#000000',
+      strokeThickness: 3,
+      backgroundColor: '#00000099',
+      padding: { x: 12, y: 6 },
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    });
+    this.fragmentationText.setDepth(200);
 
-  try {
-    // Set up interactive area with proper relative coordinates
-    process.graphics.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, GAME_CONFIG.PROCESS_BLOCK_WIDTH, GAME_CONFIG.PROCESS_BLOCK_HEIGHT),
+    // Efficiency
+    this.efficiencyText = this.add.text(200, 145, 'Efficiency: 100%', {
+      fontSize: '20px',
+      color: '#00E5FF',
+      fontStyle: '600',
+      stroke: '#000000',
+      strokeThickness: 3,
+      backgroundColor: '#00000099',
+      padding: { x: 12, y: 6 },
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    });
+    this.efficiencyText.setDepth(200);
+
+    // Instruction text
+    this.instructionText = this.add.text(width / 2, height - 50, '', {
+      fontSize: '22px',
+      color: '#FFFFFF',
+      fontStyle: '600',
+      stroke: '#000000',
+      strokeThickness: 4,
+      align: 'center',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5);
+    this.instructionText.setDepth(200);
+  }
+
+  private showIntroScenario(width: number, height: number) {
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.88);
+    overlay.fillRect(0, 0, width, height);
+    overlay.setDepth(300);
+
+    const boxWidth = 850;
+    const boxHeight = 620;
+    const boxX = width / 2 - boxWidth / 2;
+    const boxY = height / 2 - boxHeight / 2;
+
+    const scenarioBox = this.add.graphics();
+    scenarioBox.fillStyle(0x0a0e27, 0.98);
+    scenarioBox.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 25);
+    scenarioBox.lineStyle(5, 0x00E5FF, 1);
+    scenarioBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 25);
+    scenarioBox.setDepth(301);
+
+    const title = this.add.text(width / 2, boxY + 55, '🅿️ FIRST FIT PARKING ALLOCATOR', {
+      fontSize: '40px',
+      color: '#00E5FF',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(302);
+
+    const subtitle = this.add.text(width / 2, boxY + 110, 'Memory Management - First Fit Algorithm', {
+      fontSize: '22px',
+      color: '#FFFFFF',
+      fontStyle: '600',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(302);
+
+    const scenarioText = `📚 LEARNING OBJECTIVES:
+• Understand First Fit memory allocation
+• Visualize FIFO allocation strategy
+• Learn about internal fragmentation
+• Calculate memory efficiency
+
+🎮 GAMEPLAY:
+1️⃣ Vehicles arrive on the road (right side)
+2️⃣ Click a vehicle on the road to select it
+3️⃣ Click a parking slot (P area) to park
+4️⃣ FIRST FIT RULE: Park in the FIRST slot that fits!
+5️⃣ Wrong slot = penalty & fragmentation increases
+
+⚠️ FIRST FIT RULES:
+• Check slots from top to bottom (S1, S2, S3...)
+• Park in the FIRST slot that can fit the vehicle
+• Don't skip slots even if a better fit exists later
+• Small vehicle in large slot = wasted space!
+
+🎯 METRICS TO TRACK:
+• Fragmentation % = Wasted Space / Total Allocated
+• Efficiency = 100% - Fragmentation %
+• Score = Correct allocations - Penalties
+
+💡 TIP: First Fit is fast (O(n)) but can leave
+   unusable gaps. Watch the fragmentation!`;
+
+    const text = this.add.text(width / 2, boxY + 360, scenarioText, {
+      fontSize: '16px',
+      color: '#E0E0E0',
+      fontStyle: 'normal',
+      align: 'center',
+      lineSpacing: 3,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(302);
+
+    // Start button
+    const buttonWidth = 280;
+    const buttonHeight = 65;
+    const buttonX = width / 2 - buttonWidth / 2;
+    const buttonY = boxY + boxHeight - 75;
+
+    const startButton = this.add.graphics();
+    startButton.fillGradientStyle(0x00E5FF, 0x00E5FF, 0x00A8CC, 0x00A8CC, 1);
+    startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
+    startButton.lineStyle(4, 0x00FFFF, 1);
+    startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
+    startButton.setDepth(302);
+
+    const buttonText = this.add.text(width / 2, buttonY + 32, '🚀 START PARKING', {
+      fontSize: '28px',
+      color: '#000000',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(303);
+
+    startButton.setInteractive(
+      new Phaser.Geom.Rectangle(buttonX, buttonY, buttonWidth, buttonHeight),
       Phaser.Geom.Rectangle.Contains
     );
-    
-    // Enable dragging after setting interactive
-    scene.input.setDraggable(process.graphics);
-    
-    // Set up pointer events directly on the graphics
-    process.graphics.on('pointerover', () => {
-      process.graphics!.setAlpha(0.9);
-      scene.sys.canvas.style.cursor = 'pointer';
-    });
-    
-    process.graphics.on('pointerout', () => {
-      if (!gameObjects.draggedProcess || gameObjects.draggedProcess.graphics !== process.graphics) {
-        process.graphics!.setAlpha(1);
-      }
-      scene.sys.canvas.style.cursor = 'default';
-    });
-    
-    process.graphics.on('pointerdown', () => {
-      console.log('Process clicked:', process.id);
-      gameObjects.draggedProcess = { graphics: process.graphics!, label: process.label! };
-      process.graphics!.setDepth(100);
-      process.label!.setDepth(101);
-      process.graphics!.setAlpha(0.8);
-      process.label!.setAlpha(0.8);
-      
-      if (gameObjects.feedbackText) {
-        gameObjects.feedbackText.setText('');
-      }
+
+    startButton.on('pointerover', () => {
+      startButton.clear();
+      startButton.fillGradientStyle(0x00FFFF, 0x00FFFF, 0x00CCEE, 0x00CCEE, 1);
+      startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
+      startButton.lineStyle(4, 0x00FFFF, 1);
+      startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
+      this.sys.canvas.style.cursor = 'pointer';
     });
 
-    // Handle the drag events
-    process.graphics.on('drag', (pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
-      console.log('Dragging process:', process.id, dragX, dragY);
-      
-      // Update positions - dragX and dragY are world coordinates from pointer
-      process.graphics!.x = dragX - GAME_CONFIG.PROCESS_BLOCK_WIDTH / 2;
-      process.graphics!.y = dragY - GAME_CONFIG.PROCESS_BLOCK_HEIGHT / 2;
-      process.label!.x = dragX;
-      process.label!.y = dragY;
-      
-      // Check for hover over memory blocks using world coordinates
-      checkMemoryBlockHover(dragX, dragY);
+    startButton.on('pointerout', () => {
+      startButton.clear();
+      startButton.fillGradientStyle(0x00E5FF, 0x00E5FF, 0x00A8CC, 0x00A8CC, 1);
+      startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
+      startButton.lineStyle(4, 0x00FFFF, 1);
+      startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
+      this.sys.canvas.style.cursor = 'default';
     });
 
-    process.graphics.on('dragend', (pointer: Phaser.Input.Pointer) => {
-      console.log('Drag ended for process:', process.id, pointer.x, pointer.y);
+    startButton.on('pointerdown', () => {
+      overlay.destroy();
+      scenarioBox.destroy();
+      title.destroy();
+      subtitle.destroy();
+      text.destroy();
+      startButton.destroy();
+      buttonText.destroy();
       
-      // Use the drag end position
-      const targetBlock = findTargetMemoryBlock(pointer.x, pointer.y);
-      handleProcessDrop(process, targetBlock);
-      
-      gameObjects.draggedProcess = null;
-      clearHoverEffects();
+      this.startParkingPhase();
     });
+  }
+
+  private startParkingPhase() {
+    this.gamePhase = 'parking';
+    this.phaseText.setText('Phase: Parking (First Fit)');
+    this.instructionText.setText('🚗 Click the vehicle on the road, then click the FIRST available slot!');
     
-  } catch (error) {
-    console.warn('Error making process draggable:', error);
-  }
-}
-
-function setupDragAndDrop() {
-  // This function is now simplified as individual objects handle their own drag events
-  console.log('Drag and drop setup complete');
-}
-
-// ===== HELPER FUNCTIONS =====
-function findProcessByGraphics(graphics: Phaser.GameObjects.Graphics): Process | null {
-  if (!graphics) return null;
-  return gameState.processQueue.find(p => p.graphics === graphics) || null;
-}
-
-function findProcessByLabel(label: Phaser.GameObjects.Text): Process | null {
-  if (!label) return null;
-  return gameState.processQueue.find(p => p.label === label) || null;
-}
-
-function checkMemoryBlockHover(x: number, y: number) {
-  clearHoverEffects();
-  
-  const width = scene.scale.width;
-  const height = scene.scale.height;
-  const ramHeight = height * 0.7;
-  const ramX = width * 0.1;
-  
-  const hoveredBlock = gameState.memoryBlocks.find(block => {
-    if (block.isOccupied || !block.graphics) return false;
-    const yPos = calculateBlockYPosition(block);
-    const blockHeight = Math.max((block.size / GAME_CONFIG.RAM_TOTAL_SIZE) * (ramHeight - 20), GAME_CONFIG.RAM_BLOCK_MIN_HEIGHT);
-    return x >= ramX + 10 && x <= ramX + 10 + GAME_CONFIG.RAM_BLOCK_WIDTH &&
-           y >= yPos && y <= yPos + blockHeight;
-  });
-
-  if (hoveredBlock) {
-    gameObjects.hoverBlock = hoveredBlock;
-    const yPos = calculateBlockYPosition(hoveredBlock);
-    const blockHeight = Math.max((hoveredBlock.size / GAME_CONFIG.RAM_TOTAL_SIZE) * (ramHeight - 20), GAME_CONFIG.RAM_BLOCK_MIN_HEIGHT);
+    // Create parking slots on the left (parking area)
+    this.createParkingSlots();
     
-    hoveredBlock.graphics.clear();
-    hoveredBlock.graphics.fillStyle(COLORS.RAM_HOVER, 0.6);
-    hoveredBlock.graphics.lineStyle(2, 0xffffff, 1);
-    hoveredBlock.graphics.fillRoundedRect(0, 0, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight, 5);
-    hoveredBlock.graphics.strokeRoundedRect(0, 0, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight, 5);
-  }
-}
-
-function clearHoverEffects() {
-  if (gameObjects.hoverBlock) {
-    const block = gameObjects.hoverBlock;
-    const width = scene.scale.width;
-    const height = scene.scale.height;
-    const ramHeight = height * 0.7;
-    const ramX = width * 0.1;
-    
-    block.graphics.clear();
-    const blockHeight = Math.max((block.size / GAME_CONFIG.RAM_TOTAL_SIZE) * (ramHeight - 20), GAME_CONFIG.RAM_BLOCK_MIN_HEIGHT);
-    const yPos = calculateBlockYPosition(block);
-    
-    block.graphics.fillStyle(COLORS.RAM_FREE, 0.3);
-    block.graphics.lineStyle(2, 0xffffff, 0.4);
-    block.graphics.fillRoundedRect(0, 0, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight, 5);
-    block.graphics.strokeRoundedRect(0, 0, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight, 5);
-    
-    gameObjects.hoverBlock = null;
-  }
-}
-
-function findTargetMemoryBlock(x: number, y: number): MemoryBlock | null {
-  const width = scene.scale.width;
-  const height = scene.scale.height;
-  const ramHeight = height * 0.7;
-  const ramX = width * 0.1;
-  
-  return gameState.memoryBlocks.find(block => {
-    if (block.isOccupied || !block.graphics) return false;
-    const yPos = calculateBlockYPosition(block);
-    const blockHeight = Math.max((block.size / GAME_CONFIG.RAM_TOTAL_SIZE) * (ramHeight - 20), GAME_CONFIG.RAM_BLOCK_MIN_HEIGHT);
-    return x >= ramX + 10 && x <= ramX + 10 + GAME_CONFIG.RAM_BLOCK_WIDTH &&
-           y >= yPos && y <= yPos + blockHeight;
-  }) || null;
-}
-
-function calculateBlockYPosition(targetBlock: MemoryBlock): number {
-  const height = scene.scale.height;
-  const ramHeight = height * 0.7;
-  const ramY = height * 0.15;
-  
-  let yPos = ramY + 10;
-  for (const block of gameState.memoryBlocks) {
-    if (block === targetBlock) break;
-    const blockHeight = Math.max((block.size / GAME_CONFIG.RAM_TOTAL_SIZE) * (ramHeight - 20), GAME_CONFIG.RAM_BLOCK_MIN_HEIGHT);
-    yPos += blockHeight + 5;
-  }
-  return yPos;
-}
-
-// ===== PROCESS ALLOCATION LOGIC =====
-function handleProcessDrop(process: Process, targetBlock: MemoryBlock | null) {
-  if (!targetBlock) {
-    resetProcessPosition(process);
-    showFeedback("Drop the process on a free memory block!", COLORS.ERROR);
-    playErrorSound();
-    return;
+    // Start bringing vehicles onto the road
+    this.bringNextVehicle();
   }
 
-  // Check if this follows First Fit strategy
-  const firstFitBlock = findFirstFitBlock(process.size);
-  
-  if (!firstFitBlock) {
-    resetProcessPosition(process);
-    showFeedback(`No memory block available for ${process.name} (${process.size}MB)`, COLORS.ERROR);
-    playErrorSound();
-    return;
+  private createParkingSlots() {
+    this.PARKING_SLOTS_CONFIG.forEach((config, index) => {
+      const slot: ParkingSlot = {
+        id: `slot-${config.slotNumber}`,
+        slotNumber: config.slotNumber,
+        size: config.size,
+        x: config.x,
+        y: config.y,
+        width: 80,
+        height: 80,
+        occupied: false
+      };
+
+      // Create interactive area around the P mark
+      const slotBg = this.add.graphics();
+      slotBg.lineStyle(4, 0x00E5FF, 0.8);
+      slotBg.strokeCircle(slot.x, slot.y, 40);
+      slotBg.fillStyle(0x00E5FF, 0.1);
+      slotBg.fillCircle(slot.x, slot.y, 40);
+      slotBg.setDepth(5);
+
+      // Slot label below the P mark
+      const slotLabel = this.add.text(slot.x, slot.y + 50, `S${config.slotNumber}\n[${config.size} units]`, {
+        fontSize: '16px',
+        color: '#00E5FF',
+        fontStyle: '600',
+        stroke: '#000000',
+        strokeThickness: 2,
+        align: 'center',
+        fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+      }).setOrigin(0.5);
+      slotLabel.setDepth(6);
+
+      // Make slot interactive
+      const hitArea = new Phaser.Geom.Circle(slot.x, slot.y, 40);
+      slotBg.setInteractive(hitArea, Phaser.Geom.Circle.Contains);
+      
+      slotBg.on('pointerover', () => {
+        if (!slot.occupied && this.selectedVehicle) {
+          slotBg.clear();
+          slotBg.lineStyle(4, 0xFFD700, 1);
+          slotBg.strokeCircle(slot.x, slot.y, 40);
+          slotBg.fillStyle(0xFFD700, 0.3);
+          slotBg.fillCircle(slot.x, slot.y, 40);
+          this.sys.canvas.style.cursor = 'pointer';
+        }
+      });
+
+      slotBg.on('pointerout', () => {
+        if (!slot.occupied) {
+          slotBg.clear();
+          slotBg.lineStyle(4, 0x00E5FF, 0.8);
+          slotBg.strokeCircle(slot.x, slot.y, 40);
+          slotBg.fillStyle(0x00E5FF, 0.1);
+          slotBg.fillCircle(slot.x, slot.y, 40);
+        }
+        this.sys.canvas.style.cursor = 'default';
+      });
+
+      slotBg.on('pointerdown', () => {
+        if (this.selectedVehicle && !slot.occupied) {
+          this.attemptParkVehicle(this.selectedVehicle, slot);
+        }
+      });
+
+      slot.slotBg = slotBg;
+      slot.slotLabel = slotLabel;
+      
+      this.parkingSlots.push(slot);
+      this.totalSlotSpace += slot.size;
+    });
   }
 
-  if (targetBlock !== firstFitBlock) {
-    resetProcessPosition(process);
-    showFeedback(`Wrong! First Fit chooses the FIRST available block. Try the block at position ${firstFitBlock.start}MB`, COLORS.ERROR);
-    playErrorSound();
-    return;
-  }
-
-  if (targetBlock.size < process.size) {
-    resetProcessPosition(process);
-    showFeedback(`${process.name} (${process.size}MB) won't fit in ${targetBlock.size}MB block!`, COLORS.ERROR);
-    playErrorSound();
-    return;
-  }
-
-  // Successful allocation
-  allocateProcess(process, targetBlock);
-}
-
-function findFirstFitBlock(size: number): MemoryBlock | null {
-  for (const block of gameState.memoryBlocks) {
-    if (!block.isOccupied && block.size >= size) {
-      return block;
-    }
-  }
-  return null;
-}
-
-function allocateProcess(process: Process, block: MemoryBlock) {
-  // Update block
-  block.isOccupied = true;
-  block.processId = process.id;
-  block.color = process.color;
-
-  // Update visuals
-  updateBlockVisuals(block);
-  
-  // Remove process from queue visually
-  if (process.graphics) process.graphics.setVisible(false);
-  if (process.label) process.label.setVisible(false);
-  
-  // Mark as allocated
-  process.allocated = true;
-  gameState.allocatedProcesses++;
-  gameState.score += 100;
-  
-  // Move to next process
-  gameState.currentProcessIndex++;
-  updateProcessQueue();
-  
-  // Show success feedback
-  showSuccessEffect(block);
-  showFeedback(`Great! ${process.name} allocated using First Fit strategy. +100 points!`, COLORS.SUCCESS);
-  playSuccessSound();
-  
-  // Update score display
-  if (gameObjects.scoreText) {
-    gameObjects.scoreText.setText(`Score: ${gameState.score}`);
-  }
-
-  // Handle internal fragmentation (split block if necessary)
-  if (block.size > process.size) {
-    splitMemoryBlock(block, process.size);
-  }
-
-  // Check for level completion
-  checkLevelCompletion();
-}
-
-function updateBlockVisuals(block: MemoryBlock) {
-  if (!block.graphics) return;
-  
-  const width = scene.scale.width;
-  const height = scene.scale.height;
-  const ramHeight = height * 0.7;
-  const ramX = width * 0.1;
-  
-  const blockHeight = Math.max((block.size / GAME_CONFIG.RAM_TOTAL_SIZE) * (ramHeight - 20), GAME_CONFIG.RAM_BLOCK_MIN_HEIGHT);
-  const yPos = calculateBlockYPosition(block);
-  
-  block.graphics.clear();
-  block.graphics.fillStyle(block.color || COLORS.RAM_USED, 0.8);
-  block.graphics.lineStyle(2, 0xffffff, 0.8);
-  block.graphics.fillRoundedRect(0, 0, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight, 5);
-  block.graphics.strokeRoundedRect(0, 0, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight, 5);
-
-  // Update label
-  if (block.label) {
-    block.label.setText(`${block.processId}\n${block.size}MB`);
-    block.label.setColor(COLORS.TEXT_PRIMARY);
-  }
-}
-
-function splitMemoryBlock(block: MemoryBlock, allocatedSize: number) {
-  const remainingSize = block.size - allocatedSize;
-  if (remainingSize <= 0) return;
-
-  // Update current block
-  block.size = allocatedSize;
-  
-  // Create new free block for remaining space
-  const newBlock: MemoryBlock = {
-    start: block.start + allocatedSize,
-    size: remainingSize,
-    isOccupied: false,
-    color: COLORS.RAM_FREE,
-    graphics: scene.add.graphics(),
-    label: scene.add.text(0, 0, '', { fontSize: '12px', color: COLORS.TEXT_SECONDARY, fontFamily: 'Arial, sans-serif', align: 'center' }),
-  };
-
-  // Insert new block after current block
-  const blockIndex = gameState.memoryBlocks.indexOf(block);
-  gameState.memoryBlocks.splice(blockIndex + 1, 0, newBlock);
-  
-  // Recreate RAM visualization with new block structure
-  recreateRAMVisualization();
-}
-
-function recreateRAMVisualization() {
-  // Clear existing visuals
-  gameState.memoryBlocks.forEach(block => {
-    if (block.graphics) block.graphics.destroy();
-    if (block.label) block.label.destroy();
-  });
-
-  const width = scene.scale.width;
-  const height = scene.scale.height;
-  const ramHeight = height * 0.7;
-  const ramX = width * 0.1;
-  const ramY = height * 0.15;
-
-  // Recreate all blocks
-  let currentY = ramY + 10;
-  gameState.memoryBlocks.forEach((block, index) => {
-    const blockHeight = Math.max((block.size / GAME_CONFIG.RAM_TOTAL_SIZE) * (ramHeight - 20), GAME_CONFIG.RAM_BLOCK_MIN_HEIGHT);
-    
-    // Create block graphics - Position the graphics object, then draw at (0,0)
-    block.graphics = scene.add.graphics();
-    block.graphics.x = ramX + 10;
-    block.graphics.y = currentY;
-    
-    block.graphics.fillStyle(block.color || COLORS.RAM_FREE, block.isOccupied ? 0.8 : 0.3);
-    block.graphics.lineStyle(2, 0xffffff, block.isOccupied ? 0.8 : 0.4);
-    block.graphics.fillRoundedRect(0, 0, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight, 5);
-    block.graphics.strokeRoundedRect(0, 0, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight, 5);
-
-    // Make free blocks interactive for drop zones
-    if (!block.isOccupied) {
-      block.graphics.setInteractive(
-        new Phaser.Geom.Rectangle(0, 0, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight),
-        Phaser.Geom.Rectangle.Contains
-      );
-      block.graphics.setData('memoryBlock', block);
-      block.graphics.setData('blockIndex', index);
+  private bringNextVehicle() {
+    if (this.currentVehicleIndex >= this.VEHICLES_CONFIG.length) {
+      return; // All vehicles have arrived
     }
 
-    // Create block label
-    const labelText = block.isOccupied ?
-      `${block.processId}\n${block.size}MB` :
-      `Free\n${block.size}MB`;
+    const vehicleConfig = this.VEHICLES_CONFIG[this.currentVehicleIndex];
+    const config = this.VEHICLE_CONFIGS[vehicleConfig.type];
     
-    block.label = scene.add.text(
-      ramX + 10 + GAME_CONFIG.RAM_BLOCK_WIDTH / 2,
-      currentY + blockHeight / 2,
-      labelText, {
-      fontSize: '12px',
-      color: block.isOccupied ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
-      fontFamily: 'Arial, sans-serif',
+    const vehicle: Vehicle = {
+      id: vehicleConfig.id,
+      type: vehicleConfig.type,
+      size: config.size,
+      name: config.name,
+      isOnRoad: true,
+      isParked: false,
+      roadY: this.ROAD_Y // Use the road Y position (ground level)
+    };
+
+    // Create sprite starting from far right (off-screen) at ground level
+    const sprite = this.add.sprite(this.ROAD_END_X + 200, this.ROAD_Y, config.comingAsset);
+    sprite.setScale(config.scale);
+    sprite.setDepth(50);
+    sprite.setInteractive({ useHandCursor: true });
+    sprite.setFlipX(true); // Face left (coming towards parking)
+
+    // Size label above the vehicle
+    const sizeLabel = this.add.text(this.ROAD_END_X + 200, this.ROAD_Y - 50, `${config.emoji} ${config.name}\n${config.size} units`, {
+      fontSize: '18px',
+      color: '#FFFFFF',
+      fontStyle: '600',
+      stroke: '#000000',
+      strokeThickness: 3,
       align: 'center',
+      backgroundColor: '#00000099',
+      padding: { x: 10, y: 6 },
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setOrigin(0.5);
+    sizeLabel.setDepth(51);
 
-    currentY += blockHeight + 5;
-  });
-}
-
-// ===== PROCESS QUEUE MANAGEMENT =====
-function updateProcessQueue() {
-  gameState.processQueue.forEach((process, index) => {
-    try {
-      if (index === gameState.currentProcessIndex && !process.allocated && process.graphics && process.label) {
-        // Make current process draggable
-        process.graphics.setAlpha(1);
-        process.label.setAlpha(1);
-        makeProcessDraggable(process);
-      } else if (!process.allocated && process.graphics && process.label) {
-        // Dim non-current processes
-        process.graphics.setAlpha(0.5);
-        process.label.setAlpha(0.5);
-        if (process.graphics.input && process.graphics.input.enabled) {
-          process.graphics.disableInteractive();
-        }
-        if (process.label.input && process.label.input.enabled) {
-          process.label.disableInteractive();
-        }
+    sprite.on('pointerdown', () => {
+      if (vehicle.isOnRoad && !vehicle.isParked) {
+        this.selectVehicle(vehicle);
       }
-    } catch (error) {
-      console.warn('Error updating process queue:', error);
-    }
-  });
-}
+    });
 
-function resetProcessPosition(process: Process) {
-  if (!process.graphics || !process.label) return;
-  
-  const width = scene.scale.width;
-  const height = scene.scale.height;
-  const queueX = width * 0.7;
-  const queueStartY = height * 0.25;
-  
-  const index = gameState.processQueue.indexOf(process);
-  const yPos = queueStartY + index * (GAME_CONFIG.PROCESS_BLOCK_HEIGHT + 15);
-  
-  // Animate back to original position
-  scene.tweens.add({
-    targets: [process.graphics, process.label],
-    x: process.graphics === gameObjects.draggedProcess?.graphics ?
-        queueX - GAME_CONFIG.PROCESS_BLOCK_WIDTH / 2 : queueX,
-    y: process.graphics === gameObjects.draggedProcess?.graphics ? yPos : yPos + GAME_CONFIG.PROCESS_BLOCK_HEIGHT / 2,
-    duration: 200,
-    ease: 'Power2',
-    onComplete: () => {
-      if (process.graphics && process.label) {
-        process.graphics.setAlpha(1);
-        process.label.setAlpha(1);
-        process.graphics.setDepth(1);
-        process.label.setDepth(2);
+    sprite.on('pointerover', () => {
+      if (vehicle.isOnRoad && !vehicle.isParked) {
+        this.sys.canvas.style.cursor = 'pointer';
       }
+    });
+
+    sprite.on('pointerout', () => {
+      this.sys.canvas.style.cursor = 'default';
+    });
+
+    vehicle.sprite = sprite;
+    vehicle.sizeLabel = sizeLabel;
+    
+    this.vehicles.push(vehicle);
+
+    // Animate vehicle coming onto the road (moving left) at ground level
+    this.tweens.add({
+      targets: [sprite, sizeLabel],
+      x: this.ROAD_START_X + 100,
+      duration: 2500,
+      ease: 'Power2',
+      onComplete: () => {
+        // Vehicle has arrived, ready to be parked
+        this.instructionText.setText(`🚗 ${config.name} arrived! Click it, then click the FIRST slot that fits!`);
+      }
+    });
+
+    this.currentVehicleIndex++;
+  }
+
+  private selectVehicle(vehicle: Vehicle) {
+    // Deselect previous
+    if (this.selectedVehicle && this.selectedVehicle.sprite) {
+      this.selectedVehicle.sprite.clearTint();
     }
-  });
-}
 
-// ===== VISUAL EFFECTS =====
-function showSuccessEffect(block: MemoryBlock) {
-  if (!block.graphics) return;
-  
-  const width = scene.scale.width;
-  const height = scene.scale.height;
-  const ramHeight = height * 0.7;
-  const ramX = width * 0.1;
-  
-  // Create success flash effect
-  const yPos = calculateBlockYPosition(block);
-  const blockHeight = Math.max((block.size / GAME_CONFIG.RAM_TOTAL_SIZE) * (ramHeight - 20), GAME_CONFIG.RAM_BLOCK_MIN_HEIGHT);
-  
-  const flashOverlay = scene.add.graphics();
-  flashOverlay.fillStyle(COLORS.SUCCESS, 0.6);
-  flashOverlay.fillRect(ramX + 10, yPos, GAME_CONFIG.RAM_BLOCK_WIDTH, blockHeight);
-  flashOverlay.setDepth(50);
-  
-  // Animate flash with pulse effect
-  scene.tweens.add({
-    targets: flashOverlay,
-    alpha: 0,
-    scaleX: 1.1,
-    scaleY: 1.1,
-    duration: GAME_CONFIG.SUCCESS_FLASH_DURATION,
-    ease: 'Power2',
-    onComplete: () => flashOverlay.destroy()
-  });
-  
-  // Add floating +100 text effect
-  const scorePopup = scene.add.text(ramX + 10 + GAME_CONFIG.RAM_BLOCK_WIDTH / 2, yPos, '+100', {
-    fontSize: '18px',
-    color: '#38a169',
-    fontFamily: 'Arial, sans-serif',
-    fontStyle: 'bold',
-  }).setOrigin(0.5).setDepth(51);
-  
-  scene.tweens.add({
-    targets: scorePopup,
-    y: yPos - 30,
-    alpha: 0,
-    duration: 800,
-    ease: 'Power2',
-    onComplete: () => scorePopup.destroy()
-  });
-}
+    this.selectedVehicle = vehicle;
+    
+    if (vehicle.sprite) {
+      vehicle.sprite.setTint(0xFFD700);
+    }
 
-function showFeedback(message: string, color: number) {
-  if (!gameObjects.feedbackText) return;
-  
-  gameObjects.feedbackText.setText(message);
-  gameObjects.feedbackText.setColor(color === COLORS.SUCCESS ? '#38a169' : '#e53e3e');
-  
-  // Fade out after delay
-  scene.time.delayedCall(3000, () => {
-    if (gameObjects.feedbackText) {
-      scene.tweens.add({
-        targets: gameObjects.feedbackText,
-        alpha: 0,
-        duration: 1000,
+    this.instructionText.setText(`✅ ${vehicle.name} selected (${vehicle.size} units) → Click the FIRST slot that fits!`);
+  }
+
+  private attemptParkVehicle(vehicle: Vehicle, slot: ParkingSlot) {
+    // Check if slot can fit the vehicle
+    if (slot.size < vehicle.size) {
+      this.showError('❌ Slot too small! First Fit requires slot ≥ vehicle size!');
+      this.wrongAttempts++;
+      this.score -= 20;
+      this.updateScore();
+      this.cameras.main.shake(200, 0.006);
+      return;
+    }
+
+    // Check if this is the first fit (first available slot from top to bottom)
+    const firstFitSlot = this.parkingSlots.find(s => !s.occupied && s.size >= vehicle.size);
+
+    if (!firstFitSlot) {
+      this.showError('❌ No slot available for this vehicle!');
+      this.wrongAttempts++;
+      this.score -= 20;
+      this.updateScore();
+      this.cameras.main.shake(200, 0.006);
+      return;
+    }
+
+    if (slot.id !== firstFitSlot.id) {
+      this.showError(`❌ Wrong! First Fit = FIRST available slot that fits!\nS${firstFitSlot.slotNumber} comes before S${slot.slotNumber}!`);
+      this.wrongAttempts++;
+      this.score -= 20;
+      this.updateScore();
+      this.cameras.main.shake(200, 0.006);
+      return;
+    }
+
+    // Correct allocation!
+    this.parkVehicleInSlot(vehicle, slot);
+  }
+
+  private parkVehicleInSlot(vehicle: Vehicle, slot: ParkingSlot) {
+    slot.occupied = true;
+    slot.vehicle = vehicle;
+    vehicle.assignedSlot = slot;
+    vehicle.isOnRoad = false;
+
+    const config = this.VEHICLE_CONFIGS[vehicle.type];
+
+    // Animate vehicle from road to parking slot
+    if (vehicle.sprite && vehicle.sizeLabel) {
+      vehicle.sprite.disableInteractive();
+      vehicle.sprite.clearTint();
+
+      this.tweens.add({
+        targets: [vehicle.sprite, vehicle.sizeLabel],
+        x: slot.x,
+        y: slot.y,
+        duration: 1800,
+        ease: 'Power2',
+        onStart: () => {
+          // Flip sprite to face right when moving to parking
+          if (vehicle.sprite) {
+            vehicle.sprite.setFlipX(false);
+          }
+        },
         onComplete: () => {
-          if (gameObjects.feedbackText) {
-            gameObjects.feedbackText.setText('');
-            gameObjects.feedbackText.setAlpha(1);
+          // Change to parked sprite
+          if (vehicle.sprite) {
+            vehicle.sprite.setTexture(config.parkedAsset);
+            vehicle.isParked = true;
+            // Scale down when parked
+            vehicle.sprite.setScale(config.scale * 0.7);
+          }
+
+          // Hide size label when parked
+          if (vehicle.sizeLabel) {
+            vehicle.sizeLabel.setVisible(false);
+          }
+
+          // Update slot visual
+          this.updateSlotAfterParking(slot, vehicle);
+          
+          // Calculate metrics
+          this.calculateMetrics();
+          
+          // Award points
+          this.score += 100;
+          this.updateScore();
+          
+          // Show success message
+          const fragmentation = slot.size - vehicle.size;
+          if (fragmentation > 0) {
+            this.showMessage(`✅ Parked! But ${fragmentation} units wasted (fragmentation)`, '#FFA500');
+          } else {
+            this.showMessage(`✅ Perfect fit! No fragmentation! +100`, '#00FF88');
+          }
+
+          // Check if 4 vehicles are parked (end game after 4 successful parkings)
+          const parkedCount = this.vehicles.filter(v => v.isParked).length;
+          if (parkedCount >= 4) {
+            this.time.delayedCall(2500, () => {
+              this.showResults();
+            });
+          } else {
+            // Bring next vehicle
+            this.selectedVehicle = undefined;
+            this.time.delayedCall(1500, () => {
+              this.bringNextVehicle();
+            });
           }
         }
       });
     }
-  });
-}
 
-// ===== LEVEL COMPLETION =====
-function checkLevelCompletion() {
-  const unallocatedProcesses = gameState.processQueue.filter(p => !p.allocated);
-  
-  if (unallocatedProcesses.length === 0) {
-    // All processes allocated
-    gameState.gamePhase = 'completed';
-    showLevelComplete();
-  } else if (gameState.currentProcessIndex >= gameState.processQueue.length) {
-    // No more processes to try
-    gameState.gamePhase = 'completed';
-    showLevelComplete();
+    // Update slot background to green
+    if (slot.slotBg) {
+      slot.slotBg.clear();
+      slot.slotBg.lineStyle(4, 0x00FF88, 1);
+      slot.slotBg.strokeCircle(slot.x, slot.y, 40);
+      slot.slotBg.fillStyle(0x00FF88, 0.4);
+      slot.slotBg.fillCircle(slot.x, slot.y, 40);
+    }
+  }
+
+  private updateSlotAfterParking(slot: ParkingSlot, vehicle: Vehicle) {
+    const fragmentation = slot.size - vehicle.size;
+    
+    if (fragmentation > 0) {
+      // Show fragmentation warning below the slot
+      const fragmentationText = this.add.text(
+        slot.x,
+        slot.y + 80,
+        `⚠️ ${fragmentation} units wasted`,
+        {
+          fontSize: '14px',
+          color: '#FF0000',
+          fontStyle: 'bold',
+          align: 'center',
+          stroke: '#000000',
+          strokeThickness: 2,
+          fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+        }
+      ).setOrigin(0.5);
+      fragmentationText.setDepth(7);
+      slot.fragmentationText = fragmentationText;
+    }
+  }
+
+  private calculateMetrics() {
+    this.totalAllocated = 0;
+    this.totalFragmentation = 0;
+
+    this.parkingSlots.forEach(slot => {
+      if (slot.occupied && slot.vehicle) {
+        this.totalAllocated += slot.size;
+        const waste = slot.size - slot.vehicle.size;
+        this.totalFragmentation += waste;
+      }
+    });
+
+    const fragmentationPercent = this.totalAllocated > 0 
+      ? (this.totalFragmentation / this.totalAllocated) * 100 
+      : 0;
+    
+    const efficiency = 100 - fragmentationPercent;
+
+    this.fragmentationText.setText(`Fragmentation: ${fragmentationPercent.toFixed(1)}%`);
+    this.efficiencyText.setText(`Efficiency: ${efficiency.toFixed(1)}%`);
+  }
+
+  private updateScore() {
+    this.scoreText.setText(`Score: ${Math.max(0, this.score)}`);
+  }
+
+  private showError(message: string) {
+    const { width, height } = this.sys.game.canvas;
+    
+    const errorText = this.add.text(width / 2, height / 2, message, {
+      fontSize: '26px',
+      color: '#FF0000',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 5,
+      backgroundColor: '#000000DD',
+      padding: { x: 25, y: 18 },
+      align: 'center',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5);
+    errorText.setDepth(300);
+
+    this.tweens.add({
+      targets: errorText,
+      alpha: 0,
+      y: errorText.y - 60,
+      duration: 3500,
+      ease: 'Power2',
+      onComplete: () => errorText.destroy()
+    });
+  }
+
+  private showMessage(message: string, color: string) {
+    const { width, height } = this.sys.game.canvas;
+    
+    const messageText = this.add.text(width / 2, height / 2 - 120, message, {
+      fontSize: '24px',
+      color: color,
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 5,
+      backgroundColor: '#000000BB',
+      padding: { x: 20, y: 12 },
+      align: 'center',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5);
+    messageText.setDepth(300);
+
+    this.tweens.add({
+      targets: messageText,
+      alpha: 0,
+      y: messageText.y - 60,
+      duration: 2500,
+      ease: 'Power2',
+      onComplete: () => messageText.destroy()
+    });
+  }
+
+  private showResults() {
+    this.gamePhase = 'results';
+    this.phaseText.setText('Phase: Results & Analysis');
+    
+    const { width, height } = this.sys.game.canvas;
+
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.92);
+    overlay.fillRect(0, 0, width, height);
+    overlay.setDepth(400);
+
+    const boxWidth = 950;
+    const boxHeight = 680;
+    const boxX = width / 2 - boxWidth / 2;
+    const boxY = height / 2 - boxHeight / 2;
+
+    const box = this.add.graphics();
+    box.fillStyle(0x0a0e27, 0.98);
+    box.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 22);
+    box.lineStyle(5, 0x00E5FF, 1);
+    box.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 22);
+    box.setDepth(401);
+
+    // Title
+    this.add.text(width / 2, boxY + 55, '📊 FIRST FIT ALLOCATION RESULTS', {
+      fontSize: '40px',
+      color: '#00E5FF',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(402);
+
+    // Calculate final metrics
+    const fragmentationPercent = this.totalAllocated > 0 
+      ? (this.totalFragmentation / this.totalAllocated) * 100 
+      : 0;
+    const efficiency = 100 - fragmentationPercent;
+    const utilization = (this.totalAllocated / this.totalSlotSpace) * 100;
+
+    // Performance summary
+    const summaryY = boxY + 130;
+    this.add.text(boxX + 60, summaryY, '📈 PERFORMANCE METRICS', {
+      fontSize: '26px',
+      color: '#FFD700',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(402);
+
+    const metricsText = `Total Slot Space: ${this.totalSlotSpace} units
+Total Allocated: ${this.totalAllocated} units
+Wasted Space (Fragmentation): ${this.totalFragmentation} units
+Fragmentation %: ${fragmentationPercent.toFixed(2)}%
+Efficiency: ${efficiency.toFixed(2)}%
+Utilization: ${utilization.toFixed(2)}%
+Wrong Attempts: ${this.wrongAttempts}
+Final Score: ${Math.max(0, this.score)}`;
+
+    this.add.text(boxX + 60, summaryY + 50, metricsText, {
+      fontSize: '20px',
+      color: '#E0E0E0',
+      lineSpacing: 12,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(402);
+
+    // Allocation details
+    const detailsY = boxY + 400;
+    this.add.text(boxX + 60, detailsY, '🚗 ALLOCATION DETAILS', {
+      fontSize: '26px',
+      color: '#FFD700',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(402);
+
+    let detailsText = 'Vehicle | Size | Slot | Slot Size | Wasted | Efficiency\n';
+    detailsText += '─'.repeat(68) + '\n';
+    
+    this.vehicles.forEach(vehicle => {
+      if (vehicle.assignedSlot) {
+        const slot = vehicle.assignedSlot;
+        const wasted = slot.size - vehicle.size;
+        const slotEfficiency = ((vehicle.size / slot.size) * 100).toFixed(1);
+        detailsText += `${vehicle.name.padEnd(7)} | ${vehicle.size.toString().padEnd(4)} | S${slot.slotNumber} | ${slot.size.toString().padEnd(9)} | ${wasted.toString().padEnd(6)} | ${slotEfficiency}%\n`;
+      }
+    });
+
+    this.add.text(boxX + 60, detailsY + 50, detailsText, {
+      fontSize: '15px',
+      color: '#E0E0E0',
+      fontFamily: 'Consolas, "Courier New", monospace',
+      lineSpacing: 6
+    }).setDepth(402);
+
+    // Educational note
+    this.add.text(width / 2, boxY + boxHeight - 130, 
+      '💡 First Fit is fast (O(n)) but can waste space. Compare with Best Fit!',
+      {
+        fontSize: '18px',
+        color: '#00E5FF',
+        fontStyle: '600',
+        align: 'center',
+        fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+      }
+    ).setOrigin(0.5).setDepth(402);
+
+    // Buttons
+    const buttonY = boxY + boxHeight - 75;
+    this.createResultButton(width / 2 - 140, buttonY, 'Restart', () => {
+      this.scene.restart();
+    });
+
+    this.createResultButton(width / 2 + 140, buttonY, 'Next Level', () => {
+      this.showMessage('Next level coming soon!', '#FFD700');
+    });
+  }
+
+  private createResultButton(x: number, y: number, label: string, callback: () => void) {
+    const buttonWidth = 220;
+    const buttonHeight = 55;
+    const buttonX = x - buttonWidth / 2;
+
+    const button = this.add.graphics();
+    button.fillGradientStyle(0x00E5FF, 0x00E5FF, 0x00A8CC, 0x00A8CC, 1);
+    button.fillRoundedRect(buttonX, y, buttonWidth, buttonHeight, 12);
+    button.lineStyle(4, 0x00FFFF, 1);
+    button.strokeRoundedRect(buttonX, y, buttonWidth, buttonHeight, 12);
+    button.setInteractive(
+      new Phaser.Geom.Rectangle(buttonX, y, buttonWidth, buttonHeight),
+      Phaser.Geom.Rectangle.Contains
+    );
+    button.setDepth(402);
+
+    const buttonText = this.add.text(x, y + 27, label, {
+      fontSize: '22px',
+      color: '#000000',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5);
+    buttonText.setDepth(403);
+
+    button.on('pointerover', () => {
+      button.clear();
+      button.fillGradientStyle(0x00FFFF, 0x00FFFF, 0x00CCEE, 0x00CCEE, 1);
+      button.fillRoundedRect(buttonX, y, buttonWidth, buttonHeight, 12);
+      button.lineStyle(4, 0x00FFFF, 1);
+      button.strokeRoundedRect(buttonX, y, buttonWidth, buttonHeight, 12);
+      this.sys.canvas.style.cursor = 'pointer';
+    });
+
+    button.on('pointerout', () => {
+      button.clear();
+      button.fillGradientStyle(0x00E5FF, 0x00E5FF, 0x00A8CC, 0x00A8CC, 1);
+      button.fillRoundedRect(buttonX, y, buttonWidth, buttonHeight, 12);
+      button.lineStyle(4, 0x00FFFF, 1);
+      button.strokeRoundedRect(buttonX, y, buttonWidth, buttonHeight, 12);
+      this.sys.canvas.style.cursor = 'default';
+    });
+
+    button.on('pointerdown', callback);
   }
 }
 
-function showLevelComplete() {
-  const width = scene.scale.width;
-  const height = scene.scale.height;
-  
-  const completionBg = scene.add.graphics();
-  completionBg.fillStyle(0x000000, 0.8);
-  completionBg.fillRect(0, 0, width, height);
-  completionBg.setDepth(200);
-
-  const completionPanel = scene.add.container(width / 2, height / 2);
-  completionPanel.setDepth(201);
-
-  // Panel background
-  const panelBg = scene.add.graphics();
-  panelBg.fillStyle(COLORS.UI_BACKGROUND, 1);
-  panelBg.lineStyle(3, COLORS.RAM_BORDER, 1);
-  panelBg.fillRoundedRect(-200, -150, 400, 300, 15);
-  panelBg.strokeRoundedRect(-200, -150, 400, 300, 15);
-  completionPanel.add(panelBg);
-
-  // Title
-  const title = scene.add.text(0, -100, 'Level Complete!', {
-    fontSize: '24px',
-    color: COLORS.TEXT_PRIMARY,
-    fontFamily: 'Arial, sans-serif',
-    fontStyle: 'bold',
-  }).setOrigin(0.5);
-  completionPanel.add(title);
-
-  // Stats
-  const allocatedCount = gameState.processQueue.filter(p => p.allocated).length;
-  const statsText = scene.add.text(0, -50, 
-    `Processes Allocated: ${allocatedCount}/${gameState.processQueue.length}\n` +
-    `Final Score: ${gameState.score}\n\n` +
-    `First Fit Strategy:\n` +
-    `✓ Fast allocation (O(n) time)\n` +
-    `✓ Simple to implement\n` +
-    `⚠ May cause fragmentation`, {
-    fontSize: '14px',
-    color: COLORS.TEXT_SECONDARY,
-    fontFamily: 'Arial, sans-serif',
-    align: 'center',
-  }).setOrigin(0.5);
-  completionPanel.add(statsText);
-
-  // Restart button
-  const restartBtn = scene.add.graphics();
-  restartBtn.fillStyle(COLORS.SUCCESS, 1);
-  restartBtn.fillRoundedRect(-60, 80, 120, 40, 8);
-  restartBtn.setInteractive(new Phaser.Geom.Rectangle(-60, 80, 120, 40), Phaser.Geom.Rectangle.Contains);
-  completionPanel.add(restartBtn);
-
-  const restartText = scene.add.text(0, 100, 'Play Again', {
-    fontSize: '16px',
-    color: COLORS.TEXT_PRIMARY,
-    fontFamily: 'Arial, sans-serif',
-    fontStyle: 'bold',
-  }).setOrigin(0.5);
-  completionPanel.add(restartText);
-
-  // Restart functionality
-  restartBtn.on('pointerdown', () => {
-    completionBg.destroy();
-    completionPanel.destroy();
-    restartGame();
-  });
-
-  gameObjects.completionPanel = completionPanel;
-}
-
-function restartGame() {
-  // Clear existing objects
-  scene.children.removeAll();
-  
-  // Reset and restart
-  initializeGame();
-  createGameUI();
-  createRAMVisualization();
-  createProcessQueue();
-  setupDragAndDrop();
-  createInstructions();
-}
-
-// ===== INSTRUCTIONS =====
-function createInstructions() {
-  const width = scene.scale.width;
-  
-  gameObjects.instructionText = scene.add.text(width / 2, 110,
-    'Allocation Strategy: First Fit – Find the first available block that can fit the process', {
-    fontSize: '14px',
-    color: COLORS.TEXT_SECONDARY,
-    fontFamily: 'Arial, sans-serif',
-    align: 'center',
-  }).setOrigin(0.5);
-}
-
-// ===== UPDATE FUNCTION =====
-function update(this: Phaser.Scene) {
-  // Game loop - currently no continuous updates needed
-}
+// Export config
+export const FirstFitGameConfig = {
+  type: Phaser.AUTO,
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: 1600,
+    height: 1000,
+  },
+  backgroundColor: '#000000',
+  scene: FirstFitGame,
+};
