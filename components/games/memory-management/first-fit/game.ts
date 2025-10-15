@@ -83,17 +83,17 @@ export class FirstFitGame extends Phaser.Scene {
     }
   };
 
-  // Parking slots based on the actual "P" marks in the background image
+  // Parking slots positioned to center vehicles in background asset circles
   private readonly PARKING_SLOTS_CONFIG = [
-    // Top row P marks - positioned to match the actual P marks in the image
-    { slotNumber: 1, size: 200, x: 180, y: 200 },   // Large slot (top left)
-    { slotNumber: 2, size: 100, x: 350, y: 200 },   // Medium slot (top center)
-    { slotNumber: 3, size: 50, x: 520, y: 200 },    // Small slot (top right)
+    // Top row - adjusted to center vehicles in circles
+    { slotNumber: 1, size: 200, x: 130, y: 220 },   // S1: moved left to center in circle
+    { slotNumber: 2, size: 100, x: 350, y: 220 },   // S2: moved down slightly
+    { slotNumber: 3, size: 50, x: 520, y: 200 },    // S3: keep as is
     
-    // Bottom row P marks - positioned to match the actual P marks in the image
-    { slotNumber: 4, size: 100, x: 180, y: 750 },   // Medium slot (bottom left)
-    { slotNumber: 5, size: 200, x: 350, y: 750 },   // Large slot (bottom center)
-    { slotNumber: 6, size: 50, x: 520, y: 750 },    // Small slot (bottom right)
+    // Bottom row - adjusted to center vehicles in P areas
+    { slotNumber: 4, size: 100, x: 180, y: 750 },   // S4: keep as is
+    { slotNumber: 5, size: 200, x: 350, y: 730 },   // S5: moved up
+    { slotNumber: 6, size: 50, x: 520, y: 750 },    // S6: keep as is
   ];
 
   // Vehicles that will arrive on the road sequentially
@@ -202,8 +202,8 @@ export class FirstFitGame extends Phaser.Scene {
     });
     this.scoreText.setDepth(200);
 
-    // Fragmentation
-    this.fragmentationText = this.add.text(200, 100, 'Fragmentation: 0%', {
+    // Fragmentation - moved to proper top-left position
+    this.fragmentationText = this.add.text(5, 30, 'Fragmentation: 0%', {
       fontSize: '20px',
       color: '#FF6B6B',
       fontStyle: '600',
@@ -215,8 +215,8 @@ export class FirstFitGame extends Phaser.Scene {
     });
     this.fragmentationText.setDepth(200);
 
-    // Efficiency
-    this.efficiencyText = this.add.text(200, 145, 'Efficiency: 100%', {
+    // Efficiency - moved to proper top-left position
+    this.efficiencyText = this.add.text(5, 67, 'Efficiency: 100%', {
       fontSize: '20px',
       color: '#00E5FF',
       fontStyle: '600',
@@ -247,8 +247,8 @@ export class FirstFitGame extends Phaser.Scene {
     overlay.fillRect(0, 0, width, height);
     overlay.setDepth(300);
 
-    const boxWidth = 850;
-    const boxHeight = 620;
+    const boxWidth = 950; // Increased width for better text fit
+    const boxHeight = 750; // Increased height to accommodate all text without overflow
     const boxX = width / 2 - boxWidth / 2;
     const boxY = height / 2 - boxHeight / 2;
 
@@ -277,7 +277,6 @@ export class FirstFitGame extends Phaser.Scene {
 
     const scenarioText = `📚 LEARNING OBJECTIVES:
 • Understand First Fit memory allocation
-• Visualize FIFO allocation strategy
 • Learn about internal fragmentation
 • Calculate memory efficiency
 
@@ -286,36 +285,33 @@ export class FirstFitGame extends Phaser.Scene {
 2️⃣ Click a vehicle on the road to select it
 3️⃣ Click a parking slot (P area) to park
 4️⃣ FIRST FIT RULE: Park in the FIRST slot that fits!
-5️⃣ Wrong slot = penalty & fragmentation increases
 
 ⚠️ FIRST FIT RULES:
 • Check slots from top to bottom (S1, S2, S3...)
 • Park in the FIRST slot that can fit the vehicle
-• Don't skip slots even if a better fit exists later
 • Small vehicle in large slot = wasted space!
 
 🎯 METRICS TO TRACK:
 • Fragmentation % = Wasted Space / Total Allocated
 • Efficiency = 100% - Fragmentation %
-• Score = Correct allocations - Penalties
 
-💡 TIP: First Fit is fast (O(n)) but can leave
-   unusable gaps. Watch the fragmentation!`;
+💡 TIP: First Fit is fast but can leave unusable gaps!`;
 
-    const text = this.add.text(width / 2, boxY + 360, scenarioText, {
+    const text = this.add.text(width / 2, boxY + 380, scenarioText, {
       fontSize: '16px',
       color: '#E0E0E0',
       fontStyle: 'normal',
       align: 'center',
-      lineSpacing: 3,
-      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+      lineSpacing: 5,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+      wordWrap: { width: boxWidth - 80, useAdvancedWrap: true }
     }).setOrigin(0.5).setDepth(302);
 
     // Start button
     const buttonWidth = 280;
     const buttonHeight = 65;
     const buttonX = width / 2 - buttonWidth / 2;
-    const buttonY = boxY + boxHeight - 75;
+    const buttonY = boxY + boxHeight - 85; // Adjusted for larger panel
 
     const startButton = this.add.graphics();
     startButton.fillGradientStyle(0x00E5FF, 0x00E5FF, 0x00A8CC, 0x00A8CC, 1);
@@ -392,15 +388,33 @@ export class FirstFitGame extends Phaser.Scene {
         occupied: false
       };
 
-      // Create interactive area around the P mark
+      // Create invisible interactive area that matches the existing background asset circles/P marks
+      // NO custom graphics drawing - just an invisible hit area
       const slotBg = this.add.graphics();
-      slotBg.lineStyle(4, 0x00E5FF, 0.8);
-      slotBg.strokeCircle(slot.x, slot.y, 40);
-      slotBg.fillStyle(0x00E5FF, 0.1);
-      slotBg.fillCircle(slot.x, slot.y, 40);
       slotBg.setDepth(5);
+      
+      // Make slot interactive using the existing background asset area
+      const hitArea = new Phaser.Geom.Circle(slot.x, slot.y, 40);
+      slotBg.setInteractive(hitArea, Phaser.Geom.Circle.Contains);
+      
+      slotBg.on('pointerover', () => {
+        if (!slot.occupied && this.selectedVehicle) {
+          // Only change cursor, NO visual feedback circles
+          this.sys.canvas.style.cursor = 'pointer';
+        }
+      });
 
-      // Slot label below the P mark
+      slotBg.on('pointerout', () => {
+        this.sys.canvas.style.cursor = 'default';
+      });
+
+      slotBg.on('pointerdown', () => {
+        if (this.selectedVehicle && !slot.occupied) {
+          this.attemptParkVehicle(this.selectedVehicle, slot);
+        }
+      });
+
+      // Slot label below the existing background asset
       const slotLabel = this.add.text(slot.x, slot.y + 50, `S${config.slotNumber}\n[${config.size} units]`, {
         fontSize: '16px',
         color: '#00E5FF',
@@ -411,38 +425,6 @@ export class FirstFitGame extends Phaser.Scene {
         fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
       }).setOrigin(0.5);
       slotLabel.setDepth(6);
-
-      // Make slot interactive
-      const hitArea = new Phaser.Geom.Circle(slot.x, slot.y, 40);
-      slotBg.setInteractive(hitArea, Phaser.Geom.Circle.Contains);
-      
-      slotBg.on('pointerover', () => {
-        if (!slot.occupied && this.selectedVehicle) {
-          slotBg.clear();
-          slotBg.lineStyle(4, 0xFFD700, 1);
-          slotBg.strokeCircle(slot.x, slot.y, 40);
-          slotBg.fillStyle(0xFFD700, 0.3);
-          slotBg.fillCircle(slot.x, slot.y, 40);
-          this.sys.canvas.style.cursor = 'pointer';
-        }
-      });
-
-      slotBg.on('pointerout', () => {
-        if (!slot.occupied) {
-          slotBg.clear();
-          slotBg.lineStyle(4, 0x00E5FF, 0.8);
-          slotBg.strokeCircle(slot.x, slot.y, 40);
-          slotBg.fillStyle(0x00E5FF, 0.1);
-          slotBg.fillCircle(slot.x, slot.y, 40);
-        }
-        this.sys.canvas.style.cursor = 'default';
-      });
-
-      slotBg.on('pointerdown', () => {
-        if (this.selectedVehicle && !slot.occupied) {
-          this.attemptParkVehicle(this.selectedVehicle, slot);
-        }
-      });
 
       slot.slotBg = slotBg;
       slot.slotLabel = slotLabel;
@@ -607,9 +589,11 @@ export class FirstFitGame extends Phaser.Scene {
           // Change to parked sprite
           if (vehicle.sprite) {
             vehicle.sprite.setTexture(config.parkedAsset);
-            vehicle.isParked = true;
             // Scale down when parked
             vehicle.sprite.setScale(config.scale * 0.7);
+            // Ensure centering after texture and scale change
+            vehicle.sprite.setPosition(slot.x, slot.y);
+            vehicle.isParked = true;
           }
 
           // Hide size label when parked
@@ -652,14 +636,8 @@ export class FirstFitGame extends Phaser.Scene {
       });
     }
 
-    // Update slot background to green
-    if (slot.slotBg) {
-      slot.slotBg.clear();
-      slot.slotBg.lineStyle(4, 0x00FF88, 1);
-      slot.slotBg.strokeCircle(slot.x, slot.y, 40);
-      slot.slotBg.fillStyle(0x00FF88, 0.4);
-      slot.slotBg.fillCircle(slot.x, slot.y, 40);
-    }
+    // Slot is now occupied - no visual feedback circles needed
+    // The existing background asset circles remain unchanged
   }
 
   private updateSlotAfterParking(slot: ParkingSlot, vehicle: Vehicle) {
