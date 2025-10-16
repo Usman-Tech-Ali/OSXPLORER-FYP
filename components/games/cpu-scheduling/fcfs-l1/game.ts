@@ -97,6 +97,7 @@ export class FCFSGame extends Phaser.Scene {
   // Timing
   private numCustomers: number = 0; // Will be randomly set (3-5)
   private currentWaiterCustomerIndex: number = 0;
+  private waiterVisitOrder: number[] = []; // Randomized indices for customer visits
   private timeEvent?: Phaser.Time.TimerEvent;
 
   constructor() {
@@ -525,7 +526,7 @@ export class FCFSGame extends Phaser.Scene {
       
       const order: FoodOrder = {
         id: `order-${customerIndex + 1}`,
-        orderNumber: customerIndex + 1,
+        orderNumber: 0, // Will be assigned when waiter visits
         customerName: name,
         arrivalTime: 0, // All arrive at time 0
         burstTime: dishConfig.burstTime,
@@ -558,18 +559,32 @@ export class FCFSGame extends Phaser.Scene {
   private startWaiterCollecting() {
     this.phaseText.setText('Phase: Taking Orders');
     this.instructionText.setText('👨‍🍳 Waiter is collecting orders from customers...');
+    
+    // Create randomized visit order (shuffle customer indices)
+    this.waiterVisitOrder = [];
+    for (let i = 0; i < this.customers.length; i++) {
+      this.waiterVisitOrder.push(i);
+    }
+    // Shuffle the array using Fisher-Yates algorithm
+    for (let i = this.waiterVisitOrder.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this.waiterVisitOrder[i], this.waiterVisitOrder[j]] = [this.waiterVisitOrder[j], this.waiterVisitOrder[i]];
+    }
+    
     this.currentWaiterCustomerIndex = 0;
     this.collectOrderFromCustomer();
   }
 
   private collectOrderFromCustomer() {
-    if (this.currentWaiterCustomerIndex >= this.customers.length) {
+    if (this.currentWaiterCustomerIndex >= this.waiterVisitOrder.length) {
       // All orders collected, waiter returns and cooking phase starts
       this.waiterReturnsHome();
       return;
     }
 
-    const customer = this.customers[this.currentWaiterCustomerIndex];
+    // Get customer using randomized visit order
+    const customerIndex = this.waiterVisitOrder[this.currentWaiterCustomerIndex];
+    const customer = this.customers[customerIndex];
     
     // Calculate realistic movement duration based on distance
     const distance = Phaser.Math.Distance.Between(
@@ -588,6 +603,12 @@ export class FCFSGame extends Phaser.Scene {
       duration: moveDuration,
       ease: 'Sine.inOut', // More natural movement
       onComplete: () => {
+        // Assign order number based on visit sequence (1st visit = order #1, 2nd visit = order #2, etc.)
+        customer.order.orderNumber = this.currentWaiterCustomerIndex + 1;
+        
+        // Set arrival time to current game time
+        customer.order.arrivalTime = Math.round(this.currentTime);
+        
         // Show customer's order on the stand
         const dishConfig = this.DISH_CONFIGS[customer.order.dishType];
         
@@ -1175,14 +1196,7 @@ export class FCFSGame extends Phaser.Scene {
       `🚴 Delivering Order #${nextOrder.orderNumber}: ${dishConfig.name} to ${nextOrder.customerName}`
     );
     
-    // Create food sprite on delivery boy
-    this.waiterFoodSprite = this.add.sprite(
-      this.deliveryBoySprite.x + 8,
-      this.deliveryBoySprite.y - 20,
-      dishConfig.asset
-    );
-    this.waiterFoodSprite.setScale(0.15);
-    this.waiterFoodSprite.setDepth(3);
+    // No food sprite during delivery - delivery boy delivers without visible food
     
     // Start delivery animation
     this.deliverToCustomer(targetCustomer, nextOrder);
@@ -1258,12 +1272,14 @@ export class FCFSGame extends Phaser.Scene {
     this.deliveryBoySprite.setTexture(moveToCustomerTexture);
     
     const deliveryDuration = 1500;
+    const targetX = customer.x - 65;
+    const targetY = customer.y - 10;
     
-    // Move to customer
+    // Move delivery boy to customer (no food sprite)
     this.tweens.add({
-      targets: [this.deliveryBoySprite, this.waiterFoodSprite],
-      x: customer.x-65,
-      y: customer.y - 10,
+      targets: this.deliveryBoySprite,
+      x: targetX,
+      y: targetY,
       duration: deliveryDuration,
       ease: 'Power2',
       onComplete: () => {
@@ -1272,120 +1288,114 @@ export class FCFSGame extends Phaser.Scene {
         this.totalScore += 100;
         this.updateScoreDisplay();
         
-        // Remove food sprite
-        if (this.waiterFoodSprite) {
-          this.waiterFoodSprite.destroy();
-          this.waiterFoodSprite = undefined;
-        }
-        
         // Update order details on stand to show "DONE" status
         if (customer.standOrderText && customer.standSprite) {
-          // Clear the old order details
-          customer.standOrderText.destroy();
-          
-          // Create new "DONE" display on stand
-          const standX = customer.standSprite.x;
-          const standY = customer.standSprite.y;
-          
-          customer.standOrderText = this.add.container(standX + 5, standY);
-          customer.standOrderText.setDepth(2);
-          
-          // Green checkmark
-          const checkmark = this.add.text(0, -8, '✓', {
-            fontSize: '15px',
-            color: '#00FF00',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 2
-          }).setOrigin(0.5);
-          customer.standOrderText.add(checkmark);
-          
-          // "DONE" text below checkmark
-          const doneText = this.add.text(0, 10, 'DONE', {
-            fontSize: '10px',
-            color: '#00FF00',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 2
-          }).setOrigin(0.5);
-          customer.standOrderText.add(doneText);
-          
-          // Animate appearance with scale and alpha
-          customer.standOrderText.setAlpha(0);
-          customer.standOrderText.setScale(0.5);
-          this.tweens.add({
-            targets: customer.standOrderText,
-            alpha: 1,
-            scale: 1,
-            duration: 400,
-            ease: 'Back.out'
-          });
-        }
-        
-        customer.moodIcon.setText('');
-        this.addCustomerEatingAnimation(customer);
-        
-        const successText = this.add.text(
-          customer.x,
-          customer.y - 100,
-          `✅ Delivered!\n+100 Points\nTotal: ${this.totalScore}`,
-          {
-            fontSize: '16px',
-            color: '#00FF00',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 3,
-            backgroundColor: '#000000',
-            padding: { x: 10, y: 5 },
-            align: 'center'
+            // Clear the old order details
+            customer.standOrderText.destroy();
+            
+            // Create new "DONE" display on stand
+            const standX = customer.standSprite.x;
+            const standY = customer.standSprite.y;
+            
+            customer.standOrderText = this.add.container(standX + 5, standY);
+            customer.standOrderText.setDepth(2);
+            
+            // Green checkmark
+            const checkmark = this.add.text(0, -8, '✓', {
+              fontSize: '15px',
+              color: '#00FF00',
+              fontStyle: 'bold',
+              stroke: '#000000',
+              strokeThickness: 2
+            }).setOrigin(0.5);
+            customer.standOrderText.add(checkmark);
+            
+            // "DONE" text below checkmark
+            const doneText = this.add.text(0, 10, 'DONE', {
+              fontSize: '10px',
+              color: '#00FF00',
+              fontStyle: 'bold',
+              stroke: '#000000',
+              strokeThickness: 2
+            }).setOrigin(0.5);
+            customer.standOrderText.add(doneText);
+            
+            // Animate appearance with scale and alpha
+            customer.standOrderText.setAlpha(0);
+            customer.standOrderText.setScale(0.5);
+            this.tweens.add({
+              targets: customer.standOrderText,
+              alpha: 1,
+              scale: 1,
+              duration: 400,
+              ease: 'Back.out'
+            });
           }
-        ).setOrigin(0.5);
-
-        this.tweens.add({
-          targets: successText,
-          alpha: 0,
-          y: customer.y - 150,
-          duration: 2000,
-          ease: 'Power2',
-          onComplete: () => successText.destroy()
-        });
-        
-        // Phase 2: Return to starting position at end of first row
-        this.time.delayedCall(1000, () => {
-          if (!this.deliveryBoySprite) return;
           
-          // Change to appropriate texture for return journey
-          const isReturningLeft = deliveryBoyStartX < this.deliveryBoySprite.x;
-          const returnTexture = isReturningLeft ? 'deliver3' : 'deliver2';
-          this.deliveryBoySprite.setTexture(returnTexture);
+          customer.moodIcon.setText('');
+          this.addCustomerEatingAnimation(customer);
           
-          this.tweens.add({
-            targets: this.deliveryBoySprite,
-            x: deliveryBoyStartX,
-            y: deliveryBoyStartY,
-            duration: deliveryDuration,
-            ease: 'Power2',
-            onComplete: () => {
-              // Back to standing pose
-              if (this.deliveryBoySprite) {
-                this.deliveryBoySprite.setTexture('deliver1');
-              }
-              
-              const remainingOrders = this.completedOrders.filter(o => !o.isDelivered);
-              if (remainingOrders.length > 0) {
-                this.instructionText.setText('🚴 Preparing next delivery...');
-                this.time.delayedCall(500, () => {
-                  this.pickUpNextOrder();
-                });
-              } else {
-                this.instructionText.setText('✅ All orders delivered!');
-                this.time.delayedCall(1000, () => {
-                  this.showResults();
-                });
-              }
+          const successText = this.add.text(
+            customer.x,
+            customer.y - 100,
+            `✅ Delivered!\n+100 Points\nTotal: ${this.totalScore}`,
+            {
+              fontSize: '16px',
+              color: '#00FF00',
+              fontStyle: 'bold',
+              stroke: '#000000',
+              strokeThickness: 3,
+              backgroundColor: '#000000',
+              padding: { x: 10, y: 5 },
+              align: 'center'
             }
+          ).setOrigin(0.5);
+
+          this.tweens.add({
+            targets: successText,
+            alpha: 0,
+            y: customer.y - 150,
+            duration: 2000,
+            ease: 'Power2',
+            onComplete: () => successText.destroy()
           });
-        });
+          
+          // Phase 2: Return to starting position at end of first row
+          this.time.delayedCall(1000, () => {
+            if (!this.deliveryBoySprite) return;
+            
+            // Change to appropriate texture for return journey
+            const isReturningLeft = deliveryBoyStartX < this.deliveryBoySprite.x;
+            const returnTexture = isReturningLeft ? 'deliver3' : 'deliver2';
+            this.deliveryBoySprite.setTexture(returnTexture);
+            
+            this.tweens.add({
+              targets: this.deliveryBoySprite,
+              x: deliveryBoyStartX,
+              y: deliveryBoyStartY,
+              duration: deliveryDuration,
+              ease: 'Power2',
+              onComplete: () => {
+                // Back to standing pose
+                if (this.deliveryBoySprite) {
+                  this.deliveryBoySprite.setTexture('deliver1');
+                }
+                
+                const remainingOrders = this.completedOrders.filter(o => !o.isDelivered);
+                if (remainingOrders.length > 0) {
+                  this.instructionText.setText('🚴 Preparing next delivery...');
+                  this.time.delayedCall(500, () => {
+                    this.pickUpNextOrder();
+                  });
+                } else {
+                  this.instructionText.setText('✅ All orders delivered!');
+                  this.time.delayedCall(1000, () => {
+                    this.showResults();
+                  });
+                }
+              }
+            });
+          });
       }
     });
   }

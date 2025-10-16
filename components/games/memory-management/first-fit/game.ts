@@ -145,18 +145,18 @@ export class FirstFitGame extends Phaser.Scene {
   private createBackground(width: number, height: number) {
     // Background 1 (left half - parking area)
     const bg1 = this.add.image(0, height / 2, 'bg-1');
-    bg1.setOrigin(0, 0.5);
+    bg1.setOrigin(0, 0.4);
     const scale1X = (width / 2) / bg1.width;
-    const scale1Y = height / bg1.height;
+    const scale1Y = height / bg1.height-50;
     const scale1 = Math.max(scale1X, scale1Y);
     bg1.setScale(scale1);
     bg1.setDepth(-100);
 
     // Background 2 (right half - road area)
-    const bg2 = this.add.image(width / 2, height / 2, 'bg-2');
-    bg2.setOrigin(0, 0.5);
+    const bg2 = this.add.image(width / 2 , height / 2, 'bg-2');
+    bg2.setOrigin(0, 0.4);
     const scale2X = (width / 2) / bg2.width;
-    const scale2Y = height / bg2.height;
+    const scale2Y = height / bg2.height-50;
     const scale2 = Math.max(scale2X, scale2Y);
     bg2.setScale(scale2);
     bg2.setDepth(-100);
