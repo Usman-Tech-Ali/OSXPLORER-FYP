@@ -50,50 +50,55 @@ export class FirstFitGame extends Phaser.Scene {
   private efficiencyText!: Phaser.GameObjects.Text;
 
   // Layout constants
-  private readonly PARKING_AREA_X = 150; // Left side - parking area
-  private readonly ROAD_START_X = 900; // Right side - road area
-  private readonly ROAD_END_X = 1500; // End of visible road
-  private readonly ROAD_Y = 750; // Y position of the road (ground level) - lowered to be on actual road
+  private readonly PARKING_AREA_X = 900; // Right side - parking area
+  private readonly ROAD_START_X = 400; // Left side - road area (where vehicle stops)
+  private readonly ROAD_END_X = -200; // Start of road (off-screen left)
+  private readonly ROAD_Y = 450; // Y position of the road (centered vertically in background2)
 
   // Vehicle configurations with larger scales
   private readonly VEHICLE_CONFIGS = {
     bike: { 
       name: 'Bike', 
-      size: 50, 
+      size: 25, 
       comingAsset: 'bike1-coming', 
       parkedAsset: 'bike1-parked', 
       emoji: '🏍️',
-      scale: 0.4 // Further increased scale
+      scale: 0.5 // Smaller scale for 25 units
     },
     car: { 
       name: 'Car', 
-      size: 100, 
+      size: 50, 
       comingAsset: 'orange-car-coming', 
       parkedAsset: 'orange-car-parked', 
       emoji: '🚗',
-      scale: 0.5 // Further increased scale
+      scale: 0.65 // Medium scale for 50 units
     },
     truck: { 
       name: 'Truck', 
-      size: 200, 
+      size: 100, 
       comingAsset: 'truck1-coming', 
       parkedAsset: 'truck-parked', 
       emoji: '🚛',
-      scale: 0.6 // Further increased scale
+      scale: 0.8 // Larger scale for 100 units
     }
   };
 
   // Parking slots positioned to center vehicles in background asset circles
   private readonly PARKING_SLOTS_CONFIG = [
-    // Top row - adjusted to center vehicles in circles
-    { slotNumber: 1, size: 200, x: 130, y: 220 },   // S1: moved left to center in circle
-    { slotNumber: 2, size: 100, x: 350, y: 220 },   // S2: moved down slightly
-    { slotNumber: 3, size: 50, x: 520, y: 200 },    // S3: keep as is
+    // Top row - 3 Trucks (100 units each) and 3 Bikes (25 units each) - NOW ON RIGHT SIDE
+    { slotNumber: 1, size: 100, x: 830, y: 300, label: 'S1: 🚛 Truck\n100 units' },    // Truck 1
+    { slotNumber: 2, size: 100, x: 990, y: 300, label: 'S2: 🚛 Truck\n100 units' },   // Truck 2
+    { slotNumber: 3, size: 100, x: 1140, y: 300, label: 'S3: 🚛 Truck\n100 units' },   // Truck 3
+    { slotNumber: 4, size: 25, x: 1260, y: 300, label: 'S4: \n Bike\n25 units' },     // Bike 1
+    { slotNumber: 5, size: 25, x: 1340, y: 300, label: 'S5: \n Bike\n25 units' },     // Bike 2
+    { slotNumber: 6, size: 25, x: 1430, y: 300, label: 'S6:  \nBike\n25 units' },     // Bike 3
     
-    // Bottom row - adjusted to center vehicles in P areas
-    { slotNumber: 4, size: 100, x: 180, y: 750 },   // S4: keep as is
-    { slotNumber: 5, size: 200, x: 350, y: 730 },   // S5: moved up
-    { slotNumber: 6, size: 50, x: 520, y: 750 },    // S6: keep as is
+    // Bottom row - 5 Cars (50 units each) - NOW ON RIGHT SIDE
+    { slotNumber: 7, size: 50, x: 830, y: 430, label: 'S7: 🚗 Car\n50 units' },        // Car 1
+    { slotNumber: 8, size: 50, x: 970, y: 430, label: 'S8: 🚗 Car\n50 units' },       // Car 2
+    { slotNumber: 9, size: 50, x: 1120, y: 430, label: 'S9: 🚗 Car\n50 units' },       // Car 3
+    { slotNumber: 10, size: 50, x: 1260, y: 430, label: 'S10: 🚗 Car\n50 units' },     // Car 4
+    { slotNumber: 11, size: 50, x: 1400, y: 430, label: 'S11: 🚗 Car\n50 units' },     // Car 5
   ];
 
   // Vehicles that will arrive on the road sequentially
@@ -124,7 +129,7 @@ export class FirstFitGame extends Phaser.Scene {
     this.load.image('orange-car-parked', `${assetPath}orange-car-parked.png`);
     this.load.image('orange2-car-coming', `${assetPath}orange2-car-coming.png`);
     this.load.image('orange2-car-parked', `${assetPath}orange2-car-parked.png`);
-    this.load.image('truck1-coming', `${assetPath}truck1-coming.png`);
+    this.load.image('truck1-coming', `${assetPath}truck2-coming.png`);
     this.load.image('truck2-coming', `${assetPath}truck2-coming.png`);
     this.load.image('truck-parked', `${assetPath}truck-parked.png`);
   }
@@ -143,23 +148,23 @@ export class FirstFitGame extends Phaser.Scene {
   }
 
   private createBackground(width: number, height: number) {
-    // Background 1 (left half - parking area)
-    const bg1 = this.add.image(0, height / 2, 'bg-1');
-    bg1.setOrigin(0, 0.4);
-    const scale1X = (width / 2) / bg1.width;
-    const scale1Y = height / bg1.height-50;
-    const scale1 = Math.max(scale1X, scale1Y);
-    bg1.setScale(scale1);
-    bg1.setDepth(-100);
-
-    // Background 2 (right half - road area)
-    const bg2 = this.add.image(width / 2 , height / 2, 'bg-2');
+    // Background 2 (left half - road area)
+    const bg2 = this.add.image(0, height / 2, 'bg-2');
     bg2.setOrigin(0, 0.4);
     const scale2X = (width / 2) / bg2.width;
     const scale2Y = height / bg2.height-50;
     const scale2 = Math.max(scale2X, scale2Y);
     bg2.setScale(scale2);
     bg2.setDepth(-100);
+
+    // Background 1 (right half - parking area)
+    const bg1 = this.add.image(width / 2 , height / 2, 'bg-1');
+    bg1.setOrigin(0, 0.4);
+    const scale1X = (width / 2) / bg1.width;
+    const scale1Y = height / bg1.height-50;
+    const scale1 = Math.max(scale1X, scale1Y);
+    bg1.setScale(scale1);
+    bg1.setDepth(-100);
   }
 
   private createUI(width: number, height: number) {
@@ -414,9 +419,10 @@ export class FirstFitGame extends Phaser.Scene {
         }
       });
 
-      // Slot label below the existing background asset
-      const slotLabel = this.add.text(slot.x, slot.y + 50, `S${config.slotNumber}\n[${config.size} units]`, {
-        fontSize: '16px',
+      // Slot label below the existing background asset - use custom label if provided
+      const labelText = (config as any).label || `S${config.slotNumber}\n[${config.size} units]`;
+      const slotLabel = this.add.text(slot.x, slot.y + 60, labelText, {
+        fontSize: '14px',
         color: '#00E5FF',
         fontStyle: '600',
         stroke: '#000000',
@@ -452,15 +458,15 @@ export class FirstFitGame extends Phaser.Scene {
       roadY: this.ROAD_Y // Use the road Y position (ground level)
     };
 
-    // Create sprite starting from far right (off-screen) at ground level
-    const sprite = this.add.sprite(this.ROAD_END_X + 200, this.ROAD_Y, config.comingAsset);
+    // Create sprite starting from far left (off-screen) at ground level
+    const sprite = this.add.sprite(this.ROAD_END_X, this.ROAD_Y, config.comingAsset);
     sprite.setScale(config.scale);
     sprite.setDepth(50);
     sprite.setInteractive({ useHandCursor: true });
-    sprite.setFlipX(true); // Face left (coming towards parking)
+    sprite.setFlipX(true); // Face right (coming from left towards parking on right)
 
     // Size label above the vehicle
-    const sizeLabel = this.add.text(this.ROAD_END_X + 200, this.ROAD_Y - 50, `${config.emoji} ${config.name}\n${config.size} units`, {
+    const sizeLabel = this.add.text(this.ROAD_END_X, this.ROAD_Y - 50, `${config.emoji} ${config.name}\n${config.size} units`, {
       fontSize: '18px',
       color: '#FFFFFF',
       fontStyle: '600',
@@ -494,10 +500,10 @@ export class FirstFitGame extends Phaser.Scene {
     
     this.vehicles.push(vehicle);
 
-    // Animate vehicle coming onto the road (moving left) at ground level
+    // Animate vehicle coming onto the road (moving right from left) at ground level
     this.tweens.add({
       targets: [sprite, sizeLabel],
-      x: this.ROAD_START_X + 100,
+      x: this.ROAD_START_X,
       duration: 2500,
       ease: 'Power2',
       onComplete: () => {
@@ -567,6 +573,10 @@ export class FirstFitGame extends Phaser.Scene {
     vehicle.isOnRoad = false;
 
     const config = this.VEHICLE_CONFIGS[vehicle.type];
+    
+    // Adjust parking Y position based on slot row
+    // Row 1 (slots 1-6): y = 300, Row 2 (slots 7-11): y = 430
+    const parkingY = slot.slotNumber <= 6 ? slot.y-50 : slot.y + 160; // Add offset for bottom row
 
     // Animate vehicle from road to parking slot
     if (vehicle.sprite && vehicle.sizeLabel) {
@@ -576,7 +586,7 @@ export class FirstFitGame extends Phaser.Scene {
       this.tweens.add({
         targets: [vehicle.sprite, vehicle.sizeLabel],
         x: slot.x,
-        y: slot.y,
+        y: parkingY,
         duration: 1800,
         ease: 'Power2',
         onStart: () => {
@@ -592,7 +602,7 @@ export class FirstFitGame extends Phaser.Scene {
             // Scale down when parked
             vehicle.sprite.setScale(config.scale * 0.7);
             // Ensure centering after texture and scale change
-            vehicle.sprite.setPosition(slot.x, slot.y);
+            vehicle.sprite.setPosition(slot.x, parkingY);
             vehicle.isParked = true;
           }
 
