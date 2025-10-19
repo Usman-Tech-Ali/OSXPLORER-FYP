@@ -399,7 +399,11 @@ export class FirstFitGame extends Phaser.Scene {
       slotBg.setDepth(5);
       
       // Make slot interactive using the existing background asset area
-      const hitArea = new Phaser.Geom.Circle(slot.x, slot.y, 40);
+      let new_y = 0;
+      if (config.slotNumber > 6) {
+        new_y += 160; // Adjust Y for bottom row slots
+      }
+      const hitArea = new Phaser.Geom.Circle(slot.x, slot.y + new_y, 60);
       slotBg.setInteractive(hitArea, Phaser.Geom.Circle.Contains);
       
       slotBg.on('pointerover', () => {
@@ -807,7 +811,7 @@ Wasted Space (Fragmentation): ${this.totalFragmentation} units
 Fragmentation %: ${fragmentationPercent.toFixed(2)}%
 Efficiency: ${efficiency.toFixed(2)}%
 Utilization: ${utilization.toFixed(2)}%
-Wrong Attempts: ${this.wrongAttempts}
+
 Final Score: ${Math.max(0, this.score)}`;
 
     this.add.text(boxX + 60, summaryY + 50, metricsText, {
@@ -847,7 +851,7 @@ Final Score: ${Math.max(0, this.score)}`;
 
     // Educational note
     this.add.text(width / 2, boxY + boxHeight - 130, 
-      '💡 First Fit is fast (O(n)) but can waste space. Compare with Best Fit!',
+      '',
       {
         fontSize: '18px',
         color: '#00E5FF',
