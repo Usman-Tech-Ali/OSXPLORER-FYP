@@ -90,8 +90,8 @@ export class FCFSGame extends Phaser.Scene {
     burger: { name: 'Burger', emoji: '🍔', burstTime: 4, asset: 'burger' },
     pizza: { name: 'Pizza', emoji: '🍕', burstTime: 6, asset: 'pizza' },
     sandwich: { name: 'Sandwich', emoji: '🥪', burstTime: 3, asset: 'sandwich' },
-    mushroom: { name: 'Mushroom Soup', emoji: '🍄', burstTime: 5, asset: 'mashroom' },
-    chicken: { name: 'Fried Chicken', emoji: '🍗', burstTime: 5, asset: 'chicken' }
+    mushroom: { name: 'Soup', emoji: '🍄', burstTime: 5, asset: 'mashroom' },
+    chicken: { name: 'Chicken', emoji: '🍗', burstTime: 5, asset: 'chicken' }
   };
 
   // Timing
@@ -558,33 +558,110 @@ export class FCFSGame extends Phaser.Scene {
 
   private startWaiterCollecting() {
     this.phaseText.setText('Phase: Taking Orders');
-    this.instructionText.setText('👨‍🍳 Waiter is collecting orders from customers...');
+    this.instructionText.setText('�️ Click on any table to send waiter - Order number will be based on your click sequence!');
     
-    // Create randomized visit order (shuffle customer indices)
+    // Initialize empty visit order - will be filled by clicks
     this.waiterVisitOrder = [];
-    for (let i = 0; i < this.customers.length; i++) {
-      this.waiterVisitOrder.push(i);
-    }
-    // Shuffle the array using Fisher-Yates algorithm
-    for (let i = this.waiterVisitOrder.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [this.waiterVisitOrder[i], this.waiterVisitOrder[j]] = [this.waiterVisitOrder[j], this.waiterVisitOrder[i]];
-    }
-    
     this.currentWaiterCustomerIndex = 0;
-    this.collectOrderFromCustomer();
+    
+    // Make all customers clickable
+    this.customers.forEach((customer) => {
+      customer.sprite.setInteractive({ cursor: 'pointer' });
+      customer.sprite.setData('hasOrder', false); // Track if order was taken
+      
+      // Add pulsing glow circle using Graphics for better visibility
+      const glowCircle = this.add.graphics();
+      glowCircle.lineStyle(4, 0xFFFF00, 1); // Thick yellow border
+      glowCircle.fillStyle(0xFFD700, 0.3); // Semi-transparent gold fill
+      glowCircle.fillCircle(customer.x, customer.y, 65);
+      glowCircle.strokeCircle(customer.x, customer.y, 65);
+      glowCircle.setDepth(10); // High depth to ensure visibility above everything
+      customer.sprite.setData('glowCircle', glowCircle);
+      
+      // Pulsing animation
+      this.tweens.add({
+        targets: glowCircle,
+        alpha: { from: 0.5, to: 1 },
+        scaleX: { from: 1, to: 1.1 },
+        scaleY: { from: 1, to: 1.1 },
+        x: { from: customer.x, to: customer.x },
+        y: { from: customer.y, to: customer.y },
+        duration: 1000,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+      
+      // Click handler
+      customer.sprite.on('pointerdown', () => {
+        this.onCustomerTableClick(customer);
+      });
+      
+      // Hover effects
+      customer.sprite.on('pointerover', () => {
+        if (!customer.sprite.getData('hasOrder')) {
+          customer.sprite.setTint(0xFFFF00); // Yellow highlight
+          glowCircle.clear();
+          glowCircle.lineStyle(5, 0xFFFF00, 1);
+          glowCircle.fillStyle(0xFFFF00, 0.5);
+          glowCircle.fillCircle(customer.x, customer.y, 65);
+          glowCircle.strokeCircle(customer.x, customer.y, 65);
+        }
+      });
+      
+      customer.sprite.on('pointerout', () => {
+        if (!customer.sprite.getData('hasOrder')) {
+          customer.sprite.clearTint();
+          glowCircle.clear();
+          glowCircle.lineStyle(4, 0xFFFF00, 1);
+          glowCircle.fillStyle(0xFFD700, 0.3);
+          glowCircle.fillCircle(customer.x, customer.y, 65);
+          glowCircle.strokeCircle(customer.x, customer.y, 65);
+        }
+      });
+    });
   }
 
-  private collectOrderFromCustomer() {
-    if (this.currentWaiterCustomerIndex >= this.waiterVisitOrder.length) {
-      // All orders collected, waiter returns and cooking phase starts
-      this.waiterReturnsHome();
+  private onCustomerTableClick(customer: Customer) {
+    // Check if order already taken from this customer
+    if (customer.sprite.getData('hasOrder')) {
+      this.showMessage('⚠️ Order already taken from this table!', '#FF0000');
       return;
     }
-
-    // Get customer using randomized visit order
-    const customerIndex = this.waiterVisitOrder[this.currentWaiterCustomerIndex];
-    const customer = this.customers[customerIndex];
+    
+    // Check if waiter is currently busy
+    if (this.tweens.getTweensOf(this.waiterSprite).length > 0) {
+      this.showMessage('⚠️ Waiter is busy! Wait for current order collection.', '#FF0000');
+      return;
+    }
+    
+    // Mark customer as having order taken
+    customer.sprite.setData('hasOrder', true);
+    customer.sprite.removeInteractive();
+    customer.sprite.clearTint();
+    customer.moodIcon.setText('');
+    
+    // Remove glow effect
+    const glowCircle = customer.sprite.getData('glowCircle');
+    if (glowCircle) {
+      this.tweens.killTweensOf(glowCircle);
+      this.tweens.add({
+        targets: glowCircle,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => glowCircle.destroy()
+      });
+    }
+    
+    // Calculate order number (how many orders have been taken + 1)
+    const ordersAlreadyTaken = this.customers.filter(c => c.sprite.getData('hasOrder')).length;
+    const orderNumber = ordersAlreadyTaken; // This customer just got marked as hasOrder
+    
+    // Send waiter to this customer with the correct order number
+    this.collectOrderFromCustomer(customer, orderNumber);
+  }
+  
+  private collectOrderFromCustomer(customer: Customer, orderNumber: number) {
     
     // Calculate realistic movement duration based on distance
     const distance = Phaser.Math.Distance.Between(
@@ -603,8 +680,8 @@ export class FCFSGame extends Phaser.Scene {
       duration: moveDuration,
       ease: 'Sine.inOut', // More natural movement
       onComplete: () => {
-        // Assign order number based on visit sequence (1st visit = order #1, 2nd visit = order #2, etc.)
-        customer.order.orderNumber = this.currentWaiterCustomerIndex + 1;
+        // Assign order number based on click sequence
+        customer.order.orderNumber = orderNumber;
         
         // Set arrival time to current game time
         customer.order.arrivalTime = Math.round(this.currentTime);
@@ -653,11 +730,52 @@ export class FCFSGame extends Phaser.Scene {
         this.addOrderToBoard(customer.order);
         this.readyQueue.push(customer.order);
         
-        // Wait then move to next customer
+        // Return waiter to home position and wait for next click
         this.time.delayedCall(1500, () => {
-          this.currentWaiterCustomerIndex++;
-          this.collectOrderFromCustomer();
+          this.waiterReturnsHomeQuick(() => {
+            // Check if all orders collected
+            const ordersCollected = this.customers.filter(c => c.sprite.getData('hasOrder')).length;
+            if (ordersCollected >= this.customers.length) {
+              // All orders collected, start cooking phase
+              this.time.delayedCall(500, () => {
+                this.startCookingPhase();
+              });
+            } else {
+              // Update instruction for next table
+              this.instructionText.setText(`🖱️ Click on next table (${ordersCollected}/${this.customers.length} orders taken)`);
+            }
+          });
         });
+      }
+    });
+  }
+
+  private waiterReturnsHomeQuick(callback?: () => void) {
+    const { width, height } = this.sys.game.canvas;
+    const row1Y = height - 190;
+    const row1StartX = width * 0.24;
+    
+    // Return to the start of first row
+    const waiterStartX = row1StartX - 150;
+    const waiterStartY = row1Y;
+    
+    // Calculate realistic movement duration based on distance
+    const distance = Phaser.Math.Distance.Between(
+      this.waiterSprite.x,
+      this.waiterSprite.y,
+      waiterStartX,
+      waiterStartY
+    );
+    const moveDuration = Math.max(800, Math.min(2000, distance * 0.8));
+    
+    this.tweens.add({
+      targets: this.waiterSprite,
+      x: waiterStartX,
+      y: waiterStartY,
+      duration: moveDuration,
+      ease: 'Sine.inOut',
+      onComplete: () => {
+        if (callback) callback();
       }
     });
   }
@@ -721,7 +839,7 @@ export class FCFSGame extends Phaser.Scene {
     orderContainer.add(orderBg);
     
     // Order number
-    const orderNumber = this.add.text(-70, 0, `${order.orderNumber}.`, {
+    const orderNumber = this.add.text(-75, 0, `${order.orderNumber}.`, {
       fontSize: '14px',
       color: '#FF6B35',
       fontStyle: 'bold',
@@ -731,13 +849,13 @@ export class FCFSGame extends Phaser.Scene {
     orderContainer.add(orderNumber);
     
     // Food emoji
-    const foodEmoji = this.add.text(-50, 0, dishConfig.emoji, {
+    const foodEmoji = this.add.text(-55, 0, dishConfig.emoji, {
       fontSize: '16px'
     }).setOrigin(0, 0.5);
     orderContainer.add(foodEmoji);
     
     // Food name
-    const foodName = this.add.text(-25, 0, dishConfig.name, {
+    const foodName = this.add.text(-35, 0, dishConfig.name, {
       fontSize: '12px',
       color: '#000000',
       fontStyle: 'bold'
@@ -745,7 +863,7 @@ export class FCFSGame extends Phaser.Scene {
     orderContainer.add(foodName);
     
     // Arrival time
-    const arrivalTime = this.add.text(60, 0, `AT:${order.arrivalTime}s`, {
+    const arrivalTime = this.add.text(40, 0, `AT:${order.arrivalTime}s`, {
       fontSize: '10px',
       color: '#666666',
       fontStyle: 'italic'
@@ -820,7 +938,7 @@ export class FCFSGame extends Phaser.Scene {
     }).setOrigin(0.5);
     tooltip.add(text);
     
-    const text2 = this.add.text(0, -2, order.isCooking ? '⚡ Cooking...' : '⏳ Waiting in queue', {
+    const text2 = this.add.text(0, -6, order.isCooking ? ' Cooking...' : ' Waiting in queue', {
       fontSize: '11px',
       color: order.isCooking ? '#FFD700' : '#00FF00',
       align: 'center'
@@ -1155,7 +1273,7 @@ export class FCFSGame extends Phaser.Scene {
   private startServingPhase() {
     this.gamePhase = 'serving';
     this.phaseText.setText('Phase: Delivery');
-    this.instructionText.setText('🚴 Delivery boy is preparing to deliver orders!');
+    this.instructionText.setText('�️ Click on customers to deliver orders - Follow FCFS order sequence!');
     
     // Delivery boy is already created and visible at the end of first row
     // Just ensure it's visible and in the right position
@@ -1164,10 +1282,146 @@ export class FCFSGame extends Phaser.Scene {
       this.deliveryBoySprite.setDepth(2);
     }
     
-    // Start delivering orders automatically
-    this.time.delayedCall(1000, () => {
-      this.pickUpNextOrder();
+    // Make customers with completed orders clickable
+    this.makeCustomersClickableForDelivery();
+  }
+
+  private makeCustomersClickableForDelivery() {
+    this.customers.forEach((customer) => {
+      // Only make clickable if their order is completed but not delivered
+      if (customer.order.isCompleted && !customer.order.isDelivered) {
+        customer.sprite.setInteractive({ cursor: 'pointer' });
+        
+        // Add pulsing glow circle
+        const glowCircle = this.add.graphics();
+        glowCircle.lineStyle(4, 0x00FF00, 1); // Green border for delivery
+        glowCircle.fillStyle(0x00FF88, 0.3); // Green fill
+        glowCircle.fillCircle(customer.x, customer.y, 65);
+        glowCircle.strokeCircle(customer.x, customer.y, 65);
+        glowCircle.setDepth(10);
+        customer.sprite.setData('deliveryGlowCircle', glowCircle);
+        
+        // Pulsing animation
+        this.tweens.add({
+          targets: glowCircle,
+          alpha: { from: 0.5, to: 1 },
+          scaleX: { from: 1, to: 1.1 },
+          scaleY: { from: 1, to: 1.1 },
+          x: { from: customer.x, to: customer.x },
+          y: { from: customer.y, to: customer.y },
+          duration: 1000,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+        
+        // Click handler for delivery
+        customer.sprite.on('pointerdown', () => {
+          this.onCustomerClickForDelivery(customer);
+        });
+        
+        // Hover effects
+        customer.sprite.on('pointerover', () => {
+          if (!customer.order.isDelivered) {
+            customer.sprite.setTint(0x00FF00); // Green highlight
+            glowCircle.clear();
+            glowCircle.lineStyle(5, 0x00FF00, 1);
+            glowCircle.fillStyle(0x00FF00, 0.5);
+            glowCircle.fillCircle(customer.x, customer.y, 65);
+            glowCircle.strokeCircle(customer.x, customer.y, 65);
+          }
+        });
+        
+        customer.sprite.on('pointerout', () => {
+          if (!customer.order.isDelivered) {
+            customer.sprite.clearTint();
+            glowCircle.clear();
+            glowCircle.lineStyle(4, 0x00FF00, 1);
+            glowCircle.fillStyle(0x00FF88, 0.3);
+            glowCircle.fillCircle(customer.x, customer.y, 65);
+            glowCircle.strokeCircle(customer.x, customer.y, 65);
+          }
+        });
+      }
     });
+  }
+
+  private onCustomerClickForDelivery(customer: Customer) {
+    // Check if order already delivered
+    if (customer.order.isDelivered) {
+      this.showMessage('⚠️ Order already delivered to this customer!', '#FF0000');
+      return;
+    }
+    
+    // Check if delivery boy is currently busy
+    if (this.deliveryBoySprite && this.tweens.getTweensOf(this.deliveryBoySprite).length > 0) {
+      this.showMessage('⚠️ Delivery boy is busy! Wait for current delivery.', '#FF0000');
+      return;
+    }
+    
+    // Check FCFS order - must deliver to the first completed order
+    const nextOrderToDeliver = this.completedOrders.find(o => !o.isDelivered);
+    
+    if (!nextOrderToDeliver) {
+      this.showMessage('⚠️ No orders to deliver!', '#FF0000');
+      return;
+    }
+    
+    // Validate FCFS - check if clicked customer is the correct one
+    if (customer.order.id !== nextOrderToDeliver.id) {
+      // Wrong customer! Deduct points
+      this.wrongAttempts++;
+      this.totalScore = Math.max(0, this.totalScore - 10);
+      this.updateScoreDisplay();
+      
+      // Find the correct customer to highlight
+      const correctCustomer = this.customers.find(c => c.order.id === nextOrderToDeliver.id);
+      
+      this.showMessage(`❌ Wrong! Must deliver Order #${nextOrderToDeliver.orderNumber} first (FCFS)! -10 points`, '#FF0000');
+      
+      // Flash the correct customer
+      if (correctCustomer) {
+        this.tweens.add({
+          targets: correctCustomer.sprite,
+          scaleX: 0.28,
+          scaleY: 0.28,
+          duration: 200,
+          yoyo: true,
+          repeat: 2,
+          ease: 'Power2'
+        });
+      }
+      
+      // Shake wrong customer
+      this.tweens.add({
+        targets: customer.sprite,
+        x: customer.x + 5,
+        duration: 100,
+        yoyo: true,
+        repeat: 3,
+        ease: 'Power2'
+      });
+      
+      return;
+    }
+    
+    // Correct customer! Remove interactivity and glow
+    customer.sprite.removeInteractive();
+    customer.sprite.clearTint();
+    
+    const glowCircle = customer.sprite.getData('deliveryGlowCircle');
+    if (glowCircle) {
+      this.tweens.killTweensOf(glowCircle);
+      this.tweens.add({
+        targets: glowCircle,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => glowCircle.destroy()
+      });
+    }
+    
+    // Deliver to this customer
+    this.deliverToCustomer(customer, customer.order);
   }
 
   private pickUpNextOrder() {
@@ -1383,10 +1637,9 @@ export class FCFSGame extends Phaser.Scene {
                 
                 const remainingOrders = this.completedOrders.filter(o => !o.isDelivered);
                 if (remainingOrders.length > 0) {
-                  this.instructionText.setText('🚴 Preparing next delivery...');
-                  this.time.delayedCall(500, () => {
-                    this.pickUpNextOrder();
-                  });
+                  // Update instruction and show how many orders remaining
+                  const deliveredCount = this.completedOrders.filter(o => o.isDelivered).length;
+                  this.instructionText.setText(`🖱️ Click next customer to deliver (${deliveredCount}/${this.completedOrders.length} delivered)`);
                 } else {
                   this.instructionText.setText('✅ All orders delivered!');
                   this.time.delayedCall(1000, () => {
@@ -1433,9 +1686,9 @@ export class FCFSGame extends Phaser.Scene {
     overlay.fillRect(0, 0, width, height);
     overlay.setDepth(100);
 
-    // Results box
-    const boxWidth = 900;
-    const boxHeight = 700;
+    // Results box - made taller to accommodate content
+    const boxWidth = 1000;
+    const boxHeight = 750;
     const boxX = width / 2 - boxWidth / 2;
     const boxY = height / 2 - boxHeight / 2;
 
@@ -1447,8 +1700,8 @@ export class FCFSGame extends Phaser.Scene {
     box.setDepth(101);
 
     // Title
-    this.add.text(width / 2, boxY + 40, '📊 FCFS SIMULATION RESULTS', {
-      fontSize: '36px',
+    this.add.text(width / 2, boxY + 35, '📊 FCFS SIMULATION RESULTS', {
+      fontSize: '32px',
       color: '#00FF00',
       fontStyle: 'bold',
       stroke: '#000000',
@@ -1460,11 +1713,18 @@ export class FCFSGame extends Phaser.Scene {
     const avgTurnaroundTime = this.orders.reduce((sum, o) => sum + (o.turnaroundTime || 0), 0) / this.orders.length;
     const throughput = this.orders.length / (this.currentTime / 1000);
 
-    // Gantt Chart
-    this.drawGanttChart(boxX + 50, boxY + 120, boxWidth - 100);
+    // Gantt Chart Section
+    const ganttY = boxY + 90;
+    this.add.text(width / 2, ganttY, '📊 GANTT CHART (Execution Timeline)', {
+      fontSize: '20px',
+      color: '#FFD700',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(102);
+    
+    this.drawGanttChart(boxX + 50, ganttY + 35, boxWidth - 100);
 
-    // Metrics Table
-    const metricsY = boxY + 380;
+    // Performance Metrics Section
+    const metricsY = ganttY + 140;
     this.add.text(boxX + 50, metricsY, '📈 PERFORMANCE METRICS', {
       fontSize: '20px',
       color: '#FFD700',
@@ -1474,41 +1734,69 @@ export class FCFSGame extends Phaser.Scene {
     const metricsText = `Average Waiting Time: ${avgWaitingTime.toFixed(2)}s
 Average Turnaround Time: ${avgTurnaroundTime.toFixed(2)}s
 Throughput: ${throughput.toFixed(2)} processes/second
-Total Time: ${(this.currentTime / 1000).toFixed(1)}s
+Total Time: ${(this.currentTime ).toFixed(2)}s
 Final Score: ${this.totalScore} points`;
 
-    this.add.text(boxX + 50, metricsY + 40, metricsText, {
+    this.add.text(boxX + 50, metricsY + 35, metricsText, {
       fontSize: '16px',
       color: '#FFFFFF',
       lineSpacing: 8
     }).setDepth(102);
 
-    // Individual Order Details
-    const detailsY = boxY + 495;
+    // Order Details Table
+    const detailsY = metricsY + 155;
     this.add.text(boxX + 50, detailsY, '📋 ORDER DETAILS', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold'
     }).setDepth(102);
 
-    let detailsText = 'Order | Arrival | Burst | Start | Complete | Wait | Turnaround\n';
-    detailsText += '─'.repeat(80) + '\n';
-    
-    this.orders.forEach(order => {
-      detailsText += `${order.orderNumber}      ${order.arrivalTime}       ${order.burstTime}       ${order.startTime}        ${order.completionTime}          ${order.waitingTime}      ${order.turnaroundTime}\n`;
-    });
-
-    this.add.text(boxX + 50, detailsY + 40, detailsText, {
-      fontSize: '12px',
-      color: '#FFFFFF',
+    // Table header with proper spacing
+    const tableHeaderY = detailsY + 35;
+    this.add.text(boxX + 50, tableHeaderY, 
+      'Order |  Arrival |      Burst |      Start |      Complete |      Wait |       Turnaround', {
+      fontSize: '14px',
+      color: '#00FFFF',
+      fontStyle: 'bold',
       fontFamily: 'monospace'
     }).setDepth(102);
+
+    // Separator line
+    this.add.text(boxX + 50, tableHeaderY + 20, 
+      '─'.repeat(70), {
+      fontSize: '14px',
+      color: '#888888',
+      fontFamily: 'monospace'
+    }).setDepth(102);
+    
+// Table rows with proper spacing and alignment
+this.orders.forEach((order, index) => {
+  const rowY = tableHeaderY + 40 + (index * 22);
+
+  // Format values to 3 decimal points if they are numbers
+  const orderNumber = order.orderNumber?.toString().padStart(2);
+  const arrivalTime = Number(order.arrivalTime).toFixed(3).padStart(7);
+  const burstTime = Number(order.burstTime).toFixed(3).padStart(7);
+  const startTime = Number(order.startTime || 0).toFixed(3).padStart(7);
+  const completionTime = Number(order.completionTime || 0).toFixed(3).padStart(9);
+  const waitingTime = Number(order.waitingTime || 0).toFixed(3).padStart(8);
+  const turnaroundTime = Number(order.turnaroundTime || 0).toFixed(3).padStart(10);
+
+  const rowText = `  ${orderNumber}   |   ${arrivalTime}   |   ${burstTime}   |   ${startTime}   |   ${completionTime}   |   ${waitingTime}   |   ${turnaroundTime}`;
+
+  this.add.text(boxX + 50, rowY, rowText, {
+    fontSize: '13px',
+    color: '#FFFFFF',
+    fontFamily: 'monospace'
+  }).setDepth(102);
+});
+
 
     // Next Level button
     const buttonWidth = 200;
     const buttonHeight = 50;
     const buttonX = width / 2 - buttonWidth / 2;
-    const buttonY = boxY + boxHeight - 80;
+    const buttonY = boxY + boxHeight - 70;
 
     const button = this.add.graphics();
     button.fillStyle(0xFFD700, 1);
@@ -1549,58 +1837,81 @@ Final Score: ${this.totalScore} points`;
     });
   }
 
-  private drawGanttChart(x: number, y: number, width: number) {
-    // Title
-    this.add.text(x + width / 2, y, '📊 GANTT CHART (Execution Timeline)', {
-      fontSize: '18px',
-      color: '#FFD700',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(102);
+private drawGanttChart(x: number, y: number, width: number) {
+  // Calculate maximum time and scale
+  const maxTime = Math.max(...this.orders.map(o => o.completionTime || 0));
+  const scale = width / maxTime;
 
-    // Calculate positions
-    const maxTime = Math.max(...this.orders.map(o => o.completionTime || 0));
-    const scale = (width - 100) / maxTime;
-    
-    let currentX = x + 50;
-    const barHeight = 30;
-    const barY = y + 40;
-    const spacing = 10;
+  const barHeight = 40;
+  const barY = y;
 
-    this.orders.forEach((order, index) => {
-      const barWidth = (order.completionTime! - order.startTime!) * scale;
-      
-      // Bar background
-      const bar = this.add.graphics();
-      bar.fillStyle(0x4CAF50, 1);
-      bar.fillRect(currentX, barY, barWidth, barHeight);
-      bar.lineStyle(2, 0x000000, 1);
-      bar.strokeRect(currentX, barY, barWidth, barHeight);
-      bar.setDepth(102);
-      
-      // Order number
-      const orderText = this.add.text(currentX + barWidth / 2, barY + barHeight / 2, 
-        `P${order.orderNumber}`, {
-        fontSize: '14px',
-        color: '#FFFFFF',
-        fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(102);
-      
-      // Time labels
-      const startLabel = this.add.text(currentX, barY + barHeight + 5, 
-        `${order.startTime}`, {
-        fontSize: '11px',
-        color: '#FFFFFF'
-      }).setOrigin(0.5).setDepth(102);
-      
-      const endLabel = this.add.text(currentX + barWidth, barY + barHeight + 5,
-        `${order.completionTime}`, {
-        fontSize: '11px',
-        color: '#FFFFFF'
-      }).setOrigin(0.5).setDepth(102);
-      
-      currentX += barWidth + spacing;
-    });
-  }
+  // 🎨 Draw timeline axis
+  const axisY = barY + barHeight + 20;
+  const axis = this.add.graphics();
+  axis.lineStyle(2, 0xFFFFFF, 0.6);
+  axis.lineBetween(x, axisY, x + width, axisY);
+  axis.setDepth(102);
+
+  // 🟦 Define colors for bars
+  const colors = [0x4CAF50, 0x2196F3, 0xFF9800, 0x9C27B0, 0xE91E63, 0x00BCD4, 0x8BC34A];
+
+  // 🔹 Draw each order as a Gantt bar
+  this.orders.forEach((order, index) => {
+    const startTime = Number(order.startTime || 0);
+    const completionTime = Number(order.completionTime || 0);
+    const startX = x + startTime * scale;
+    const barWidth = (completionTime - startTime) * scale;
+
+    const color = colors[index % colors.length];
+
+    // Bar with border and shadow
+    const bar = this.add.graphics();
+    bar.fillStyle(color, 0.85);
+    bar.fillRoundedRect(startX, barY, barWidth, barHeight, 8);
+    bar.lineStyle(2, 0xffffff, 0.8);
+    bar.strokeRoundedRect(startX, barY, barWidth, barHeight, 8);
+    bar.setDepth(102);
+
+    // Process label inside bar
+    const labelX = startX + barWidth / 2;
+    const labelY = barY + barHeight / 2;
+    this.add.text(labelX, labelY, `P${order.orderNumber}`, {
+      fontSize: '15px',
+      color: '#FFFFFF',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(103);
+
+    // 📍 Start time marker
+    this.add.text(startX, axisY + 5, `${startTime.toFixed(0)}`, {
+      fontSize: '12px',
+      color: '#00FFFF',
+      fontFamily: 'monospace'
+    }).setOrigin(0.5, 0).setDepth(102);
+
+    // 📍 End time marker (only if last or next doesn’t share same time)
+    const isLast = index === this.orders.length - 1;
+    const nextOrder = !isLast ? this.orders[index + 1] : null;
+    const showEndTime = isLast || (nextOrder && nextOrder.startTime !== order.completionTime);
+
+    if (showEndTime) {
+      this.add.text(startX + barWidth, axisY + 5, `${completionTime.toFixed(0)}`, {
+        fontSize: '12px',
+        color: '#00FFFF',
+        fontFamily: 'monospace'
+      }).setOrigin(0.5, 0).setDepth(102);
+    }
+  });
+
+  // 🕒 Add labels for clarity
+  this.add.text(x, axisY + 25, 'Time (s)', {
+    fontSize: '13px',
+    color: '#FFFFFF',
+    fontStyle: 'italic'
+  }).setDepth(102);
+}
+
 
   private updateClock() {
     this.currentTime = (this.time.now - this.gameStartTime) / 1000;
