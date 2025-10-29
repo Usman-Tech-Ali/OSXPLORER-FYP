@@ -164,7 +164,7 @@ export class CriticalSectionGame extends Phaser.Scene {
     this.atmStatusBg = this.add.graphics();
     this.atmStatusBg.setDepth(50);
 
-    this.atmStatusText = this.add.text(this.ATM_X, this.ATM_Y - 120, 'FREE', {
+    this.atmStatusText = this.add.text(this.ATM_X-50, this.ATM_Y - 140, 'FREE', {
       fontSize: '24px',
       color: '#00ff88',
       fontFamily: 'Arial, sans-serif',

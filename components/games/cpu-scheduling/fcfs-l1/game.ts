@@ -1169,14 +1169,159 @@ export class FCFSGame extends Phaser.Scene {
         // Show completion message
         this.showMessage(`✅ Order #${order.orderNumber} completed!`, '#00FF00');
         
-        // Check if all orders done
-        if (this.completedOrders.length === this.orders.length) {
-          this.time.delayedCall(1500, () => {
-            this.startServingPhase();
+        // Immediately deliver the order after cooking
+        this.time.delayedCall(500, () => {
+          this.deliveryBoyDeliversOrder(order);
+        });
+      }
+    });
+  }
+
+  private deliveryBoyDeliversOrder(order: FoodOrder) {
+    // Find the customer who ordered this
+    const targetCustomer = this.customers.find(c => c.order.id === order.id);
+    
+    if (!targetCustomer || !this.deliveryBoySprite) return;
+    
+    const dishConfig = this.DISH_CONFIGS[order.dishType];
+    
+    this.instructionText.setText(`🚴 Delivery boy is delivering Order #${order.orderNumber}: ${dishConfig.name} to ${order.customerName}`);
+    
+    const deliveryBoyStartX = this.deliveryBoySprite.x;
+    const deliveryBoyStartY = this.deliveryBoySprite.y;
+    
+    // Determine if customer is to the left or right
+    const isCustomerLeft = targetCustomer.x < this.deliveryBoySprite.x;
+    
+    // Phase 1: Move toward customer
+    const moveToCustomerTexture = isCustomerLeft ? 'deliver3' : 'deliver2';
+    this.deliveryBoySprite.setTexture(moveToCustomerTexture);
+    
+    const deliveryDuration = 1500;
+    const targetX = targetCustomer.x - 65;
+    const targetY = targetCustomer.y - 10;
+    
+    // Move delivery boy to customer
+    this.tweens.add({
+      targets: this.deliveryBoySprite,
+      x: targetX,
+      y: targetY,
+      duration: deliveryDuration,
+      ease: 'Power2',
+      onComplete: () => {
+        // Delivered!
+        order.isDelivered = true;
+        this.totalScore += 100;
+        this.updateScoreDisplay();
+        
+        // Update order details on stand to show "DONE" status
+        if (targetCustomer.standOrderText && targetCustomer.standSprite) {
+          // Clear the old order details
+          targetCustomer.standOrderText.destroy();
+          
+          // Create new "DONE" display on stand
+          const standX = targetCustomer.standSprite.x;
+          const standY = targetCustomer.standSprite.y;
+          
+          targetCustomer.standOrderText = this.add.container(standX + 5, standY);
+          targetCustomer.standOrderText.setDepth(2);
+          
+          // Green checkmark
+          const checkmark = this.add.text(0, -8, '✓', {
+            fontSize: '15px',
+            color: '#00FF00',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
+          }).setOrigin(0.5);
+          targetCustomer.standOrderText.add(checkmark);
+          
+          // "DONE" text below checkmark
+          const doneText = this.add.text(0, 10, 'DONE', {
+            fontSize: '10px',
+            color: '#00FF00',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
+          }).setOrigin(0.5);
+          targetCustomer.standOrderText.add(doneText);
+          
+          // Animate appearance with scale and alpha
+          targetCustomer.standOrderText.setAlpha(0);
+          targetCustomer.standOrderText.setScale(0.5);
+          this.tweens.add({
+            targets: targetCustomer.standOrderText,
+            alpha: 1,
+            scale: 1,
+            duration: 400,
+            ease: 'Back.out'
           });
-        } else {
-          this.instructionText.setText('🎯 Click on the next order in the queue (FCFS order)!');
         }
+        
+        targetCustomer.moodIcon.setText('😊');
+        this.addCustomerEatingAnimation(targetCustomer);
+        
+        const successText = this.add.text(
+          targetCustomer.x,
+          targetCustomer.y - 100,
+          `✅ Delivered!\n+100 Points\nTotal: ${this.totalScore}`,
+          {
+            fontSize: '16px',
+            color: '#00FF00',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3,
+            backgroundColor: '#000000',
+            padding: { x: 10, y: 5 },
+            align: 'center'
+          }
+        ).setOrigin(0.5);
+
+        this.tweens.add({
+          targets: successText,
+          alpha: 0,
+          y: targetCustomer.y - 150,
+          duration: 2000,
+          ease: 'Power2',
+          onComplete: () => successText.destroy()
+        });
+        
+        // Phase 2: Return to starting position
+        this.time.delayedCall(1000, () => {
+          if (!this.deliveryBoySprite) return;
+          
+          // Change to appropriate texture for return journey
+          const isReturningLeft = deliveryBoyStartX < this.deliveryBoySprite.x;
+          const returnTexture = isReturningLeft ? 'deliver3' : 'deliver2';
+          this.deliveryBoySprite.setTexture(returnTexture);
+          
+          this.tweens.add({
+            targets: this.deliveryBoySprite,
+            x: deliveryBoyStartX,
+            y: deliveryBoyStartY,
+            duration: deliveryDuration,
+            ease: 'Power2',
+            onComplete: () => {
+              // Back to standing pose
+              if (this.deliveryBoySprite) {
+                this.deliveryBoySprite.setTexture('deliver1');
+              }
+              
+              // Check if all orders have been cooked AND delivered
+              const allOrdersCookedAndDelivered = this.orders.every(o => o.isCompleted && o.isDelivered);
+              
+              if (allOrdersCookedAndDelivered) {
+                this.instructionText.setText('✅ All orders delivered! Calculating results...');
+                this.time.delayedCall(1500, () => {
+                  this.showResults();
+                });
+              } else {
+                // Continue cooking next order
+                this.instructionText.setText('🎯 Click on the next order in the queue (FCFS order)!');
+              }
+            }
+          });
+        });
       }
     });
   }
@@ -1769,8 +1914,9 @@ Final Score: ${this.totalScore} points`;
       fontFamily: 'monospace'
     }).setDepth(102);
     
-// Table rows with proper spacing and alignment
-this.orders.forEach((order, index) => {
+// Table rows with proper spacing and alignment - sorted by order number
+const sortedOrders = [...this.orders].sort((a, b) => a.orderNumber - b.orderNumber);
+sortedOrders.forEach((order, index) => {
   const rowY = tableHeaderY + 40 + (index * 22);
 
   // Format values to 3 decimal points if they are numbers
