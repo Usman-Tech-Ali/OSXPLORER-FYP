@@ -51,6 +51,7 @@ export class FCFSGame extends Phaser.Scene {
   private currentCookingOrder?: FoodOrder;
   private gameStartTime: number = 0;
   private currentTime: number = 0;
+  private cookingSound?: Phaser.Sound.BaseSound;
   
   // Sprites & Objects
   private waiterSprite!: Phaser.GameObjects.Sprite;
@@ -133,6 +134,11 @@ export class FCFSGame extends Phaser.Scene {
     this.load.image('deliver1', `${assetPath}deliver1.png`); // Delivery boy standing
     this.load.image('deliver2', `${assetPath}deliver2.png`); // Delivery boy moving right
     this.load.image('deliver3', `${assetPath}deliver3.png`); // Delivery boy moving left
+    
+    // Load sound effects
+    this.load.audio('person-walk', `${assetPath}sounds/person-walk.wav`);
+    this.load.audio('background-music', `${assetPath}sounds/background_music.flac`);
+    this.load.audio('cooking', `${assetPath}sounds/cooking.mp3`);
   }
 
   create() {
@@ -140,6 +146,12 @@ export class FCFSGame extends Phaser.Scene {
     
     // Clean up any stray DOM inputs from previous sessions
     this.removeDOMInput();
+    
+    // Start background music - loop continuously
+    this.sound.play('background-music', { 
+      loop: true, 
+      volume: 0.3 
+    });
     
     // Full screen background
     const bgImage = this.add.image(width / 2, height / 2, 'bg-restaurant');
@@ -293,95 +305,121 @@ export class FCFSGame extends Phaser.Scene {
   }
 
   private showIntroScenario(width: number, height: number) {
-    // Dark overlay to hide background completely
+    // Dark overlay
     const overlay = this.add.graphics();
-    overlay.fillStyle(0x000000, 0.95);
+    overlay.fillStyle(0x000000, 0.85);
     overlay.fillRect(0, 0, width, height);
-    overlay.setDepth(100);
+    overlay.setDepth(300);
 
-    // Compact scenario box
-    const boxWidth = 850;
-    const boxHeight = 550;
+    // Scenario box - cleaner and more compact
+    const boxWidth = 700;
+    const boxHeight = 600;
     const boxX = width / 2 - boxWidth / 2;
     const boxY = height / 2 - boxHeight / 2;
 
     const scenarioBox = this.add.graphics();
-    scenarioBox.fillStyle(0x1a1a2e, 0.98);
-    scenarioBox.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 25);
+    scenarioBox.fillStyle(0x0a0e27, 0.98);
+    scenarioBox.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     scenarioBox.lineStyle(4, 0xFFD700, 1);
-    scenarioBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 25);
-    scenarioBox.setDepth(101);
+    scenarioBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
+    scenarioBox.setDepth(301);
 
-    const gradientBox = this.add.graphics();
-    gradientBox.fillGradientStyle(0xFFD700, 0xFFA500, 0xFF8C00, 0xFF4500, 0.1);
-    gradientBox.fillRoundedRect(boxX + 5, boxY + 5, boxWidth - 10, boxHeight - 10, 20);
-    gradientBox.setDepth(101);
-
-    const title = this.add.text(width / 2, boxY + 40, '🎯 FCFS CPU SCHEDULING', {
-      fontSize: '38px',
+    // Title
+    const title = this.add.text(width / 2, boxY + 50, '🎯 FCFS SCHEDULING', {
+      fontSize: '36px',
       color: '#FFD700',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 4
-    }).setOrigin(0.5);
-    title.setDepth(102);
+      strokeThickness: 4,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(302);
 
-    const subtitle = this.add.text(width / 2, boxY + 90, 'First Come First Served Algorithm - Restaurant Simulation', {
+    const subtitle = this.add.text(width / 2, boxY + 95, 'CPU Scheduling - Restaurant Game', {
+      fontSize: '18px',
+      color: '#FFFFFF',
+      fontStyle: '600',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(302);
+
+    // Clean sections layout
+    const contentY = boxY + 145;
+
+    // How to Play
+    const howToPlayTitle = this.add.text(boxX + 50, contentY, '🎮 How to Play', {
       fontSize: '20px',
-      color: '#FFFFFF',
-      fontStyle: 'normal'
-    }).setOrigin(0.5);
-    subtitle.setDepth(102);
+      color: '#FFD700',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
 
-    const scenarioText = `📚 LEARNING OBJECTIVES:
-• Understand FCFS (First Come First Served) scheduling
-• Visualize FIFO queue behavior & convoy effect
+    const howToPlay = `   1. Waiter collects orders from customers
+   2. Orders appear in the Ready Queue
+   3. Click the FIRST order to start cooking
+   4. Delivery boy delivers completed orders`;
 
-🎮 HOW TO PLAY:
-
-1️⃣ ARRIVAL: Waiter collects orders from customers
-2️⃣ COOKING: Click orders in Ready Queue
-   ⚠️ Must select FIRST order only! (FCFS Rule)
-3️⃣ DELIVERY: Delivery boy delivers completed orders
-
-📋 RULES:
-• Click the FIRST order in queue to cook
-• No skipping orders (FCFS principle)
-• Chef cooks one order at a time
-
-🎯 SCORING:
-✅ Correct order: +20 points
-❌ Wrong order: -10 points
-🚚 Delivery: +100 points`;
-
-    const text = this.add.text(width / 2, boxY + 310, scenarioText, {
+    const howToPlayText = this.add.text(boxX + 50, contentY + 35, howToPlay, {
       fontSize: '16px',
-      color: '#FFFFFF',
-      fontStyle: 'normal',
-      align: 'left',
-      lineSpacing: 5
-    }).setOrigin(0.5);
-    text.setDepth(102);
+      color: '#E0E0E0',
+      lineSpacing: 6,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
 
-    // Start button - positioned inside box
-    const buttonWidth = 280;
+    // Rules
+    const rulesTitle = this.add.text(boxX + 50, contentY + 145, '⚠️ FCFS Rules', {
+      fontSize: '20px',
+      color: '#FFD700',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
+
+    const rules = `   • Always select the FIRST order in queue
+   • Orders must be processed in arrival order
+   • Chef cooks one order at a time
+   • Correct order: +20 pts | Wrong order: -10 pts`;
+
+    const rulesText = this.add.text(boxX + 50, contentY + 180, rules, {
+      fontSize: '16px',
+      color: '#E0E0E0',
+      lineSpacing: 6,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
+
+    // Goals
+    const goalTitle = this.add.text(boxX + 50, contentY + 280, '🎯 Goal', {
+      fontSize: '20px',
+      color: '#FFD700',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
+
+    const goal = `   Process all orders following FCFS (First Come First Served)!`;
+
+    const goalText = this.add.text(boxX + 50, contentY + 315, goal, {
+      fontSize: '16px',
+      color: '#00ff88',
+      fontStyle: '600',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
+
+    // Start button
+    const buttonWidth = 200;
     const buttonHeight = 55;
-    const buttonX = width / 2 - buttonWidth / 2 + 240;
-    const buttonY = boxY + boxHeight - 80;
+    const buttonX = width / 2 - buttonWidth / 2;
+    const buttonY = boxY + boxHeight - 75;
 
     const startButton = this.add.graphics();
-    startButton.fillStyle(0xFFD700, 1);
-    startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
-    startButton.lineStyle(3, 0xFF8C00, 1);
-    startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
-    startButton.setDepth(102);
+    startButton.fillGradientStyle(0xFFD700, 0xFFD700, 0xFFA500, 0xFFA500, 1);
+    startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+    startButton.lineStyle(3, 0xFFD700, 1);
+    startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+    startButton.setDepth(302);
 
-    const buttonText = this.add.text(width / 2 + 240, buttonY + 28, '🚀 START', {
+    const buttonText = this.add.text(width / 2, buttonY + 27, '🚀 START GAME', {
       fontSize: '22px',
       color: '#000000',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    buttonText.setDepth(102);
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(303);
 
     startButton.setInteractive(
       new Phaser.Geom.Rectangle(buttonX, buttonY, buttonWidth, buttonHeight),
@@ -390,27 +428,33 @@ export class FCFSGame extends Phaser.Scene {
 
     startButton.on('pointerover', () => {
       startButton.clear();
-      startButton.fillStyle(0xFFA500, 1);
-      startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
-      startButton.lineStyle(3, 0xFF8C00, 1);
-      startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
+      startButton.fillGradientStyle(0xFFFF00, 0xFFFF00, 0xFFCC00, 0xFFCC00, 1);
+      startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+      startButton.lineStyle(3, 0xFFD700, 1);
+      startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+      this.sys.canvas.style.cursor = 'pointer';
     });
 
     startButton.on('pointerout', () => {
       startButton.clear();
-      startButton.fillStyle(0xFFD700, 1);
-      startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
-      startButton.lineStyle(3, 0xFF8C00, 1);
-      startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
+      startButton.fillGradientStyle(0xFFD700, 0xFFD700, 0xFFA500, 0xFFA500, 1);
+      startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+      startButton.lineStyle(3, 0xFFD700, 1);
+      startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+      this.sys.canvas.style.cursor = 'default';
     });
 
     startButton.on('pointerdown', () => {
       overlay.destroy();
       scenarioBox.destroy();
-      gradientBox.destroy();
       title.destroy();
       subtitle.destroy();
-      text.destroy();
+      howToPlayTitle.destroy();
+      howToPlayText.destroy();
+      rulesTitle.destroy();
+      rulesText.destroy();
+      goalTitle.destroy();
+      goalText.destroy();
       startButton.destroy();
       buttonText.destroy();
       
@@ -451,7 +495,7 @@ export class FCFSGame extends Phaser.Scene {
     this.currentTime = 0;
     
     // Randomly decide how many customers (3 to 5)
-    this.numCustomers = Phaser.Math.Between(1, 1);
+    this.numCustomers = Phaser.Math.Between(3, 5);
     
     this.phaseText.setText('Phase: Customers Arriving');
     this.instructionText.setText(`🎲 ${this.numCustomers} customers have arrived at the restaurant!`);
@@ -682,6 +726,15 @@ export class FCFSGame extends Phaser.Scene {
     );
     const moveDuration = Math.max(500, Math.min(1500, distance * 0.8)); // Scale duration by distance
     
+    // Play walking sound with reduced duration
+    const walkSound = this.sound.add('person-walk');
+    walkSound.play({ volume: 0.5 });
+    this.time.delayedCall(1500, () => {
+      if (walkSound.isPlaying) {
+        walkSound.stop();
+      }
+    });
+    
     // Waiter walks to customer with smooth animation
     this.tweens.add({
       targets: this.waiterSprite,
@@ -778,6 +831,15 @@ export class FCFSGame extends Phaser.Scene {
     );
     const moveDuration = Math.max(800, Math.min(2000, distance * 0.8));
     
+    // Play walking sound with reduced duration
+    const walkSound = this.sound.add('person-walk');
+    walkSound.play({ volume: 0.5 });
+    this.time.delayedCall(1500, () => {
+      if (walkSound.isPlaying) {
+        walkSound.stop();
+      }
+    });
+    
     this.tweens.add({
       targets: this.waiterSprite,
       x: waiterStartX,
@@ -809,6 +871,15 @@ export class FCFSGame extends Phaser.Scene {
       waiterStartY
     );
     const moveDuration = Math.max(1000, Math.min(2500, distance * 0.8)); // Scale duration by distance
+    
+    // Play walking sound with reduced duration
+    const walkSound = this.sound.add('person-walk');
+    walkSound.play({ volume: 0.5 });
+    this.time.delayedCall(1500, () => {
+      if (walkSound.isPlaying) {
+        walkSound.stop();
+      }
+    });
     
     this.tweens.add({
       targets: this.waiterSprite,
@@ -1144,6 +1215,13 @@ export class FCFSGame extends Phaser.Scene {
     this.chefSprite.setTexture('chef-cutting');
     this.addChefCookingAnimation();
     
+    // Play cooking sound
+    this.cookingSound = this.sound.add('cooking');
+    this.cookingSound.play({ 
+      loop: true,
+      volume: 0.4 
+    });
+    
     // Cooking progress
     const cookTime = order.burstTime * 1000;
     this.currentProgress = 0;
@@ -1159,6 +1237,11 @@ export class FCFSGame extends Phaser.Scene {
       onComplete: () => {
         this.stopChefCookingAnimation();
         this.chefSprite.setTexture('chef-standing');
+        
+        // Stop cooking sound
+        if (this.cookingSound && this.cookingSound.isPlaying) {
+          this.cookingSound.stop();
+        }
         
         // Mark as completed
         order.isCompleted = true;
@@ -1210,6 +1293,15 @@ export class FCFSGame extends Phaser.Scene {
     const deliveryDuration = 1500;
     const targetX = targetCustomer.x - 65;
     const targetY = targetCustomer.y - 10;
+    
+    // Play walking sound with reduced duration
+    const walkSound = this.sound.add('person-walk');
+    walkSound.play({ volume: 0.5 });
+    this.time.delayedCall(1500, () => {
+      if (walkSound.isPlaying) {
+        walkSound.stop();
+      }
+    });
     
     // Move delivery boy to customer
     this.tweens.add({
@@ -1304,6 +1396,15 @@ export class FCFSGame extends Phaser.Scene {
           const isReturningLeft = deliveryBoyStartX < this.deliveryBoySprite.x;
           const returnTexture = isReturningLeft ? 'deliver3' : 'deliver2';
           this.deliveryBoySprite.setTexture(returnTexture);
+          
+          // Play walking sound with reduced duration
+          const walkSound = this.sound.add('person-walk');
+          walkSound.play({ volume: 0.5 });
+          this.time.delayedCall(1500, () => {
+            if (walkSound.isPlaying) {
+              walkSound.stop();
+            }
+          });
           
           this.tweens.add({
             targets: this.deliveryBoySprite,

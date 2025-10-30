@@ -8,6 +8,8 @@ interface Person {
   isAtAtm: boolean;
   isCompleted: boolean;
   queuePosition: number;
+  atmUsageTime: number; // Time in milliseconds to use ATM
+  clickCircle?: Phaser.GameObjects.Graphics; // Visual indicator for clickable area
 }
 
 export class CriticalSectionGame extends Phaser.Scene {
@@ -35,6 +37,9 @@ export class CriticalSectionGame extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
   private phaseText!: Phaser.GameObjects.Text;
+  private atmProgressBar!: Phaser.GameObjects.Graphics;
+  private atmProgressBg!: Phaser.GameObjects.Graphics;
+  private atmTimerText!: Phaser.GameObjects.Text;
   
   // Game dimensions
   private GAME_WIDTH!: number;
@@ -70,6 +75,10 @@ export class CriticalSectionGame extends Phaser.Scene {
     for (let i = 1; i <= 5; i++) {
       this.load.image(`person-${i}`, `/games/process-synchronization/person-${i}.png`);
     }
+    
+    // Load sound effects
+    this.load.audio('person-walk', '/games/process-synchronization/sounds/person-walk.wav');
+    this.load.audio('background-music', '/games/process-synchronization/sounds/background_music.flac');
   }
 
   create() {
@@ -78,6 +87,12 @@ export class CriticalSectionGame extends Phaser.Scene {
     
     // Set default cursor for the entire game
     this.input.setDefaultCursor('default');
+    
+    // Start background music - loop continuously
+    this.sound.play('background-music', { 
+      loop: true, 
+      volume: 0.3 
+    });
     
     // Create background
     this.createBackground();
@@ -160,26 +175,50 @@ export class CriticalSectionGame extends Phaser.Scene {
   }
 
   private createATMStatus() {
-    // ATM status indicator above the ATM
+    // ATM status indicator - small and compact to fit on ATM
     this.atmStatusBg = this.add.graphics();
     this.atmStatusBg.setDepth(50);
 
-    this.atmStatusText = this.add.text(this.ATM_X-50, this.ATM_Y - 140, 'FREE', {
-      fontSize: '24px',
+    // Smaller status indicator positioned on the ATM
+    this.atmStatusText = this.add.text(this.ATM_X - 60, this.ATM_Y - 140, 'FREE', {
+      fontSize: '14px',
       color: '#00ff88',
       fontFamily: 'Arial, sans-serif',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3
+      strokeThickness: 2
     }).setOrigin(0.5);
     this.atmStatusText.setDepth(50);
+
+    // Progress bar background
+    this.atmProgressBg = this.add.graphics();
+    this.atmProgressBg.setDepth(50);
+    this.atmProgressBg.setVisible(false);
+
+    // Progress bar
+    this.atmProgressBar = this.add.graphics();
+    this.atmProgressBar.setDepth(51);
+    this.atmProgressBar.setVisible(false);
+
+    // Timer text
+    this.atmTimerText = this.add.text(this.ATM_X + 70, this.ATM_Y - 140, '', {
+      fontSize: '12px',
+      color: '#FFFFFF',
+      fontFamily: 'Arial, sans-serif',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    this.atmTimerText.setDepth(52);
+    this.atmTimerText.setVisible(false);
 
     this.updateATMStatus(false);
   }
 
   private createInstructions() {
-    this.instructionText = this.add.text(this.GAME_WIDTH / 2, 50, 'Click on persons to send them to the ATM (one at a time)', {
-      fontSize: '20px',
+    // Remove the instruction text as it overlaps - phase text will show instructions
+    this.instructionText = this.add.text(this.GAME_WIDTH / 2, 20, '', {
+      fontSize: '16px',
       color: '#ffffff',
       fontFamily: 'Arial, sans-serif',
       fontStyle: 'bold',
@@ -187,52 +226,53 @@ export class CriticalSectionGame extends Phaser.Scene {
       strokeThickness: 2
     }).setOrigin(0.5);
     this.instructionText.setDepth(100);
+    this.instructionText.setVisible(false); // Hide to prevent overlap
   }
 
   private createUI() {
-    // Title
-    const titleText = this.add.text(this.GAME_WIDTH / 2, 40, '🏦 Critical Section Simulation 🏦', {
-      fontSize: '28px',
+    // Title - moved up slightly
+    const titleText = this.add.text(this.GAME_WIDTH / 2, 25, '🏦 Critical Section Simulation', {
+      fontSize: '24px',
       color: '#FFD700',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 4,
-      backgroundColor: '#00000099',
-      padding: { x: 12, y: 6 }
-    }).setOrigin(0.5);
-    titleText.setDepth(12);
-
-    // Phase indicator
-    this.phaseText = this.add.text(this.GAME_WIDTH / 2, 88, 'Phase: Intro', {
-      fontSize: '18px',
-      color: '#00FF00',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3,
       backgroundColor: '#00000099',
-      padding: { x: 10, y: 4 }
+      padding: { x: 10, y: 5 }
+    }).setOrigin(0.5);
+    titleText.setDepth(12);
+
+    // Phase indicator - better positioned below title
+    this.phaseText = this.add.text(this.GAME_WIDTH / 2, 60, 'Phase: Intro', {
+      fontSize: '16px',
+      color: '#00FF00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
+      backgroundColor: '#00000099',
+      padding: { x: 8, y: 4 }
     }).setOrigin(0.5);
     this.phaseText.setDepth(12);
 
-    // Score display
-    this.scoreText = this.add.text(this.GAME_WIDTH - 150, 90, 'Score: 0', {
+    // Score display - positioned on the right
+    this.scoreText = this.add.text(this.GAME_WIDTH - 120, 25, 'Score: 0', {
       fontSize: '16px',
       color: '#FFD700',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3,
+      strokeThickness: 2,
       backgroundColor: '#00000099',
       padding: { x: 8, y: 4 }
     });
     this.scoreText.setDepth(12);
 
-    // Time display
-    this.timeText = this.add.text(170, 90, 'Time: 0s', {
+    // Time display - positioned on the left
+    this.timeText = this.add.text(120, 25, 'Time: 0s', {
       fontSize: '16px',
       color: '#00FFFF',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3,
+      strokeThickness: 2,
       backgroundColor: '#00000099',
       padding: { x: 8, y: 4 }
     });
@@ -240,97 +280,121 @@ export class CriticalSectionGame extends Phaser.Scene {
   }
 
   private showIntroScenario() {
-    // Dark overlay to hide background completely
+    // Dark overlay
     const overlay = this.add.graphics();
-    overlay.fillStyle(0x000000, 0.95);
+    overlay.fillStyle(0x000000, 0.85);
     overlay.fillRect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
-    overlay.setDepth(100);
+    overlay.setDepth(300);
 
-    // Compact scenario box
-    const boxWidth = 850;
-    const boxHeight = 550;
+    // Scenario box - cleaner and more compact
+    const boxWidth = 700;
+    const boxHeight = 600;
     const boxX = this.GAME_WIDTH / 2 - boxWidth / 2;
     const boxY = this.GAME_HEIGHT / 2 - boxHeight / 2;
 
     const scenarioBox = this.add.graphics();
-    scenarioBox.fillStyle(0x1a1a2e, 0.98);
-    scenarioBox.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 25);
+    scenarioBox.fillStyle(0x0a0e27, 0.98);
+    scenarioBox.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     scenarioBox.lineStyle(4, 0xFFD700, 1);
-    scenarioBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 25);
-    scenarioBox.setDepth(101);
+    scenarioBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
+    scenarioBox.setDepth(301);
 
-    const gradientBox = this.add.graphics();
-    gradientBox.fillGradientStyle(0xFFD700, 0xFFA500, 0xFF8C00, 0xFF4500, 0.1);
-    gradientBox.fillRoundedRect(boxX + 5, boxY + 5, boxWidth - 10, boxHeight - 10, 20);
-    gradientBox.setDepth(101);
-
-    const title = this.add.text(this.GAME_WIDTH / 2, boxY + 40, '🔒 CRITICAL SECTION SIMULATION', {
-      fontSize: '38px',
+    // Title
+    const title = this.add.text(this.GAME_WIDTH / 2, boxY + 50, '🔒 CRITICAL SECTION', {
+      fontSize: '36px',
       color: '#FFD700',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 4
-    }).setOrigin(0.5);
-    title.setDepth(102);
+      strokeThickness: 4,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(302);
 
-    const subtitle = this.add.text(this.GAME_WIDTH / 2, boxY + 90, 'Process Synchronization - Mutual Exclusion Demo', {
+    const subtitle = this.add.text(this.GAME_WIDTH / 2, boxY + 95, 'Process Synchronization Game', {
+      fontSize: '18px',
+      color: '#FFFFFF',
+      fontStyle: '600',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(302);
+
+    // Clean sections layout
+    const contentY = boxY + 145;
+
+    // How to Play
+    const howToPlayTitle = this.add.text(boxX + 50, contentY, '🎮 How to Play', {
       fontSize: '20px',
-      color: '#FFFFFF',
-      fontStyle: 'normal'
-    }).setOrigin(0.5);
-    subtitle.setDepth(102);
+      color: '#FFD700',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
 
-    const scenarioText = `📚 LEARNING OBJECTIVES:
-• Understand Critical Section concept
-• Learn Mutual Exclusion principle
-• Visualize process synchronization
+    const howToPlay = `   1. Persckons arrive and form a queue
+   2. Click on any person to send them to the ATM
+   3. Only ONE person can use the ATM at a time
+   4. Wait for the person to finish before sending next`;
 
-🎮 HOW TO PLAY:
-
-1️⃣ ARRIVAL: Persons arrive and form a queue
-2️⃣ ATM ACCESS: Click on persons to send them to ATM
-   ⚠️ Only ONE person can use ATM at a time!
-3️⃣ COMPLETION: Person completes transaction and leaves
-
-📋 RULES:
-• Click on any person to send them to ATM
-• Only one person can use ATM at a time
-• Wait for current person to finish before next
-• Follow mutual exclusion principle
-
-🎯 SCORING:
-✅ Correct access: +25 points
-❌ Wrong attempt: -10 points
-🏆 Perfect game: +100 bonus points`;
-
-    const text = this.add.text(this.GAME_WIDTH / 2, boxY + 310, scenarioText, {
+    const howToPlayText = this.add.text(boxX + 50, contentY + 35, howToPlay, {
       fontSize: '16px',
-      color: '#FFFFFF',
-      fontStyle: 'normal',
-      align: 'left',
-      lineSpacing: 5
-    }).setOrigin(0.5);
-    text.setDepth(102);
+      color: '#E0E0E0',
+      lineSpacing: 6,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
 
-    // Start button - positioned inside box
-    const buttonWidth = 280;
+    // Rules
+    const rulesTitle = this.add.text(boxX + 50, contentY + 145, '⚠️ Mutual Exclusion Rules', {
+      fontSize: '20px',
+      color: '#FFD700',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
+
+    const rules = `   • ATM is a critical section (shared resource)
+   • Only one person can access it at a time
+   • Trying to access an occupied ATM = Error (-10 points)
+   • Correct access = +25 points | Perfect game = +100 bonus`;
+
+    const rulesText = this.add.text(boxX + 50, contentY + 180, rules, {
+      fontSize: '16px',
+      color: '#E0E0E0',
+      lineSpacing: 6,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
+
+    // Goals
+    const goalTitle = this.add.text(boxX + 50, contentY + 280, '🎯 Goal', {
+      fontSize: '20px',
+      color: '#FFD700',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
+
+    const goal = `   Help all persons use the ATM while maintaining mutual exclusion!`;
+
+    const goalText = this.add.text(boxX + 50, contentY + 315, goal, {
+      fontSize: '16px',
+      color: '#00ff88',
+      fontStyle: '600',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
+
+    // Start button
+    const buttonWidth = 200;
     const buttonHeight = 55;
-    const buttonX = this.GAME_WIDTH / 2 - buttonWidth / 2 + 240;
-    const buttonY = boxY + boxHeight - 80;
+    const buttonX = this.GAME_WIDTH / 2 - buttonWidth / 2;
+    const buttonY = boxY + boxHeight - 75;
 
     const startButton = this.add.graphics();
-    startButton.fillStyle(0xFFD700, 1);
-    startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
-    startButton.lineStyle(3, 0xFF8C00, 1);
-    startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
-    startButton.setDepth(102);
+    startButton.fillGradientStyle(0xFFD700, 0xFFD700, 0xFFA500, 0xFFA500, 1);
+    startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+    startButton.lineStyle(3, 0xFFD700, 1);
+    startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+    startButton.setDepth(302);
 
-    const buttonText = this.add.text(this.GAME_WIDTH / 2 + 240, buttonY + 28, '🚀 START', {
+    const buttonText = this.add.text(this.GAME_WIDTH / 2, buttonY + 27, '🚀 START GAME', {
       fontSize: '22px',
       color: '#000000',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    buttonText.setDepth(102);
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(303);
 
     startButton.setInteractive(
       new Phaser.Geom.Rectangle(buttonX, buttonY, buttonWidth, buttonHeight),
@@ -339,27 +403,34 @@ export class CriticalSectionGame extends Phaser.Scene {
 
     startButton.on('pointerover', () => {
       startButton.clear();
-      startButton.fillStyle(0xFFA500, 1);
-      startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
-      startButton.lineStyle(3, 0xFF8C00, 1);
-      startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
+      startButton.fillGradientStyle(0xFFFF00, 0xFFFF00, 0xFFCC00, 0xFFCC00, 1);
+      startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+      startButton.lineStyle(3, 0xFFD700, 1);
+      startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+      this.input.setDefaultCursor('pointer');
     });
 
     startButton.on('pointerout', () => {
       startButton.clear();
-      startButton.fillStyle(0xFFD700, 1);
-      startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
-      startButton.lineStyle(3, 0xFF8C00, 1);
-      startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 15);
+      startButton.fillGradientStyle(0xFFD700, 0xFFD700, 0xFFA500, 0xFFA500, 1);
+      startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+      startButton.lineStyle(3, 0xFFD700, 1);
+      startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+      this.input.setDefaultCursor('default');
     });
 
     startButton.on('pointerdown', () => {
+      // Destroy all intro elements
       overlay.destroy();
       scenarioBox.destroy();
-      gradientBox.destroy();
       title.destroy();
       subtitle.destroy();
-      text.destroy();
+      howToPlayTitle.destroy();
+      howToPlayText.destroy();
+      rulesTitle.destroy();
+      rulesText.destroy();
+      goalTitle.destroy();
+      goalText.destroy();
       startButton.destroy();
       buttonText.destroy();
       
@@ -404,9 +475,7 @@ export class CriticalSectionGame extends Phaser.Scene {
     sprite.setScale(0.9); // Increased from 0.6 to 0.9
     sprite.setOrigin(0.5, 0.5); // Center the sprite anchor point
     sprite.setDepth(20);
-    sprite.setInteractive({
-      hitArea: new Phaser.Geom.Circle(0, 0, 40) // Hit area centered on sprite
-    });
+    // Don't set interactive yet - will set after person reaches queue
 
     // Create label
     const label = this.add.text(this.SPAWN_X, this.SPAWN_Y - 60, `Person ${personId}`, {
@@ -419,6 +488,9 @@ export class CriticalSectionGame extends Phaser.Scene {
     }).setOrigin(0.5);
     label.setDepth(20);
 
+    // Random ATM usage time between 3-7 seconds (different for each person)
+    const atmUsageTime = Phaser.Math.Between(3000, 7000);
+
     // Create person object
     const person: Person = {
       id: personId,
@@ -427,7 +499,8 @@ export class CriticalSectionGame extends Phaser.Scene {
       isInQueue: false,
       isAtAtm: false,
       isCompleted: false,
-      queuePosition
+      queuePosition,
+      atmUsageTime
     };
 
     this.persons.push(person);
@@ -436,6 +509,15 @@ export class CriticalSectionGame extends Phaser.Scene {
     const targetX = this.QUEUE_START_X + (queuePosition * this.QUEUE_SPACING);
     
     this.updateConsole(`Person ${personId} is arriving...\nWalking to queue position...`);
+    
+    // Play walking sound with reduced duration (stop after 1.5 seconds)
+    const walkSound = this.sound.add('person-walk');
+    walkSound.play({ volume: 0.5 });
+    this.time.delayedCall(1500, () => {
+      if (walkSound.isPlaying) {
+        walkSound.stop();
+      }
+    });
     
     // Animate person walking to queue position
     this.tweens.add({
@@ -446,6 +528,13 @@ export class CriticalSectionGame extends Phaser.Scene {
       onComplete: () => {
         person.isInQueue = true;
         this.updateConsole(`Person ${personId} has joined the queue!\nQueue size: ${this.persons.length}\n\nClick on any person to send them to the ATM.\nRemember: Only one person at a time!`);
+        
+        // Set interactive with pixel perfect detection based on texture
+        sprite.setInteractive({ 
+          pixelPerfect: true,
+          alphaTolerance: 1,
+          cursor: 'pointer'
+        });
         
         // Add click handler
         sprite.on('pointerdown', () => this.onPersonClick(person));
@@ -537,7 +626,20 @@ export class CriticalSectionGame extends Phaser.Scene {
     this.isAtmOccupied = true;
     this.updateATMStatus(true);
     
+    // Disable interaction for this person
+    person.sprite.disableInteractive();
+    person.sprite.clearTint();
+    
     this.updateConsole(`Person ${person.id} is walking to ATM...\nATM is now OCCUPIED!\n\nCritical section is being accessed...`);
+
+    // Play walking sound with reduced duration (stop after 1.5 seconds)
+    const walkSound = this.sound.add('person-walk');
+    walkSound.play({ volume: 0.5 });
+    this.time.delayedCall(1500, () => {
+      if (walkSound.isPlaying) {
+        walkSound.stop();
+      }
+    });
 
     // Animate person walking to ATM
     this.tweens.add({
@@ -547,17 +649,76 @@ export class CriticalSectionGame extends Phaser.Scene {
       duration: 2000,
       ease: 'Power2',
       onComplete: () => {
-        this.updateConsole(`Person ${person.id} is using the ATM...\nTransaction in progress...\n\nCritical section is protected!`);
+        const usageTimeInSeconds = (person.atmUsageTime / 1000).toFixed(1);
+        this.updateConsole(`Person ${person.id} is using the ATM...\nTransaction time: ${usageTimeInSeconds}s\nTransaction in progress...\n\nCritical section is protected!`);
         
         // Simulate ATM usage with visual feedback
         this.atmSprite.setTint(0xffaaaa); // Slight red tint when in use
         
-        // Simulate ATM usage
-        this.time.delayedCall(4000, () => {
+        // Show progress bar and timer
+        this.showATMProgress(person.atmUsageTime);
+        
+        // Simulate ATM usage with person's specific time
+        this.time.delayedCall(person.atmUsageTime, () => {
           this.completePersonTransaction(person);
         });
       }
     });
+  }
+
+  private showATMProgress(duration: number) {
+    // Show progress elements
+    this.atmProgressBg.setVisible(true);
+    this.atmProgressBar.setVisible(true);
+    this.atmTimerText.setVisible(true);
+
+    const progressBarWidth = 120;
+    const progressBarHeight = 8;
+    const progressBarX = this.ATM_X - progressBarWidth / 2;
+    const progressBarY = this.ATM_Y - 110;
+
+    // Draw progress bar background
+    this.atmProgressBg.clear();
+    this.atmProgressBg.fillStyle(0x333333, 0.8);
+    this.atmProgressBg.fillRoundedRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight, 4);
+    this.atmProgressBg.lineStyle(1, 0x666666, 1);
+    this.atmProgressBg.strokeRoundedRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight, 4);
+
+    // Animate progress bar
+    let startTime = this.time.now;
+    
+    const updateProgress = () => {
+      const elapsed = this.time.now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const remainingTime = Math.max((duration - elapsed) / 1000, 0);
+
+      // Update progress bar
+      this.atmProgressBar.clear();
+      this.atmProgressBar.fillStyle(0x00ff88, 1);
+      this.atmProgressBar.fillRoundedRect(
+        progressBarX + 1,
+        progressBarY + 1,
+        (progressBarWidth - 2) * progress,
+        progressBarHeight - 2,
+        3
+      );
+
+      // Update timer text
+      this.atmTimerText.setText(`${remainingTime.toFixed(1)}s`);
+
+      if (progress < 1) {
+        this.time.delayedCall(50, updateProgress);
+      } else {
+        // Hide progress elements when complete
+        this.time.delayedCall(200, () => {
+          this.atmProgressBg.setVisible(false);
+          this.atmProgressBar.setVisible(false);
+          this.atmTimerText.setVisible(false);
+        });
+      }
+    };
+
+    updateProgress();
   }
 
   private completePersonTransaction(person: Person) {
@@ -568,6 +729,15 @@ export class CriticalSectionGame extends Phaser.Scene {
 
     // Reset ATM visual
     this.atmSprite.setTint(0xffffff);
+
+    // Play walking sound for leaving with reduced duration (stop after 1.5 seconds)
+    const walkSound = this.sound.add('person-walk');
+    walkSound.play({ volume: 0.5 });
+    this.time.delayedCall(1500, () => {
+      if (walkSound.isPlaying) {
+        walkSound.stop();
+      }
+    });
 
     // Animate person leaving
     this.tweens.add({
@@ -604,23 +774,23 @@ export class CriticalSectionGame extends Phaser.Scene {
     this.atmStatusText.setText(text);
     this.atmStatusText.setColor(color);
     
-    // Update background
+    // Update background - smaller size to fit on ATM
     this.atmStatusBg.clear();
-    this.atmStatusBg.fillStyle(bgColor, 0.4);
+    this.atmStatusBg.fillStyle(bgColor, 0.5);
     this.atmStatusBg.fillRoundedRect(
-      this.atmStatusText.x - 70,
-      this.atmStatusText.y - 25,
-      140,
-      50,
-      15
+      this.atmStatusText.x - 40,
+      this.atmStatusText.y - 15,
+      80,
+      30,
+      8
     );
-    this.atmStatusBg.lineStyle(3, bgColor, 1);
+    this.atmStatusBg.lineStyle(2, bgColor, 1);
     this.atmStatusBg.strokeRoundedRect(
-      this.atmStatusText.x - 70,
-      this.atmStatusText.y - 25,
-      140,
-      50,
-      15
+      this.atmStatusText.x - 40,
+      this.atmStatusText.y - 15,
+      80,
+      30,
+      8
     );
   }
 
@@ -638,111 +808,159 @@ export class CriticalSectionGame extends Phaser.Scene {
     
     // Create end game overlay
     const overlay = this.add.graphics();
-    overlay.fillStyle(0x000000, 0.95);
+    overlay.fillStyle(0x000000, 0.85);
     overlay.fillRect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
-    overlay.setDepth(200);
+    overlay.setDepth(300);
 
-    // End game container
-    const container = this.add.container(this.GAME_WIDTH / 2, this.GAME_HEIGHT / 2);
-    container.setDepth(201);
+    // Scenario box - matching intro style
+    const boxWidth = 700;
+    const boxHeight = 550;
+    const boxX = this.GAME_WIDTH / 2 - boxWidth / 2;
+    const boxY = this.GAME_HEIGHT / 2 - boxHeight / 2;
 
-    // Background
-    const bg = this.add.graphics();
-    bg.fillStyle(0x1a1a1a, 0.95);
-    bg.lineStyle(4, 0x00ff88);
-    bg.fillRoundedRect(-450, -300, 900, 600, 25);
-    bg.strokeRoundedRect(-450, -300, 900, 600, 25);
-    container.add(bg);
+    const scenarioBox = this.add.graphics();
+    scenarioBox.fillStyle(0x0a0e27, 0.98);
+    scenarioBox.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
+    scenarioBox.lineStyle(4, 0xFFD700, 1);
+    scenarioBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
+    scenarioBox.setDepth(301);
 
     // Title
-    const title = this.add.text(0, -220, '🎉 CRITICAL SECTION SIMULATION COMPLETE! 🎉', {
-      fontSize: '32px',
-      color: '#00ff88',
-      fontFamily: 'Arial, sans-serif',
+    const title = this.add.text(this.GAME_WIDTH / 2, boxY + 50, '🎉 GAME COMPLETE', {
+      fontSize: '36px',
+      color: '#FFD700',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3
-    }).setOrigin(0.5);
-    container.add(title);
+      strokeThickness: 4,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(302);
 
-    // Subtitle
-    const subtitle = this.add.text(0, -160, 'Mutual Exclusion Successfully Demonstrated', {
-      fontSize: '22px',
-      color: '#ffffff',
-      fontFamily: 'Arial, sans-serif',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    container.add(subtitle);
-
-    // Results
-    const results = this.add.text(0, -80, `✅ All ${this.totalPersons} persons successfully used the ATM!\n\n🔒 No race conditions occurred\n🛡️ Mutual exclusion was maintained throughout\n⚡ Critical section was properly protected\n🎯 Each person waited their turn patiently\n\nThis simulation demonstrates how critical sections\nprevent multiple processes from accessing\nshared resources simultaneously!`, {
-      fontSize: '16px',
-      color: '#cccccc',
-      fontFamily: 'Arial, sans-serif',
-      align: 'center',
-      lineSpacing: 6
-    }).setOrigin(0.5);
-    container.add(results);
-
-    // Score breakdown
-    const scoreBreakdown = this.add.text(0, 80, `📊 SCORE BREAKDOWN:\n\nBase Score: ${this.totalScore} points\nWrong Attempts: ${this.wrongAttempts}\nPerfect Bonus: ${perfectBonus} points\n\nFinal Score: ${finalScore}/100`, {
+    const subtitle = this.add.text(this.GAME_WIDTH / 2, boxY + 95, 'Mutual Exclusion Demonstrated', {
       fontSize: '18px',
-      color: '#ffff00',
-      fontFamily: 'Arial, sans-serif',
+      color: '#FFFFFF',
+      fontStyle: '600',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(302);
+
+    // Clean sections layout
+    const contentY = boxY + 150;
+
+    // Results Summary
+    const resultsTitle = this.add.text(boxX + 50, contentY, '📊 Results', {
+      fontSize: '20px',
+      color: '#FFD700',
       fontStyle: 'bold',
-      align: 'center',
-      lineSpacing: 4
-    }).setOrigin(0.5);
-    container.add(scoreBreakdown);
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
+
+    const results = `   • All ${this.totalPersons} persons completed their transactions
+   • Base Score: ${this.totalScore} points
+   • Wrong Attempts: ${this.wrongAttempts}
+   • Perfect Bonus: ${perfectBonus} points`;
+
+    const resultsText = this.add.text(boxX + 50, contentY + 35, results, {
+      fontSize: '16px',
+      color: '#E0E0E0',
+      lineSpacing: 6,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
 
     // Performance rating
     let rating = '';
     let ratingColor = '#ff0000';
+    let ratingIcon = '📚';
     if (finalScore >= 90) {
-      rating = '🏆 EXCELLENT! Perfect understanding of mutual exclusion!';
+      rating = 'EXCELLENT!';
       ratingColor = '#00ff00';
+      ratingIcon = '🏆';
     } else if (finalScore >= 70) {
-      rating = '🥈 GOOD! Good understanding with minor errors.';
+      rating = 'GOOD!';
       ratingColor = '#ffff00';
+      ratingIcon = '🥈';
     } else if (finalScore >= 50) {
-      rating = '🥉 FAIR! Some understanding but needs improvement.';
+      rating = 'FAIR!';
       ratingColor = '#ff8800';
+      ratingIcon = '🥉';
     } else {
-      rating = '📚 NEEDS IMPROVEMENT! Review mutual exclusion concepts.';
+      rating = 'NEEDS IMPROVEMENT!';
       ratingColor = '#ff0000';
+      ratingIcon = '📚';
     }
 
-    const performanceRating = this.add.text(0, 180, rating, {
-      fontSize: '16px',
-      color: ratingColor,
-      fontFamily: 'Arial, sans-serif',
+    const performanceTitle = this.add.text(boxX + 50, contentY + 150, '⭐ Performance', {
+      fontSize: '20px',
+      color: '#FFD700',
       fontStyle: 'bold',
-      align: 'center'
-    }).setOrigin(0.5);
-    container.add(performanceRating);
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
 
-    // Instructions
-    const instructions = this.add.text(0, 220, 'Click anywhere to restart the simulation', {
+    const performanceRating = this.add.text(boxX + 50, contentY + 185, `   ${ratingIcon} ${rating}`, {
       fontSize: '18px',
-      color: '#888888',
-      fontFamily: 'Arial, sans-serif'
-    }).setOrigin(0.5);
-    container.add(instructions);
+      color: ratingColor,
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
 
-    // Make clickable
-    overlay.setInteractive();
-    overlay.on('pointerdown', () => {
-      this.scene.restart();
+    // Final Score - large display
+    const finalScoreTitle = this.add.text(boxX + 50, contentY + 240, '🎯 Final Score', {
+      fontSize: '20px',
+      color: '#FFD700',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
+
+    const finalScoreText = this.add.text(boxX + 50, contentY + 275, `   ${finalScore}/100`, {
+      fontSize: '32px',
+      color: '#00ff88',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setDepth(302);
+
+    // Restart button
+    const buttonWidth = 200;
+    const buttonHeight = 55;
+    const buttonX = this.GAME_WIDTH / 2 - buttonWidth / 2;
+    const buttonY = boxY + boxHeight - 75;
+
+    const restartButton = this.add.graphics();
+    restartButton.fillGradientStyle(0xFFD700, 0xFFD700, 0xFFA500, 0xFFA500, 1);
+    restartButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+    restartButton.lineStyle(3, 0xFFD700, 1);
+    restartButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+    restartButton.setDepth(302);
+
+    const buttonText = this.add.text(this.GAME_WIDTH / 2, buttonY + 27, '🔄 PLAY AGAIN', {
+      fontSize: '22px',
+      color: '#000000',
+      fontStyle: 'bold',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(303);
+
+    restartButton.setInteractive(
+      new Phaser.Geom.Rectangle(buttonX, buttonY, buttonWidth, buttonHeight),
+      Phaser.Geom.Rectangle.Contains
+    );
+
+    restartButton.on('pointerover', () => {
+      restartButton.clear();
+      restartButton.fillGradientStyle(0xFFFF00, 0xFFFF00, 0xFFCC00, 0xFFCC00, 1);
+      restartButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+      restartButton.lineStyle(3, 0xFFD700, 1);
+      restartButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+      this.input.setDefaultCursor('pointer');
     });
 
-    // Animate
-    container.setScale(0);
-    this.tweens.add({
-      targets: container,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 800,
-      ease: 'Back.easeOut'
+    restartButton.on('pointerout', () => {
+      restartButton.clear();
+      restartButton.fillGradientStyle(0xFFD700, 0xFFD700, 0xFFA500, 0xFFA500, 1);
+      restartButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+      restartButton.lineStyle(3, 0xFFD700, 1);
+      restartButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
+      this.input.setDefaultCursor('default');
+    });
+
+    restartButton.on('pointerdown', () => {
+      this.scene.restart();
     });
   }
 
