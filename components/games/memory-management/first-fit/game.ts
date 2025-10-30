@@ -58,6 +58,10 @@ export class FirstFitGame extends Phaser.Scene {
   private chatScrollOffset: number = 0;
   private maxChatScroll: number = 0;
 
+  // Audio
+  private bgm?: Phaser.Sound.BaseSound;
+  private currentMovingSound?: Phaser.Sound.BaseSound;
+
   // Layout constants
   private readonly PARKING_AREA_X = 900; // Right side - parking area
   private readonly ROAD_START_X = 400; // Left side - road area (where vehicle stops)
@@ -184,6 +188,14 @@ export class FirstFitGame extends Phaser.Scene {
     this.load.image('truck1-coming', `${assetPath}truck2-coming.png`);
     this.load.image('truck2-coming', `${assetPath}truck2-coming.png`);
     this.load.image('truck-parked', `${assetPath}truck-parked.png`);
+
+    // Load sounds
+    const soundsPath = `${assetPath}sounds/`;
+    this.load.audio('bg-music', `${soundsPath}background_music.flac`);
+    this.load.audio('bike-moving', `${soundsPath}bike_moving.wav`);
+    this.load.audio('car-moving', `${soundsPath}car_moving.wav`);
+    this.load.audio('truck-moving', `${soundsPath}truck_moving.mp3`);
+    this.load.audio('vehicle-parked', `${soundsPath}vehicle_parked.mp3`);
   }
 
   create() {
@@ -198,8 +210,54 @@ export class FirstFitGame extends Phaser.Scene {
     // Create UI
     this.createUI(width, height);
     
+    // Start background music
+    if (!this.bgm) {
+      this.bgm = this.sound.add('bg-music', { loop: true, volume: 0.35 });
+    }
+    if (this.bgm && !this.bgm.isPlaying) {
+      this.bgm.play();
+    }
+
+    // Cleanup sounds on shutdown/destroy
+    this.events.on('shutdown', () => {
+      if (this.currentMovingSound && this.currentMovingSound.isPlaying) {
+        this.currentMovingSound.stop();
+      }
+      if (this.bgm && this.bgm.isPlaying) {
+        this.bgm.stop();
+      }
+    });
+    this.events.on('destroy', () => {
+      if (this.currentMovingSound && this.currentMovingSound.isPlaying) {
+        this.currentMovingSound.stop();
+      }
+      if (this.bgm && this.bgm.isPlaying) {
+        this.bgm.stop();
+      }
+    });
+
     // Show intro
     this.showIntroScenario(width, height);
+  }
+
+  private playMovingSoundFor(type: 'bike' | 'car' | 'truck') {
+    if (this.currentMovingSound && this.currentMovingSound.isPlaying) {
+      this.currentMovingSound.stop();
+    }
+    const key = type === 'bike' ? 'bike-moving' : type === 'car' ? 'car-moving' : 'truck-moving';
+    const vol = type === 'truck' ? 0.6 : type === 'car' ? 0.5 : 0.45;
+    this.currentMovingSound = this.sound.add(key, { volume: vol });
+    this.currentMovingSound.play();
+  }
+
+  private stopMovingSound() {
+    if (this.currentMovingSound && this.currentMovingSound.isPlaying) {
+      this.currentMovingSound.stop();
+    }
+  }
+
+  private playParkedSound() {
+    this.sound.play('vehicle-parked', { volume: 0.6 });
   }
 
   private createBackground(width: number, height: number) {
@@ -603,7 +661,11 @@ export class FirstFitGame extends Phaser.Scene {
       x: this.ROAD_START_X,
       duration: 2500,
       ease: 'Power2',
+      onStart: () => {
+        this.playMovingSoundFor(vehicleConfig.type);
+      },
       onComplete: () => {
+        this.stopMovingSound();
         // Vehicle has arrived
         const totalVehicles = this.VEHICLES_CONFIG.length;
         
@@ -731,8 +793,10 @@ export class FirstFitGame extends Phaser.Scene {
           if (vehicle.sprite) {
             vehicle.sprite.setFlipX(false);
           }
+          this.playMovingSoundFor(vehicle.type);
         },
         onComplete: () => {
+          this.stopMovingSound();
           // Change to parked sprite
           if (vehicle.sprite) {
             vehicle.sprite.setTexture(config.parkedAsset);
@@ -747,6 +811,9 @@ export class FirstFitGame extends Phaser.Scene {
           if (vehicle.sizeLabel) {
             vehicle.sizeLabel.setVisible(false);
           }
+
+          // Play parked confirmation sound
+          this.playParkedSound();
 
           // Update slot visual
           this.updateSlotAfterParking(slot, vehicle);
@@ -1051,7 +1118,11 @@ Memory exists but not in a single block!`;
           x: this.ROAD_END_X,
           duration: 2000,
           ease: 'Power2',
+          onStart: () => {
+            this.playMovingSoundFor(vehicle.type);
+          },
           onComplete: () => {
+            this.stopMovingSound();
             vehicle.sprite?.destroy();
             vehicle.sizeLabel?.destroy();
             
