@@ -84,6 +84,13 @@ export class FCFSGame extends Phaser.Scene {
   private totalScore: number = 0;
   private wrongAttempts: number = 0;
   
+  // AI Chatbot
+  private chatbotContainer?: Phaser.GameObjects.Container;
+  private chatMessages: Array<{ role: 'user' | 'ai', message: string }> = [];
+  private isChatbotOpen: boolean = false;
+  private chatScrollOffset: number = 0;
+  private maxChatScroll: number = 0;
+  
   // Game Data
   private readonly CUSTOMER_NAMES = ['Alice', 'Bob', 'Carol', 'Dave', 'Emma'];
   private readonly DISH_CONFIGS = {
@@ -130,6 +137,9 @@ export class FCFSGame extends Phaser.Scene {
 
   create() {
     const { width, height } = this.sys.game.canvas;
+    
+    // Clean up any stray DOM inputs from previous sessions
+    this.removeDOMInput();
     
     // Full screen background
     const bgImage = this.add.image(width / 2, height / 2, 'bg-restaurant');
@@ -441,7 +451,7 @@ export class FCFSGame extends Phaser.Scene {
     this.currentTime = 0;
     
     // Randomly decide how many customers (3 to 5)
-    this.numCustomers = Phaser.Math.Between(3, 5);
+    this.numCustomers = Phaser.Math.Between(1, 1);
     
     this.phaseText.setText('Phase: Customers Arriving');
     this.instructionText.setText(`🎲 ${this.numCustomers} customers have arrived at the restaurant!`);
@@ -1819,7 +1829,7 @@ export class FCFSGame extends Phaser.Scene {
     });
   }
 
-  private showResults() {
+  private async showResults() {
     this.gamePhase = 'results';
     this.phaseText.setText('Phase: Results & Analysis');
     
@@ -1938,10 +1948,66 @@ sortedOrders.forEach((order, index) => {
 });
 
 
-    // Next Level button
+    // AI Feedback Button (Left side)
+    const aiFeedbackButtonWidth = 220;
+    const aiFeedbackButtonHeight = 50;
+    const aiFeedbackButtonX = boxX + 50;
+    const aiFeedbackButtonY = boxY + boxHeight - 70;
+
+    const aiFeedbackButton = this.add.graphics();
+    aiFeedbackButton.fillStyle(0x4CAF50, 1);
+    aiFeedbackButton.fillRoundedRect(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight, 10);
+    aiFeedbackButton.lineStyle(3, 0x2E7D32, 1);
+    aiFeedbackButton.strokeRoundedRect(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight, 10);
+    aiFeedbackButton.setDepth(102);
+    aiFeedbackButton.setInteractive(
+      new Phaser.Geom.Rectangle(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight),
+      Phaser.Geom.Rectangle.Contains
+    );
+    aiFeedbackButton.setData('isAIButton', true);
+    
+    // Store button references for later access
+    this.registry.set('aiFeedbackButton', aiFeedbackButton);
+
+    const aiFeedbackButtonText = this.add.text(aiFeedbackButtonX + aiFeedbackButtonWidth / 2, aiFeedbackButtonY + 25, '💬 Chat with AI', {
+      fontSize: '18px',
+      color: '#FFFFFF',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    aiFeedbackButtonText.setDepth(103);
+
+    aiFeedbackButton.on('pointerover', () => {
+      aiFeedbackButton.clear();
+      aiFeedbackButton.fillStyle(0x66BB6A, 1);
+      aiFeedbackButton.fillRoundedRect(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight, 10);
+      aiFeedbackButton.lineStyle(3, 0x2E7D32, 1);
+      aiFeedbackButton.strokeRoundedRect(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight, 10);
+    });
+
+    aiFeedbackButton.on('pointerout', () => {
+      aiFeedbackButton.clear();
+      aiFeedbackButton.fillStyle(0x4CAF50, 1);
+      aiFeedbackButton.fillRoundedRect(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight, 10);
+      aiFeedbackButton.lineStyle(3, 0x2E7D32, 1);
+      aiFeedbackButton.strokeRoundedRect(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight, 10);
+    });
+
+    aiFeedbackButton.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      // Prevent multiple clicks while processing
+      if (aiFeedbackButton.getData('isProcessing')) return;
+      aiFeedbackButton.setData('isProcessing', true);
+      
+      // Toggle chatbot open/close - don't disable other buttons
+      this.showAIFeedback(boxX, boxY, boxWidth, boxHeight).finally(() => {
+        aiFeedbackButton.setData('isProcessing', false);
+      });
+    });
+
+    // Next Level button (Right side)
     const buttonWidth = 200;
     const buttonHeight = 50;
-    const buttonX = width / 2 - buttonWidth / 2;
+    const buttonX = boxX + boxWidth - buttonWidth - 50;
     const buttonY = boxY + boxHeight - 70;
 
     const button = this.add.graphics();
@@ -1954,13 +2020,16 @@ sortedOrders.forEach((order, index) => {
       new Phaser.Geom.Rectangle(buttonX, buttonY, buttonWidth, buttonHeight),
       Phaser.Geom.Rectangle.Contains
     );
+    
+    // Store button reference for later access
+    this.registry.set('nextLevelButton', button);
 
-    const buttonText = this.add.text(width / 2, buttonY + 25, 'Next Level', {
+    const buttonText = this.add.text(buttonX + buttonWidth / 2, buttonY + 25, 'Next Level', {
       fontSize: '24px',
       color: '#000000',
       fontStyle: 'bold'
     }).setOrigin(0.5);
-    buttonText.setDepth(102);
+    buttonText.setDepth(103);
     
     button.on('pointerover', () => {
       button.clear();
@@ -1979,6 +2048,8 @@ sortedOrders.forEach((order, index) => {
     });
 
     button.on('pointerdown', () => {
+      // Don't restart if chatbot is open
+      if (this.isChatbotOpen) return;
       this.scene.restart();
     });
   }
@@ -2058,6 +2129,494 @@ private drawGanttChart(x: number, y: number, width: number) {
   }).setDepth(102);
 }
 
+  private async showAIFeedback(boxX: number, boxY: number, boxWidth: number, boxHeight: number) {
+    console.log('showAIFeedback called, isChatbotOpen:', this.isChatbotOpen);
+    
+    if (this.isChatbotOpen) {
+      // If chatbot is already open, just close it
+      this.closeChatbot();
+      return;
+    }
+    
+    this.isChatbotOpen = true;
+    
+    // Don't dim the results screen - keep it visible
+    // Just add a slight overlay behind chatbot for emphasis
+    
+    // Initialize chat with performance summary
+    const avgWaitingTime = this.orders.reduce((sum, o) => sum + (o.waitingTime || 0), 0) / this.orders.length;
+    const avgTurnaroundTime = this.orders.reduce((sum, o) => sum + (o.turnaroundTime || 0), 0) / this.orders.length;
+    const throughput = this.orders.length / (this.currentTime / 1000);
+    
+    const initialContext = `Player's Performance Summary:
+- Total Orders: ${this.orders.length}
+- Final Score: ${this.totalScore} points
+- Wrong Attempts: ${this.wrongAttempts}
+- Average Waiting Time: ${avgWaitingTime.toFixed(2)}s
+- Average Turnaround Time: ${avgTurnaroundTime.toFixed(2)}s
+- Throughput: ${throughput.toFixed(2)} processes/second
+
+Please provide a brief welcome message and performance overview (2-3 sentences).`;
+    
+    this.createChatbotUI();
+    console.log('Chatbot UI created, container:', this.chatbotContainer);
+    
+    // Send initial AI greeting
+    await this.sendMessageToAI(initialContext, true);
+  }
+
+  private createChatbotUI() {
+    const { width, height } = this.sys.game.canvas;
+    
+    // Don't create full-screen overlay - just a subtle backdrop for the chatbot
+    // Results screen remains fully visible and interactive
+    
+    // Chatbot container positioned at right side
+    const chatWidth = 500;
+    const chatHeight = 680;
+    const chatX = width - chatWidth - 10;
+    const chatY = (height - chatHeight) / 2; // Vertically centered
+    
+    this.chatbotContainer = this.add.container(chatX, chatY);
+    this.chatbotContainer.setDepth(300);
+    this.chatbotContainer.setVisible(true);
+    
+    // Add an invisible blocking layer to prevent clicks from propagating through
+    const blockingLayer = this.add.graphics();
+    blockingLayer.fillStyle(0x000000, 0.01); // Nearly transparent
+    blockingLayer.fillRect(0, 0, chatWidth, chatHeight);
+    blockingLayer.setInteractive(new Phaser.Geom.Rectangle(0, 0, chatWidth, chatHeight), Phaser.Geom.Rectangle.Contains);
+    blockingLayer.on('pointerdown', (pointer: any, localX: number, localY: number, event: any) => {
+      // Stop event propagation to prevent clicks from reaching game elements below
+      event.stopPropagation();
+    });
+    this.chatbotContainer.add(blockingLayer);
+    
+    // Chat background with shadow
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.5);
+    shadow.fillRoundedRect(5, 5, chatWidth, chatHeight, 15);
+    this.chatbotContainer.add(shadow);
+    
+    const chatBg = this.add.graphics();
+    chatBg.fillStyle(0x1a1a2e, 0.98);
+    chatBg.fillRoundedRect(0, 0, chatWidth, chatHeight, 15);
+    chatBg.lineStyle(3, 0x4CAF50, 1);
+    chatBg.strokeRoundedRect(0, 0, chatWidth, chatHeight, 15);
+    this.chatbotContainer.add(chatBg);
+    
+    // Header
+    const headerBg = this.add.graphics();
+    headerBg.fillStyle(0x4CAF50, 1);
+    headerBg.fillRoundedRect(0, 0, chatWidth, 60, 15);
+    headerBg.fillRect(0, 45, chatWidth, 15); // Square bottom for seamless connection
+    headerBg.setData('isHeader', true);
+    this.chatbotContainer.add(headerBg);
+    
+    const headerText = this.add.text(20, 20, '🤖 AI Performance Coach', {
+      fontSize: '22px',
+      color: '#FFFFFF',
+      fontStyle: 'bold'
+    });
+    headerText.setData('isHeader', true);
+    this.chatbotContainer.add(headerText);
+    
+    // Close button
+    const closeBtn = this.add.text(chatWidth - 40, 15, '✕', {
+      fontSize: '28px',
+      color: '#FFFFFF',
+      fontStyle: 'bold'
+    });
+    closeBtn.setInteractive({ useHandCursor: true });
+    closeBtn.on('pointerdown', (pointer: any, localX: number, localY: number, event: any) => {
+      event.stopPropagation();
+      this.closeChatbot();
+    });
+    closeBtn.on('pointerover', () => closeBtn.setColor('#FF5555'));
+    closeBtn.on('pointerout', () => closeBtn.setColor('#FFFFFF'));
+    closeBtn.setData('isHeader', true);
+    this.chatbotContainer.add(closeBtn);
+    
+    // Messages area
+    const messagesAreaHeight = chatHeight - 140;
+    this.chatbotContainer.setData('messagesY', 70);
+    this.chatbotContainer.setData('messagesHeight', messagesAreaHeight);
+    this.chatbotContainer.setData('chatWidth', chatWidth);
+    
+    // Create interactive area for messages (for scroll detection)
+    const messagesArea = this.add.graphics();
+    messagesArea.fillStyle(0x000000, 0.01); // Nearly transparent
+    messagesArea.fillRect(0, 70, chatWidth, messagesAreaHeight);
+    messagesArea.setInteractive(new Phaser.Geom.Rectangle(0, 70, chatWidth, messagesAreaHeight), Phaser.Geom.Rectangle.Contains);
+    messagesArea.on('pointerdown', (pointer: any, localX: number, localY: number, event: any) => {
+      // Stop event propagation
+      event.stopPropagation();
+    });
+    this.chatbotContainer.add(messagesArea);
+    
+    // Add scroll listener
+    messagesArea.on('wheel', (pointer: any, deltaX: number, deltaY: number, deltaZ: number, event: any) => {
+      event.stopPropagation();
+      this.handleChatScroll(deltaY);
+    });
+    
+    // Add overlay panels to hide overflow (after messages are rendered)
+    // These will be added with high depth to cover anything that overflows
+    const topOverlay = this.add.graphics();
+    topOverlay.fillStyle(0x1a1a2e, 1);
+    topOverlay.fillRect(0, 0, chatWidth, 70);
+    topOverlay.setData('isOverlay', true);
+    topOverlay.setDepth(310); // Higher than messages
+    this.chatbotContainer.add(topOverlay);
+    
+    const bottomOverlay = this.add.graphics();
+    bottomOverlay.fillStyle(0x1a1a2e, 1);
+    bottomOverlay.fillRect(0, chatHeight - 70, chatWidth, 70);
+    bottomOverlay.setData('isOverlay', true);
+    bottomOverlay.setDepth(310); // Higher than messages
+    this.chatbotContainer.add(bottomOverlay);
+    
+    // Re-add header on top
+    this.chatbotContainer.bringToTop(headerBg);
+    this.chatbotContainer.bringToTop(headerText);
+    this.chatbotContainer.bringToTop(closeBtn);
+    
+    // Input area background
+    const inputBg = this.add.graphics();
+    inputBg.fillStyle(0x2a2a3e, 1);
+    inputBg.fillRoundedRect(0, chatHeight - 70, chatWidth, 70, 0);
+    inputBg.lineStyle(2, 0x4CAF50, 0.5);
+    inputBg.strokeRoundedRect(10, chatHeight - 60, chatWidth - 20, 50, 10);
+    inputBg.setData('isInput', true);
+    this.chatbotContainer.add(inputBg);
+    
+    // User input (will be handled via DOM input - no placeholder text needed)
+    this.createDOMInput(chatX + 10, chatY + chatHeight - 60, chatWidth - 100);
+    
+    // Send button
+    const sendBtn = this.add.graphics();
+    sendBtn.fillStyle(0x4CAF50, 1);
+    sendBtn.fillRoundedRect(chatWidth - 70, chatHeight - 55, 55, 40, 8);
+    sendBtn.setData('isInput', true);
+    this.chatbotContainer.add(sendBtn);
+    
+    const sendIcon = this.add.text(chatWidth - 50, chatHeight - 35, '➤', {
+      fontSize: '20px',
+      color: '#FFFFFF',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    sendIcon.setData('isInput', true);
+    this.chatbotContainer.add(sendIcon);
+    
+    sendBtn.setInteractive(
+      new Phaser.Geom.Rectangle(chatWidth - 70, chatHeight - 55, 55, 40),
+      Phaser.Geom.Rectangle.Contains
+    );
+    sendBtn.on('pointerdown', (pointer: any, localX: number, localY: number, event: any) => {
+      event.stopPropagation();
+      this.handleSendMessage();
+    });
+    sendBtn.on('pointerover', () => {
+      sendBtn.clear();
+      sendBtn.fillStyle(0x66BB6A, 1);
+      sendBtn.fillRoundedRect(chatWidth - 70, chatHeight - 55, 55, 40, 8);
+    });
+    sendBtn.on('pointerout', () => {
+      sendBtn.clear();
+      sendBtn.fillStyle(0x4CAF50, 1);
+      sendBtn.fillRoundedRect(chatWidth - 70, chatHeight - 55, 55, 40, 8);
+    });
+    
+    // Bring input area and send button above overlays
+    this.chatbotContainer.bringToTop(bottomOverlay);
+    this.chatbotContainer.bringToTop(inputBg);
+    this.chatbotContainer.bringToTop(sendBtn);
+    this.chatbotContainer.bringToTop(sendIcon);
+    
+    // Suggested questions
+    const suggestions = ['How can I improve?', 'Explain FCFS', 'What did I do wrong?'];
+    this.chatbotContainer.setData('suggestions', suggestions);
+  }
+
+  private createDOMInput(x: number, y: number, width: number) {
+    // Remove any existing input first
+    this.removeDOMInput();
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'chatbot-input';
+    input.placeholder = 'Type your question here...';
+    input.style.position = 'absolute';
+    input.style.left = `${x + 15}px`;
+    input.style.top = `${y + 10}px`;
+    input.style.width = `${width - 10}px`;
+    input.style.height = '35px';
+    input.style.backgroundColor = 'rgba(42, 42, 62, 0.9)';
+    input.style.border = '2px solid #4CAF50';
+    input.style.borderRadius = '8px';
+    input.style.outline = 'none';
+    input.style.color = '#FFFFFF';
+    input.style.fontSize = '15px';
+    input.style.fontFamily = 'Arial, sans-serif';
+    input.style.padding = '0 12px';
+    input.style.zIndex = '1000';
+    
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        this.handleSendMessage();
+      }
+    });
+    
+    try {
+      document.body.appendChild(input);
+      setTimeout(() => input.focus(), 100);
+      console.log('DOM input created and focused');
+    } catch (error) {
+      console.error('Error creating DOM input:', error);
+    }
+  }
+
+  private removeDOMInput() {
+    const input = document.getElementById('chatbot-input');
+    if (input) {
+      input.remove();
+      console.log('DOM input removed');
+    }
+    // Also try to remove any stray inputs
+    const allInputs = document.querySelectorAll('input[id="chatbot-input"]');
+    allInputs.forEach(inp => inp.remove());
+  }
+
+  private async handleSendMessage() {
+    const input = document.getElementById('chatbot-input') as HTMLInputElement;
+    if (!input || !input.value.trim()) return;
+    
+    const userMessage = input.value.trim();
+    input.value = '';
+    input.focus();
+    
+    // Add user message to chat
+    this.addMessageToChat('user', userMessage);
+    
+    // Send to AI
+    await this.sendMessageToAI(userMessage, false);
+  }
+
+  private addMessageToChat(role: 'user' | 'ai' | null, message: string) {
+    if (!this.chatbotContainer) return;
+    
+    // Only add new message if role and message are provided
+    if (role && message) {
+      this.chatMessages.push({ role, message });
+    }
+    
+    const chatWidth = this.chatbotContainer.getData('chatWidth');
+    const messagesY = this.chatbotContainer.getData('messagesY');
+    const messagesHeight = this.chatbotContainer.getData('messagesHeight');
+    
+    // Clear existing messages display
+    const existingMessages = this.chatbotContainer.list.filter((obj: any) => obj.getData && obj.getData('isMessage'));
+    existingMessages.forEach((obj: any) => obj.destroy());
+    
+    // Redraw all messages
+    let currentY = messagesY + 10;
+    const maxWidth = chatWidth - 60;
+    let totalContentHeight = 0;
+    
+    // Draw all messages
+    this.chatMessages.forEach((msg) => {
+      const isUser = msg.role === 'user';
+      const bubbleColor = isUser ? 0x4CAF50 : 0x2a2a3e;
+      const textColor = '#FFFFFF';
+      const align = isUser ? 'right' : 'left';
+      const xPos = isUser ? chatWidth - 30 : 30;
+      
+      // Calculate position with scroll offset
+      const yPos = currentY - this.chatScrollOffset;
+      
+      // Create temporary text to calculate height
+      const tempText = this.add.text(0, 0, msg.message, {
+        fontSize: '13px',
+        color: textColor,
+        wordWrap: { width: maxWidth - 40 },
+        align: align
+      });
+      const padding = 10;
+      const bubbleHeight = tempText.height + padding * 2;
+      tempText.destroy();
+      
+      // Only render if message is COMPLETELY within visible area (strict bounds)
+      const messageBottom = yPos + bubbleHeight;
+      const visibleTop = messagesY; // Exact top boundary
+      const visibleBottom = messagesY + messagesHeight; // Exact bottom boundary
+      
+      // Message must be completely within bounds to render
+      if (yPos >= visibleTop && messageBottom <= visibleBottom) {
+        // Create message bubble
+        const messageText = this.add.text(xPos, yPos, msg.message, {
+          fontSize: '13px',
+          color: textColor,
+          wordWrap: { width: maxWidth - 40 },
+          align: align
+        });
+        messageText.setOrigin(isUser ? 1 : 0, 0);
+        messageText.setData('isMessage', true);
+        
+        const bubbleWidth = Math.min(messageText.width + padding * 2, maxWidth);
+        
+        const bubble = this.add.graphics();
+        bubble.fillStyle(bubbleColor, 0.9);
+        if (isUser) {
+          bubble.fillRoundedRect(xPos - bubbleWidth, yPos - padding, bubbleWidth, bubbleHeight, 10);
+        } else {
+          bubble.fillRoundedRect(xPos - padding, yPos - padding, bubbleWidth, bubbleHeight, 10);
+        }
+        bubble.setData('isMessage', true);
+        
+        if (this.chatbotContainer) {
+          this.chatbotContainer.add(bubble);
+          this.chatbotContainer.add(messageText);
+        }
+      }
+      
+      currentY += bubbleHeight + 8;
+      totalContentHeight = currentY - messagesY;
+    });
+    
+    // Update max scroll and auto-scroll to bottom for new messages
+    this.maxChatScroll = Math.max(0, totalContentHeight - messagesHeight + 20);
+    
+    // Only auto-scroll if adding a new message (not just redrawing for scroll)
+    if (role && message) {
+      this.chatScrollOffset = this.maxChatScroll;
+    }
+    
+    // Draw scrollbar if content is scrollable
+    const existingScrollbar = this.chatbotContainer.list.filter((obj: any) => obj.getData && obj.getData('isScrollbar'));
+    existingScrollbar.forEach((obj: any) => obj.destroy());
+    
+    if (this.maxChatScroll > 0) {
+      const scrollbarWidth = 6;
+      const scrollbarX = chatWidth - 15;
+      const scrollbarTrackY = messagesY;
+      const scrollbarTrackHeight = messagesHeight;
+      
+      // Draw scrollbar track
+      const scrollbarTrack = this.add.graphics();
+      scrollbarTrack.fillStyle(0x2a2a3e, 0.3);
+      scrollbarTrack.fillRoundedRect(scrollbarX, scrollbarTrackY, scrollbarWidth, scrollbarTrackHeight, 3);
+      scrollbarTrack.setData('isScrollbar', true);
+      this.chatbotContainer.add(scrollbarTrack);
+      
+      // Calculate scrollbar thumb size and position
+      const contentRatio = messagesHeight / (totalContentHeight + 20);
+      const thumbHeight = Math.max(30, scrollbarTrackHeight * contentRatio);
+      const scrollRatio = this.chatScrollOffset / this.maxChatScroll;
+      const thumbY = scrollbarTrackY + (scrollbarTrackHeight - thumbHeight) * scrollRatio;
+      
+      // Draw scrollbar thumb
+      const scrollbarThumb = this.add.graphics();
+      scrollbarThumb.fillStyle(0x4CAF50, 0.6);
+      scrollbarThumb.fillRoundedRect(scrollbarX, thumbY, scrollbarWidth, thumbHeight, 3);
+      scrollbarThumb.setData('isScrollbar', true);
+      this.chatbotContainer.add(scrollbarThumb);
+    }
+    
+    // Ensure overlays are on top to hide any overflow
+    if (this.chatbotContainer) {
+      const overlays = this.chatbotContainer.list.filter((obj: any) => obj.getData && obj.getData('isOverlay'));
+      overlays.forEach((overlay: any) => this.chatbotContainer!.bringToTop(overlay));
+      
+      // Then bring header, input area, and send button on top of overlays
+      const header = this.chatbotContainer.list.filter((obj: any) => obj.getData && obj.getData('isHeader'));
+      header.forEach((h: any) => this.chatbotContainer!.bringToTop(h));
+      
+      const inputElements = this.chatbotContainer.list.filter((obj: any) => obj.getData && obj.getData('isInput'));
+      inputElements.forEach((el: any) => this.chatbotContainer!.bringToTop(el));
+    }
+  }
+  
+  private handleChatScroll(deltaY: number) {
+    const scrollSpeed = 30; // Pixels per scroll tick
+    const scrollAmount = deltaY > 0 ? scrollSpeed : -scrollSpeed;
+    
+    // Update scroll offset with bounds checking
+    this.chatScrollOffset = Math.max(0, Math.min(this.maxChatScroll, this.chatScrollOffset + scrollAmount));
+    
+    // Redraw messages at new scroll position
+    this.addMessageToChat(null as any, ''); // Trigger redraw without adding new message
+  }
+
+  private async sendMessageToAI(message: string, isInitial: boolean) {
+    if (!this.chatbotContainer) return;
+    
+    // Show typing indicator
+    this.addMessageToChat('ai', '💭 Thinking...');
+    
+    // Prepare context
+    const avgWaitingTime = this.orders.reduce((sum, o) => sum + (o.waitingTime || 0), 0) / this.orders.length;
+    const avgTurnaroundTime = this.orders.reduce((sum, o) => sum + (o.turnaroundTime || 0), 0) / this.orders.length;
+    const throughput = this.orders.length / (this.currentTime / 1000);
+    
+    const sortedOrders = [...this.orders].sort((a, b) => a.orderNumber - b.orderNumber);
+    const gameData = {
+      totalOrders: this.orders.length,
+      avgWaitingTime,
+      avgTurnaroundTime,
+      throughput,
+      totalTime: this.currentTime / 1000,
+      finalScore: this.totalScore,
+      wrongAttempts: this.wrongAttempts,
+      orders: sortedOrders.map(o => ({
+        orderNumber: o.orderNumber,
+        arrivalTime: o.arrivalTime,
+        burstTime: o.burstTime,
+        startTime: o.startTime || 0,
+        completionTime: o.completionTime || 0,
+        waitingTime: o.waitingTime || 0,
+        turnaroundTime: o.turnaroundTime || 0
+      })),
+      conversationHistory: this.chatMessages.slice(0, -1), // Exclude the "Thinking..." message
+      userQuestion: message,
+      isInitial
+    };
+    
+    try {
+      const response = await fetch('/api/ai-feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(gameData)
+      });
+      
+      const result = await response.json();
+      
+      // Remove typing indicator
+      this.chatMessages.pop();
+      
+      if (result.success && result.data.feedback) {
+        this.addMessageToChat('ai', result.data.feedback);
+      } else {
+        this.addMessageToChat('ai', '❌ Sorry, I had trouble processing that. Can you try again?');
+      }
+    } catch (error) {
+      console.error('Error fetching AI response:', error);
+      this.chatMessages.pop();
+      this.addMessageToChat('ai', '❌ Network error. Please check your connection and try again.');
+    }
+  }
+
+  private closeChatbot() {
+    if (this.chatbotContainer) {
+      this.chatbotContainer.destroy();
+      this.chatbotContainer = undefined;
+    }
+    this.removeDOMInput();
+    this.isChatbotOpen = false;
+    this.chatMessages = [];
+  }
+
 
   private updateClock() {
     this.currentTime = (this.time.now - this.gameStartTime) / 1000;
@@ -2099,6 +2658,12 @@ private drawGanttChart(x: number, y: number, width: number) {
       this.waiterFoodSprite.x = this.waiterSprite.x + 8;
       this.waiterFoodSprite.y = this.waiterSprite.y - 20;
     }
+  }
+
+  shutdown() {
+    // Clean up DOM input when scene is destroyed
+    this.removeDOMInput();
+    this.closeChatbot();
   }
 }
 
