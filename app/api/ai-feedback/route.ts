@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-interface GameResult {
+// CPU Scheduling Game Interface
+interface CPUSchedulingResult {
   totalOrders: number;
   avgWaitingTime: number;
   avgTurnaroundTime: number;
@@ -23,8 +24,52 @@ interface GameResult {
   isInitial?: boolean;
 }
 
-// Simple fallback feedback generator
-function createSimpleFeedback(gameData: GameResult): string {
+// Memory Management Game Interface
+interface MemoryManagementResult {
+  gameType: 'memory-management-first-fit';
+  totalVehicles: number;
+  parkedVehicles: number;
+  rejectedVehicles: number;
+  internalFragmentation: number;
+  internalFragmentationPercent: number;
+  externalFragmentation: number;
+  efficiency: number;
+  utilization: number;
+  totalSlotSpace: number;
+  totalAllocated: number;
+  finalScore: number;
+  wrongAttempts: number;
+  slots: Array<{
+    slotNumber: number;
+    size: number;
+    remainingSpace: number;
+    occupied: boolean;
+    vehicleCount: number;
+    vehicles: Array<{
+      type: string;
+      size: number;
+      name: string;
+    }>;
+  }>;
+  conversationHistory?: Array<{ role: 'user' | 'ai', message: string }>;
+  userQuestion?: string;
+  isInitial?: boolean;
+}
+
+type GameResult = CPUSchedulingResult | MemoryManagementResult;
+
+// Type guard to check if it's CPU scheduling game
+function isCPUSchedulingGame(data: GameResult): data is CPUSchedulingResult {
+  return 'totalOrders' in data && 'orders' in data;
+}
+
+// Type guard to check if it's memory management game
+function isMemoryManagementGame(data: GameResult): data is MemoryManagementResult {
+  return 'gameType' in data && data.gameType === 'memory-management-first-fit';
+}
+
+// CPU Scheduling fallback feedback
+function createCPUSchedulingFeedback(gameData: CPUSchedulingResult): string {
   const { avgWaitingTime, wrongAttempts, finalScore, totalOrders } = gameData;
   
   let feedback = "📊 **Performance Summary:**\n\n";
@@ -50,11 +95,54 @@ function createSimpleFeedback(gameData: GameResult): string {
   return feedback;
 }
 
+// Memory Management fallback feedback
+function createMemoryManagementFeedback(gameData: MemoryManagementResult): string {
+  const { efficiency, utilization, externalFragmentation, internalFragmentation, finalScore, parkedVehicles, totalVehicles } = gameData;
+  
+  let feedback = "📊 **Memory Management Performance:**\n\n";
+  
+  if (finalScore >= 500 && externalFragmentation === 0) {
+    feedback += "🌟 **Excellent!** You have a strong understanding of First Fit allocation.\n\n";
+  } else if (finalScore >= 400) {
+    feedback += "👍 **Good job!** You're managing memory allocation well.\n\n";
+  } else {
+    feedback += "📚 **Keep practicing!** Memory allocation requires strategic thinking.\n\n";
+  }
+  
+  feedback += "**Key Points:**\n";
+  feedback += `- Vehicles Parked: ${parkedVehicles}/${totalVehicles}\n`;
+  feedback += `- Efficiency: ${efficiency.toFixed(1)}%\n`;
+  feedback += `- Utilization: ${utilization.toFixed(1)}%\n`;
+  
+  if (externalFragmentation > 0) {
+    feedback += `\n⚠️ External Fragmentation: ${externalFragmentation} vehicle(s) rejected. This happens when there's no single contiguous space large enough, even if total free space exists.\n`;
+  }
+  
+  if (internalFragmentation > 0) {
+    feedback += `\n💡 Internal Fragmentation: ${internalFragmentation} units wasted (${gameData.internalFragmentationPercent.toFixed(1)}%). This is the unused space within allocated slots.\n`;
+  }
+  
+  feedback += "\n**First Fit Concept:** First Fit allocates memory to the first available block that is large enough. It's fast but can lead to fragmentation over time.";
+  
+  return feedback;
+}
+
+// Simple fallback feedback generator
+function createSimpleFeedback(gameData: GameResult): string {
+  if (isCPUSchedulingGame(gameData)) {
+    return createCPUSchedulingFeedback(gameData);
+  } else if (isMemoryManagementGame(gameData)) {
+    return createMemoryManagementFeedback(gameData);
+  }
+  return "Unable to generate feedback for this game type.";
+}
+
 export async function POST(req: NextRequest) {
   try {
     const gameData: GameResult = await req.json();
 
-    if (!gameData || !gameData.orders || gameData.orders.length === 0) {
+    // Validate game data based on type
+    if (!gameData) {
       return NextResponse.json(
         {
           success: false,
@@ -63,6 +151,31 @@ export async function POST(req: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // Type-specific validation
+    if (isCPUSchedulingGame(gameData)) {
+      if (!gameData.orders || gameData.orders.length === 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Validation error",
+            message: "Invalid CPU scheduling game data",
+          },
+          { status: 400 }
+        );
+      }
+    } else if (isMemoryManagementGame(gameData)) {
+      if (!gameData.slots || gameData.slots.length === 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Validation error",
+            message: "Invalid memory management game data",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -100,9 +213,11 @@ export async function POST(req: NextRequest) {
           
           let prompt = '';
           
-          if (gameData.isInitial) {
-            // Initial greeting and performance overview
-            prompt = `You are a friendly AI coach for a First Come First Served (FCFS) CPU scheduling game.
+          // Generate prompt based on game type
+          if (isCPUSchedulingGame(gameData)) {
+            // CPU Scheduling prompts
+            if (gameData.isInitial) {
+              prompt = `You are a friendly AI coach for a First Come First Served (FCFS) CPU scheduling game.
 
 **Player's Performance:**
 - Total Orders: ${gameData.totalOrders}
@@ -113,13 +228,12 @@ export async function POST(req: NextRequest) {
 - Throughput: ${gameData.throughput.toFixed(2)} processes/second
 
 Provide a warm greeting and a brief 2-3 sentence assessment of their performance. Be encouraging and mention you're here to answer any questions about FCFS scheduling or their results. Keep it conversational and friendly.`;
-          } else {
-            // Follow-up conversation
-            const conversationContext = gameData.conversationHistory
-              ?.map(msg => `${msg.role === 'user' ? 'Student' : 'AI Coach'}: ${msg.message}`)
-              .join('\n') || '';
-            
-            prompt = `You are a friendly AI coach helping a student understand their performance in a FCFS CPU scheduling game.
+            } else {
+              const conversationContext = gameData.conversationHistory
+                ?.map(msg => `${msg.role === 'user' ? 'Student' : 'AI Coach'}: ${msg.message}`)
+                .join('\n') || '';
+              
+              prompt = `You are a friendly AI coach helping a student understand their performance in a FCFS CPU scheduling game.
 
 **Game Performance Data:**
 - Total Orders: ${gameData.totalOrders}
@@ -141,6 +255,56 @@ ${conversationContext}
 **Student's Question:** ${gameData.userQuestion}
 
 Provide a helpful, educational response. Be specific and reference their actual performance data when relevant. Keep responses concise (3-5 sentences max). Use emojis sparingly for engagement. If they ask how to improve, give specific actionable advice based on their metrics.`;
+            }
+          } else if (isMemoryManagementGame(gameData)) {
+            // Memory Management prompts
+            if (gameData.isInitial) {
+              prompt = `You are a friendly AI coach for a First Fit memory allocation game.
+
+**Player's Performance:**
+- Total Vehicles: ${gameData.totalVehicles}
+- Parked Vehicles: ${gameData.parkedVehicles}
+- Rejected Vehicles: ${gameData.rejectedVehicles}
+- Final Score: ${gameData.finalScore} points
+- Wrong Attempts: ${gameData.wrongAttempts}
+- Efficiency: ${gameData.efficiency.toFixed(1)}%
+- Utilization: ${gameData.utilization.toFixed(1)}%
+- Internal Fragmentation: ${gameData.internalFragmentation} units (${gameData.internalFragmentationPercent.toFixed(1)}%)
+- External Fragmentation: ${gameData.externalFragmentation} vehicle(s)
+
+Provide a warm greeting and a brief 2-3 sentence assessment of their memory allocation performance. Be encouraging and mention you're here to answer any questions about First Fit allocation or their results. Keep it conversational and friendly.`;
+            } else {
+              const conversationContext = gameData.conversationHistory
+                ?.map(msg => `${msg.role === 'user' ? 'Student' : 'AI Coach'}: ${msg.message}`)
+                .join('\n') || '';
+              
+              prompt = `You are a friendly AI coach helping a student understand their performance in a First Fit memory allocation game.
+
+**Game Performance Data:**
+- Total Vehicles: ${gameData.totalVehicles}
+- Parked Vehicles: ${gameData.parkedVehicles}
+- Rejected Vehicles: ${gameData.rejectedVehicles}
+- Final Score: ${gameData.finalScore} points
+- Wrong Attempts: ${gameData.wrongAttempts}
+- Total Slot Space: ${gameData.totalSlotSpace} units
+- Total Allocated: ${gameData.totalAllocated} units
+- Efficiency: ${gameData.efficiency.toFixed(1)}%
+- Utilization: ${gameData.utilization.toFixed(1)}%
+- Internal Fragmentation: ${gameData.internalFragmentation} units (${gameData.internalFragmentationPercent.toFixed(1)}%)
+- External Fragmentation: ${gameData.externalFragmentation} vehicle(s)
+
+**Slot Allocation Details:**
+${gameData.slots.map(slot => 
+  `Slot ${slot.slotNumber} (${slot.size} units): ${slot.vehicleCount} vehicle(s), ${slot.remainingSpace} units remaining - ${slot.vehicles.map(v => `${v.name} (${v.type}, ${v.size} units)`).join(', ')}`
+).join('\n')}
+
+**Previous Conversation:**
+${conversationContext}
+
+**Student's Question:** ${gameData.userQuestion}
+
+Provide a helpful, educational response about First Fit allocation. Be specific and reference their actual performance data when relevant. Explain concepts like internal/external fragmentation if asked. Keep responses concise (3-5 sentences max). Use emojis sparingly for engagement. If they ask how to improve, give specific actionable advice based on their metrics.`;
+            }
           }
           
           const result = await model.generateContent(prompt);
