@@ -94,9 +94,6 @@ export class SJFGame extends Phaser.Scene {
   create() {
     const { width, height } = this.sys.game.canvas;
 
-    // Clear previous game data
-    this.cleanupPreviousGame();
-
     const bgImage = this.add.image(width / 2, height / 2, 'bg-office');
     const scaleX = width / bgImage.width;
     const scaleY = height / bgImage.height;
@@ -111,24 +108,6 @@ export class SJFGame extends Phaser.Scene {
     this.createUI(width, height);
     
     this.showIntroScenario(width, height);
-  }
-
-  private cleanupPreviousGame() {
-    // Clear all arrays
-    this.people = [];
-    this.requests = [];
-    this.readyQueue = [];
-    this.completedRequests = [];
-    this.orderBoardTexts = [];
-    
-    // Reset game state
-    this.currentProcessingRequest = undefined;
-    this.gameStartTime = 0;
-    this.currentTime = 0;
-    this.totalScore = 0;
-    this.wrongAttempts = 0;
-    this.currentProgress = 0;
-    this.numPeople = 0;
   }
 
   private createReceptionist() {
@@ -146,10 +125,11 @@ export class SJFGame extends Phaser.Scene {
   }
 
   private createDeliveryPerson() {
-    // Position delivery person at painting table
-    this.deliveryPersonSprite = this.add.sprite(this.PAINTING_TABLE_X - 80, this.PAINTING_TABLE_Y + 50, 'person-1');
-    this.deliveryPersonSprite.setScale(0.5);
-    this.deliveryPersonSprite.setDepth(2);
+    // Use person-1 as the delivery person (can be changed to any person asset)
+    const { width, height } = this.sys.game.canvas;
+    this.deliveryPersonSprite = this.add.sprite(this.RECEPTIONIST_X + 100, this.RECEPTIONIST_Y, 'person-1');
+    this.deliveryPersonSprite.setScale(0.3);
+    this.deliveryPersonSprite.setDepth(11);  // Above other elements
     this.deliveryPersonSprite.setVisible(true);
   }
 
@@ -415,13 +395,13 @@ export class SJFGame extends Phaser.Scene {
 
       const personImage = `person-${(i % 5) + 1}`;
       const personSprite = this.add.sprite(startX, y, personImage);
-      personSprite.setScale(1.2); // Increased from 0.8
+      personSprite.setScale(0.8);
       personSprite.setDepth(8);
-      personSprite.setAlpha(0);
+      personSprite.setAlpha(0); // Start invisible
 
       const name = this.PERSON_NAMES[i];
-      const nameText = this.add.text(startX, y - 120, name, {
-        fontSize: '24px',
+      const nameText = this.add.text(startX, y - 90, name, {
+        fontSize: '22px',
         color: '#FFFFFF',
         fontStyle: 'bold',
         stroke: '#000000',
@@ -430,16 +410,16 @@ export class SJFGame extends Phaser.Scene {
         padding: { x: 10, y: 5 }
       }).setOrigin(0.5);
       nameText.setDepth(9);
-      nameText.setAlpha(0);
+      nameText.setAlpha(0); // Start invisible
 
       const fileSize = fileSizes[Math.floor(Math.random() * fileSizes.length)];
       const fileConfig = this.FILE_CONFIGS[fileSize];
       
-      const fileSprite = this.add.sprite(startX + 40, y - 30, 'file');
-      const fileScale = fileSize === 'small' ? 0.10 : fileSize === 'medium' ? 0.14 : 0.18; // Increased
+      const fileSprite = this.add.sprite(startX + 25, y - 20, 'file');
+      const fileScale = fileSize === 'small' ? 0.06 : fileSize === 'medium' ? 0.08 : 0.10;
       fileSprite.setScale(fileScale);
       fileSprite.setDepth(9);
-      fileSprite.setAlpha(0);
+      fileSprite.setAlpha(0); // Start invisible
 
       const request: FileRequest = {
         id: `request-${i + 1}`,
@@ -481,16 +461,43 @@ export class SJFGame extends Phaser.Scene {
   }
 
   private animatePersonArrival(person: Person) {
-    // Fade in and walk directly to receptionist (no pause)
+    const { width, height } = this.sys.game.canvas;
+    const targetX = width - 250; // Position on right side
+    
+    // Fade in
     person.sprite.setAlpha(1);
     person.nameText.setAlpha(1);
     if (person.fileSprite) person.fileSprite.setAlpha(1);
     
-    // Walk directly to reception
-    this.walkToReceptionAndSubmit(person);
+    // Walk to position
+    this.tweens.add({
+      targets: [person.sprite, person.nameText, person.fileSprite],
+      x: targetX,
+      duration: 1500,
+      ease: 'Power2',
+      onComplete: () => {
+        // After all people arrive, walk to reception
+        const allArrived = this.people.every(p => p.sprite.x === targetX);
+        if (allArrived) {
+          this.time.delayedCall(1000, () => {
+            this.startWalkingToReception();
+          });
+        }
+      }
+    });
   }
 
-
+  private startWalkingToReception() {
+    this.phaseText.setText('Phase: Submitting Files');
+    this.instructionText.setText('📄 People are submitting their files to reception...');
+    
+    // Walk to reception one by one
+    this.people.forEach((person, index) => {
+      this.time.delayedCall(index * 2500, () => {
+        this.walkToReceptionAndSubmit(person);
+      });
+    });
+  }
 
   private walkToReceptionAndSubmit(person: Person) {
     const receptionX = this.RECEPTIONIST_X + 100;
@@ -758,96 +765,7 @@ export class SJFGame extends Phaser.Scene {
   private startProcessingPhase() {
     this.gamePhase = 'processing';
     this.phaseText.setText('Phase: Processing (SJF)');
-    this.instructionText.setText('🎯 Click on the SHORTEST file for delivery boy to process!');
-    
-    // Make board items clickable
-    this.orderBoardTexts.forEach(container => {
-      const requestId = container.getData('requestId');
-      const request = this.requests.find(r => r.id === requestId);
-      
-      if (request && !request.isCompleted && !request.isProcessing) {
-        container.setInteractive();
-        container.on('pointerdown', () => {
-          this.onBoardFileClick(request);
-        });
-      }
-    });
-  }
-
-  private onBoardFileClick(clickedRequest: FileRequest) {
-    if (clickedRequest.isCompleted || clickedRequest.isProcessing) {
-      return;
-    }
-
-    if (this.currentProcessingRequest) {
-      this.showMessage('⚠️ Delivery boy is busy processing!', '#FF0000');
-      return;
-    }
-
-    if (this.readyQueue.length === 0) {
-      return;
-    }
-
-    // Check if this is the shortest file
-    const shortestRequest = this.readyQueue.reduce((prev, curr) => 
-      curr.burstTime < prev.burstTime ? curr : prev
-    );
-    
-    if (clickedRequest.id !== shortestRequest.id) {
-      // Wrong selection - penalty!
-      this.wrongAttempts++;
-      this.totalScore = Math.max(0, this.totalScore - 10);
-      this.scoreText.setText(`Score: ${this.totalScore}`);
-      this.showMessage(`❌ Wrong! Select the SHORTEST file (${shortestRequest.burstTime}s)!`, '#FF0000');
-      
-      // Flash correct file
-      if (shortestRequest.requestContainer) {
-        this.tweens.add({
-          targets: shortestRequest.requestContainer,
-          scaleX: 1.2,
-          scaleY: 1.2,
-          duration: 200,
-          yoyo: true,
-          repeat: 2
-        });
-      }
-      return;
-    }
-
-    // Correct! Animate delivery boy
-    this.animateDeliveryBoyPickup(clickedRequest);
-  }
-
-  private animateDeliveryBoyPickup(request: FileRequest) {
-    this.instructionText.setText(`🚶 Delivery boy picking up ${request.personName}'s file...`);
-    
-    // Process the file
-    this.time.delayedCall(1000, () => {
-      this.processRequest(request);
-    });
-  }
-
-  private showMessage(text: string, color: string) {
-    const { width, height } = this.sys.game.canvas;
-    const message = this.add.text(width / 2, height / 2, text, {
-      fontSize: '24px',
-      color: color,
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 4,
-      backgroundColor: '#000000DD',
-      padding: { x: 20, y: 10 }
-    }).setOrigin(0.5);
-    message.setDepth(100);
-
-    this.tweens.add({
-      targets: message,
-      alpha: 0,
-      y: height / 2 - 50,
-      duration: 2000,
-      ease: 'Power2',
-      onComplete: () => message.destroy()
-    });
+    this.instructionText.setText('🎯 Click on the SHORTEST file in the queue!');
   }
 
   private tryProcessRequest(clickedRequest: FileRequest) {
@@ -945,14 +863,8 @@ export class SJFGame extends Phaser.Scene {
           request.requestContainer.setAlpha(0.3);
         }
         
-        // Check if all done
-        if (this.completedRequests.length >= this.requests.length) {
-          this.time.delayedCall(1000, () => {
-            this.showResults();
-          });
-        } else {
-          this.instructionText.setText('🎯 Click on the SHORTEST file for delivery boy to process!');
-        }
+        // Delivery person picks up printed file and delivers to customer
+        this.deliverFileToCustomer(request);
       }
     });
   }
@@ -1119,6 +1031,30 @@ export class SJFGame extends Phaser.Scene {
     });
   }
 
+  private showMessage(text: string, color: string) {
+    const { width, height } = this.sys.game.canvas;
+    
+    const message = this.add.text(width / 2, height / 2, text, {
+      fontSize: '22px',
+      color: color,
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+      backgroundColor: '#000000DD',
+      padding: { x: 20, y: 12 },
+      align: 'center'
+    }).setOrigin(0.5);
+    message.setDepth(30);
+    
+    this.tweens.add({
+      targets: message,
+      alpha: 0,
+      y: message.y - 50,
+      duration: 3000,
+      ease: 'Power2',
+      onComplete: () => message.destroy()
+    });
+  }
 
   private showResults() {
     this.gamePhase = 'results';
