@@ -41,6 +41,7 @@ export class SJFGame extends Phaser.Scene {
   private paintingTable!: Phaser.GameObjects.Image;
   private orderBoard!: Phaser.GameObjects.Image;
   private orderBoardTexts: Phaser.GameObjects.Container[] = [];
+  private deliveryPersonSprite?: Phaser.GameObjects.Sprite;  // Person who collects and delivers files
 
   private instructionText!: Phaser.GameObjects.Text;
   private phaseText!: Phaser.GameObjects.Text;
@@ -50,12 +51,13 @@ export class SJFGame extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
 
-  private readonly RECEPTIONIST_X = 350;
-  private readonly RECEPTIONIST_Y = 350;
-  private readonly PAINTING_TABLE_X = 850;
-  private readonly PAINTING_TABLE_Y = 120;
-  private readonly ORDER_BOARD_X = 270;
-  private readonly ORDER_BOARD_Y = 200;
+  // Moved to bottom for cleaner UI
+  private readonly RECEPTIONIST_X = 400;
+  private readonly RECEPTIONIST_Y = 750;  // Moved up for better visibility
+  private readonly PAINTING_TABLE_X = 900;  // Moved more to center-left
+  private readonly PAINTING_TABLE_Y = 800;   // Bottom area
+  private readonly ORDER_BOARD_X = 200;  // Moved more to the left
+  private readonly ORDER_BOARD_Y = 250;  // Moved up for better visibility
 
   private totalScore: number = 0;
   private wrongAttempts: number = 0;
@@ -101,6 +103,7 @@ export class SJFGame extends Phaser.Scene {
 
     this.createReceptionist();
     this.createPaintingTable();
+    this.createDeliveryPerson();
     this.createOrderBoard();
     this.createUI(width, height);
     
@@ -109,97 +112,129 @@ export class SJFGame extends Phaser.Scene {
 
   private createReceptionist() {
     this.receptionistSprite = this.add.sprite(this.RECEPTIONIST_X, this.RECEPTIONIST_Y, 'receptionist');
-    this.receptionistSprite.setScale(0.15);
-    this.receptionistSprite.setDepth(1);
+    this.receptionistSprite.setScale(0.25);  // Increased size for better visibility
+    this.receptionistSprite.setDepth(10);  // Higher depth to be on top
     this.receptionistSprite.setVisible(true);
   }
 
   private createPaintingTable() {
     this.paintingTable = this.add.image(this.PAINTING_TABLE_X, this.PAINTING_TABLE_Y, 'painting-table');
-    this.paintingTable.setScale(0.12);
-    this.paintingTable.setDepth(1);
+    this.paintingTable.setScale(0.12);  // Reduced size as requested
+    this.paintingTable.setDepth(10);  // Higher depth to be on top
     this.paintingTable.setVisible(true);
   }
 
+  private createDeliveryPerson() {
+    // Use person-1 as the delivery person (can be changed to any person asset)
+    const { width, height } = this.sys.game.canvas;
+    this.deliveryPersonSprite = this.add.sprite(this.RECEPTIONIST_X + 100, this.RECEPTIONIST_Y, 'person-1');
+    this.deliveryPersonSprite.setScale(0.3);
+    this.deliveryPersonSprite.setDepth(11);  // Above other elements
+    this.deliveryPersonSprite.setVisible(true);
+  }
+
   private createOrderBoard() {
-    this.orderBoard = this.add.image(this.ORDER_BOARD_X, this.ORDER_BOARD_Y + 80, 'order-board-bg');
-    this.orderBoard.setScale(0.5);
-    this.orderBoard.setDepth(1);
+    this.orderBoard = this.add.image(this.ORDER_BOARD_X, this.ORDER_BOARD_Y + 100, 'order-board-bg');
+    this.orderBoard.setScale(0.6);  // Slightly larger for better visibility
+    this.orderBoard.setDepth(5);
     this.orderBoard.setVisible(true);
 
-    const boardTitle = this.add.text(this.ORDER_BOARD_X, this.ORDER_BOARD_Y - 30, 'REQUEST QUEUE', {
-      fontSize: '18px',
+    const boardTitle = this.add.text(this.ORDER_BOARD_X, this.ORDER_BOARD_Y - 20, 'REQUEST QUEUE', {
+      fontSize: '22px',  // Larger font
       color: '#FF6B35',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3,
-      backgroundColor: '#000000AA',
-      padding: { x: 10, y: 5 }
+      strokeThickness: 4,
+      backgroundColor: '#000000CC',
+      padding: { x: 15, y: 8 }
     }).setOrigin(0.5);
-    boardTitle.setDepth(11);
+    boardTitle.setDepth(15);
   }
 
   private createUI(width: number, height: number) {
-    const titleText = this.add.text(width / 2, 40, '📁 SJF CPU Scheduling Simulator 📁', {
-      fontSize: '28px',
+    // Title - cleaner and more prominent
+    const titleText = this.add.text(width / 2, 35, '🖨️ SJF CPU Scheduling Simulator', {
+      fontSize: '32px',
       color: '#FFD700',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 4,
-      backgroundColor: '#00000099',
-      padding: { x: 12, y: 6 }
+      strokeThickness: 5,
+      backgroundColor: '#000000DD',
+      padding: { x: 20, y: 10 }
     }).setOrigin(0.5);
-    titleText.setDepth(12);
+    titleText.setDepth(20);
 
-    this.phaseText = this.add.text(width / 2, 88, 'Phase: Intro', {
+    // Shop name subtitle
+    const shopName = this.add.text(width / 2, 75, 'FAST PRINT SHOP', {
+      fontSize: '24px',
+      color: '#2196F3',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+      backgroundColor: '#000000AA',
+      padding: { x: 15, y: 6 }
+    }).setOrigin(0.5);
+    shopName.setDepth(20);
+
+    // Phase indicator - cleaner positioning
+    this.phaseText = this.add.text(width / 2, 110, 'Phase: Intro', {
       fontSize: '18px',
       color: '#00FF00',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3,
-      backgroundColor: '#00000099',
-      padding: { x: 10, y: 4 }
+      backgroundColor: '#000000CC',
+      padding: { x: 12, y: 5 }
     }).setOrigin(0.5);
-    this.phaseText.setDepth(12);
+    this.phaseText.setDepth(20);
 
-    this.scoreText = this.add.text(width - 150, 90, 'Score: 0', {
-      fontSize: '16px',
+    // Score - top right, cleaner
+    this.scoreText = this.add.text(width - 180, 50, 'Score: 0', {
+      fontSize: '18px',
       color: '#FFD700',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3,
-      backgroundColor: '#00000099',
-      padding: { x: 8, y: 4 }
+      strokeThickness: 4,
+      backgroundColor: '#000000DD',
+      padding: { x: 12, y: 6 }
     });
-    this.scoreText.setDepth(12);
+    this.scoreText.setDepth(20);
 
-    this.timeText = this.add.text(170, 90, 'Time: 0s', {
-      fontSize: '16px',
+    // Time - top left, cleaner
+    this.timeText = this.add.text(180, 50, 'Time: 0s', {
+      fontSize: '18px',
       color: '#00FFFF',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3,
-      backgroundColor: '#00000099',
-      padding: { x: 8, y: 4 }
+      strokeThickness: 4,
+      backgroundColor: '#000000DD',
+      padding: { x: 12, y: 6 }
     });
-    this.timeText.setDepth(12);
+    this.timeText.setDepth(20);
 
-    this.instructionText = this.add.text(width / 2, height - 20, '', {
-      fontSize: '18px',
+    // Instruction text - bottom center, above printer area
+    this.instructionText = this.add.text(width / 2, height - 100, '', {
+      fontSize: '20px',
       color: '#FFFFFF',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3,
+      strokeThickness: 4,
+      backgroundColor: '#000000DD',
+      padding: { x: 15, y: 8 },
       align: 'center'
     }).setOrigin(0.5);
+    this.instructionText.setDepth(20);
 
+    // Progress bar - below phase text
     this.progressBarBg = this.add.graphics();
-    this.progressBarBg.fillStyle(0x333333, 0.8);
-    this.progressBarBg.fillRoundedRect(width / 2 - 200, 115, 400, 20, 10);
+    this.progressBarBg.fillStyle(0x333333, 0.9);
+    this.progressBarBg.fillRoundedRect(width / 2 - 250, 140, 500, 25, 12);
     this.progressBarBg.setVisible(false);
+    this.progressBarBg.setDepth(19);
 
     this.progressBar = this.add.graphics();
     this.progressBar.setVisible(false);
+    this.progressBar.setDepth(19);
   }
 
   private showIntroScenario(width: number, height: number) {
@@ -349,9 +384,10 @@ export class SJFGame extends Phaser.Scene {
 
   private createAllPeople() {
     const { width, height } = this.sys.game.canvas;
-    const startX = width - 200;
-    const startY = height / 2;
-    const spacing = 120;
+    // Position customers on the floor (bottom area)
+    const startX = width - 250;
+    const startY = height - 150;  // On the floor (bottom area)
+    const spacing = 140;  // More spacing between customers
 
     const fileSizes: Array<keyof typeof this.FILE_CONFIGS> = ['small', 'medium', 'large'];
 
@@ -362,27 +398,32 @@ export class SJFGame extends Phaser.Scene {
       // Use different person sprites
       const personImage = `person-${(i % 5) + 1}`;
       const personSprite = this.add.sprite(x, y, personImage);
-      personSprite.setScale(0.3);
-      personSprite.setDepth(2);
+      personSprite.setScale(0.8);  // Larger customers for better visibility
+      personSprite.setDepth(8);  // Higher depth to be visible
 
       const name = this.PERSON_NAMES[i];
-      const nameText = this.add.text(x, y - 60, name, {
-        fontSize: '16px',
+      const nameText = this.add.text(x, y - 90, name, {
+        fontSize: '22px',  // Larger font
         color: '#FFFFFF',
         fontStyle: 'bold',
         stroke: '#000000',
-        strokeThickness: 3
+        strokeThickness: 4,
+        backgroundColor: '#000000AA',
+        padding: { x: 10, y: 5 }
       }).setOrigin(0.5);
-      nameText.setDepth(2);
+      nameText.setDepth(9);
 
       const fileSize = fileSizes[Math.floor(Math.random() * fileSizes.length)];
       const fileConfig = this.FILE_CONFIGS[fileSize];
       
-      // Use single file image with different scales for different sizes
-      const fileSprite = this.add.sprite(x + 40, y - 20, 'file');
-      const fileScale = fileSize === 'small' ? 0.15 : fileSize === 'medium' ? 0.2 : 0.25;
+      // Files on customer's hand - smaller than customer and varied sizes
+      // Position file in customer's hand area (adjust based on customer sprite)
+      const fileSprite = this.add.sprite(x + 25, y - 20, 'file');
+      // Smaller file sizes - all smaller than customer (customer is 0.8 scale)
+      // Vary sizes but keep them proportionally smaller
+      const fileScale = fileSize === 'small' ? 0.08 : fileSize === 'medium' ? 0.12 : 0.16;
       fileSprite.setScale(fileScale);
-      fileSprite.setDepth(2);
+      fileSprite.setDepth(9);
 
       const request: FileRequest = {
         id: `request-${i + 1}`,
@@ -437,33 +478,80 @@ export class SJFGame extends Phaser.Scene {
     person.request.requestNumber = requestNumber;
     person.request.arrivalTime = Math.round(this.currentTime);
     
-    this.tweens.add({
-      targets: [person.sprite, person.nameText, person.fileSprite],
-      x: this.RECEPTIONIST_X + 100,
-      y: this.RECEPTIONIST_Y,
-      duration: 1000,
-      ease: 'Power2',
-      onComplete: () => {
-        this.addRequestToBoard(person.request);
-        this.readyQueue.push(person.request);
-        
-        person.sprite.setAlpha(0);
-        person.nameText.setAlpha(0);
-        if (person.fileSprite) person.fileSprite.setAlpha(0);
-        
-        const collected = this.people.filter(p => p.sprite.getData('hasRequest')).length;
-        if (collected >= this.people.length) {
-          this.time.delayedCall(500, () => {
-            this.startProcessingPhase();
+    // Delivery person goes to customer to collect file
+    if (this.deliveryPersonSprite && person.fileSprite) {
+      // Move delivery person to customer
+      this.tweens.add({
+        targets: this.deliveryPersonSprite,
+        x: person.x - 50,
+        y: person.y,
+        duration: 800,
+        ease: 'Power2',
+        onComplete: () => {
+          // Hide customer's file (delivery person takes it)
+          if (person.fileSprite) {
+            person.fileSprite.setAlpha(0);
+          }
+          
+          // Move delivery person back to table with file
+          this.tweens.add({
+            targets: this.deliveryPersonSprite,
+            x: this.PAINTING_TABLE_X - 50,
+            y: this.PAINTING_TABLE_Y - 30,
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => {
+              // File is now on table, add to queue
+              this.readyQueue.push(person.request);
+              // Sort queue by SJF (shortest burst time first)
+              this.sortQueueBySJF();
+              // Rebuild board to show sorted order
+              this.rebuildQueueBoard();
+              
+              // Return delivery person to starting position
+              this.tweens.add({
+                targets: this.deliveryPersonSprite,
+                x: this.RECEPTIONIST_X + 100,
+                y: this.RECEPTIONIST_Y,
+                duration: 800,
+                ease: 'Power2',
+                onComplete: () => {
+                  // Keep customers visible (they'll receive printed files later)
+                  // Just mark that their file has been collected
+                  const collected = this.people.filter(p => p.sprite.getData('hasRequest')).length;
+                  if (collected >= this.people.length) {
+                    this.time.delayedCall(500, () => {
+                      this.startProcessingPhase();
+                    });
+                  }
+                }
+              });
+            }
           });
         }
+      });
+    } else {
+      // Fallback if delivery person not available
+      this.readyQueue.push(person.request);
+      this.sortQueueBySJF();
+      this.rebuildQueueBoard();
+      
+      person.sprite.setAlpha(0);
+      person.nameText.setAlpha(0);
+      if (person.fileSprite) person.fileSprite.setAlpha(0);
+      
+      const collected = this.people.filter(p => p.sprite.getData('hasRequest')).length;
+      if (collected >= this.people.length) {
+        this.time.delayedCall(500, () => {
+          this.startProcessingPhase();
+        });
       }
-    });
+    }
   }
 
   private addRequestToBoard(request: FileRequest) {
-    const startY = this.ORDER_BOARD_Y - 20;
-    const lineHeight = 28;
+    const startY = this.ORDER_BOARD_Y + 20;
+    const lineHeight = 28;  // Slightly less spacing for smaller text
     const requestIndex = this.orderBoardTexts.length;
     
     const fileConfig = this.FILE_CONFIGS[request.fileSize];
@@ -472,39 +560,71 @@ export class SJFGame extends Phaser.Scene {
     requestContainer.setDepth(15);
     requestContainer.setData('requestId', request.id);
     
+    // Smaller background for smaller text
     const requestBg = this.add.graphics();
-    requestBg.fillStyle(0xFFFFFF, 0.95);
+    requestBg.fillStyle(0xFFFFFF, 0.98);
     requestBg.fillRoundedRect(-80, -12, 160, 24, 6);
     requestBg.lineStyle(2, 0xFF6B35, 1);
     requestBg.strokeRoundedRect(-80, -12, 160, 24, 6);
     requestContainer.add(requestBg);
     
+    // Request number - smaller
     const requestNum = this.add.text(-75, 0, `${request.requestNumber}.`, {
-      fontSize: '14px',
+      fontSize: '12px',  // Decreased size
       color: '#FF6B35',
-      fontStyle: 'bold'
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 1
     }).setOrigin(0, 0.5);
     requestContainer.add(requestNum);
     
+    // File emoji - smaller
     const fileEmoji = this.add.text(-55, 0, fileConfig.size, {
-      fontSize: '16px'
+      fontSize: '14px'  // Decreased size
     }).setOrigin(0, 0.5);
     requestContainer.add(fileEmoji);
     
+    // File name - smaller
     const fileName = this.add.text(-35, 0, fileConfig.name, {
-      fontSize: '12px',
+      fontSize: '11px',  // Decreased size
       color: '#000000',
       fontStyle: 'bold'
     }).setOrigin(0, 0.5);
     requestContainer.add(fileName);
     
+    // Burst time - smaller but still visible
     const burstText = this.add.text(40, 0, `BT:${request.burstTime}s`, {
-      fontSize: '10px',
-      color: '#666666'
+      fontSize: '11px',  // Decreased size
+      color: '#2196F3',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 1
     }).setOrigin(0, 0.5);
     requestContainer.add(burstText);
     
+    // Updated interactive area to match new smaller size
     requestContainer.setInteractive(new Phaser.Geom.Rectangle(-80, -12, 160, 24), Phaser.Geom.Rectangle.Contains);
+    
+    // Hover effects for better UX
+    requestContainer.on('pointerover', () => {
+      if (this.gamePhase === 'processing' && !request.isCompleted && !request.isProcessing) {
+        requestBg.clear();
+        requestBg.fillStyle(0xE3F2FD, 0.98);
+        requestBg.fillRoundedRect(-80, -12, 160, 24, 6);
+        requestBg.lineStyle(2, 0x2196F3, 1);
+        requestBg.strokeRoundedRect(-80, -12, 160, 24, 6);
+      }
+    });
+    
+    requestContainer.on('pointerout', () => {
+      if (!request.isCompleted && !request.isProcessing) {
+        requestBg.clear();
+        requestBg.fillStyle(0xFFFFFF, 0.98);
+        requestBg.fillRoundedRect(-80, -12, 160, 24, 6);
+        requestBg.lineStyle(2, 0xFF6B35, 1);
+        requestBg.strokeRoundedRect(-80, -12, 160, 24, 6);
+      }
+    });
     
     requestContainer.on('pointerdown', () => {
       if (this.gamePhase === 'processing') {
@@ -543,6 +663,20 @@ export class SJFGame extends Phaser.Scene {
       this.wrongAttempts++;
       this.totalScore = Math.max(0, this.totalScore - 10);
       this.scoreText.setText(`Score: ${this.totalScore}`);
+      
+      // Better error message
+      const fileConfig = this.FILE_CONFIGS[shortestRequest.fileSize];
+      this.showMessage(
+        `❌ Wrong! SJF = Shortest Job First!\n` +
+        `Select Request #${shortestRequest.requestNumber} (${shortestRequest.burstTime}s) first!\n` +
+        `You selected Request #${clickedRequest.requestNumber} (${clickedRequest.burstTime}s)`,
+        '#FF0000'
+      );
+      
+      // Flash the correct request
+      if (shortestRequest.requestContainer) {
+        this.flashCorrectRequest(shortestRequest.requestContainer);
+      }
       return;
     }
 
@@ -568,6 +702,9 @@ export class SJFGame extends Phaser.Scene {
     this.progressBarBg.setVisible(true);
     this.progressBar.setVisible(true);
     
+    // Add printer animation (movement) when printing
+    this.startPrinterAnimation();
+    
     const processTime = request.burstTime * 1000;
     this.currentProgress = 0;
     
@@ -580,6 +717,8 @@ export class SJFGame extends Phaser.Scene {
         this.updateProgressBar();
       },
       onComplete: () => {
+        // Stop printer animation
+        this.stopPrinterAnimation();
         request.isCompleted = true;
         request.completionTime = this.currentTime;
         request.turnaroundTime = request.completionTime - request.arrivalTime;
@@ -598,29 +737,197 @@ export class SJFGame extends Phaser.Scene {
           request.requestContainer.setAlpha(0.3);
         }
         
-        if (this.completedRequests.length >= this.requests.length) {
-          this.time.delayedCall(1000, () => {
-            this.showResults();
-          });
-        } else {
-          this.instructionText.setText('🎯 Click on the SHORTEST file in the queue!');
-        }
+        // Delivery person picks up printed file and delivers to customer
+        this.deliverFileToCustomer(request);
       }
     });
   }
 
   private updateProgressBar() {
     const { width } = this.sys.game.canvas;
-    const barWidth = 400 * this.currentProgress;
+    const barWidth = 500 * this.currentProgress;
     
     this.progressBar.clear();
     this.progressBar.fillStyle(0x00FF00, 1);
-    this.progressBar.fillRoundedRect(width / 2 - 200, 115, barWidth, 20, 10);
+    this.progressBar.fillRoundedRect(width / 2 - 250, 140, barWidth, 25, 12);
   }
 
   private updateClock() {
     this.currentTime = (this.time.now - this.gameStartTime) / 1000;
     this.timeText.setText(`Time: ${Math.floor(this.currentTime)}s`);
+  }
+
+  private flashCorrectRequest(container: Phaser.GameObjects.Container) {
+    // Flash animation to highlight the correct request
+    this.tweens.add({
+      targets: container,
+      scaleX: 1.15,
+      scaleY: 1.15,
+      duration: 200,
+      yoyo: true,
+      repeat: 2,
+      ease: 'Power2'
+    });
+  }
+
+  private sortQueueBySJF() {
+    // Sort by burst time (shortest first), then by arrival time if equal
+    this.readyQueue.sort((a, b) => {
+      if (a.burstTime !== b.burstTime) {
+        return a.burstTime - b.burstTime;  // Shortest first
+      }
+      return a.arrivalTime - b.arrivalTime;  // If same burst time, earlier arrival first
+    });
+  }
+
+  private rebuildQueueBoard() {
+    // Clear existing board items
+    this.orderBoardTexts.forEach(container => container.destroy());
+    this.orderBoardTexts = [];
+    
+    // Rebuild board with sorted queue
+    this.readyQueue.forEach(request => {
+      this.addRequestToBoard(request);
+    });
+  }
+
+  private startPrinterAnimation() {
+    // Add subtle movement to printer when printing
+    this.tweens.add({
+      targets: this.paintingTable,
+      y: this.paintingTable.y - 3,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  private stopPrinterAnimation() {
+    // Stop printer animation and reset position
+    this.tweens.killTweensOf(this.paintingTable);
+    this.paintingTable.y = this.PAINTING_TABLE_Y;
+  }
+
+  private deliverFileToCustomer(request: FileRequest) {
+    // Find the customer who owns this request
+    const customer = this.people.find(p => p.request.id === request.id);
+    
+    if (!customer || !this.deliveryPersonSprite) {
+      // If customer not found or delivery person not available, continue normally
+      if (this.completedRequests.length >= this.requests.length) {
+        this.time.delayedCall(1000, () => {
+          this.showResults();
+        });
+      } else {
+        this.instructionText.setText('🎯 Click on the SHORTEST file in the queue!');
+      }
+      return;
+    }
+
+    // Ensure customer is visible (they should already be visible)
+    customer.sprite.setAlpha(1);
+    customer.nameText.setAlpha(1);
+    
+    // Move delivery person to printer to pick up printed file
+    this.tweens.add({
+      targets: this.deliveryPersonSprite,
+      x: this.PAINTING_TABLE_X - 50,
+      y: this.PAINTING_TABLE_Y - 30,
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => {
+        // Delivery person picks up file (visual: show file sprite following delivery person)
+        const printedFile = this.add.sprite(
+          this.deliveryPersonSprite!.x,
+          this.deliveryPersonSprite!.y - 20,
+          'file'
+        );
+        // Scale based on original file size
+        const fileConfig = this.FILE_CONFIGS[request.fileSize];
+        const fileScale = request.fileSize === 'small' ? 0.08 : request.fileSize === 'medium' ? 0.12 : 0.16;
+        printedFile.setScale(fileScale);
+        printedFile.setDepth(12);
+        
+        // Move delivery person to customer with file
+        this.tweens.add({
+          targets: [this.deliveryPersonSprite, printedFile],
+          x: customer.x - 50,
+          y: customer.y,
+          duration: 1000,
+          ease: 'Power2',
+          onComplete: () => {
+            // File delivered! Replace customer's file with printed version
+            printedFile.destroy();
+            
+            // Show customer with delivered printed file (small file in hand)
+            if (customer.fileSprite) {
+              customer.fileSprite.setAlpha(1);
+              // Keep the file size small (printed version)
+              const deliveredFileScale = request.fileSize === 'small' ? 0.08 : request.fileSize === 'medium' ? 0.12 : 0.16;
+              customer.fileSprite.setScale(deliveredFileScale);
+            }
+            
+            // Customer happy animation
+            this.tweens.add({
+              targets: customer.sprite,
+              scaleX: customer.sprite.scaleX * 1.1,
+              scaleY: customer.sprite.scaleY * 1.1,
+              duration: 300,
+              yoyo: true,
+              ease: 'Power2'
+            });
+            
+            // Show success message
+            this.showMessage(`✅ File delivered to ${customer.name}!`, '#00FF00');
+            
+            // Return delivery person to starting position
+            this.tweens.add({
+              targets: this.deliveryPersonSprite,
+              x: this.RECEPTIONIST_X + 100,
+              y: this.RECEPTIONIST_Y,
+              duration: 800,
+              ease: 'Power2',
+              onComplete: () => {
+                // Check if all requests completed
+                if (this.completedRequests.length >= this.requests.length) {
+                  this.time.delayedCall(1000, () => {
+                    this.showResults();
+                  });
+                } else {
+                  this.instructionText.setText('🎯 Click on the SHORTEST file in the queue!');
+                }
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  private showMessage(text: string, color: string) {
+    const { width, height } = this.sys.game.canvas;
+    
+    const message = this.add.text(width / 2, height / 2, text, {
+      fontSize: '22px',
+      color: color,
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+      backgroundColor: '#000000DD',
+      padding: { x: 20, y: 12 },
+      align: 'center'
+    }).setOrigin(0.5);
+    message.setDepth(30);
+    
+    this.tweens.add({
+      targets: message,
+      alpha: 0,
+      y: message.y - 50,
+      duration: 3000,
+      ease: 'Power2',
+      onComplete: () => message.destroy()
+    });
   }
 
   private showResults() {
