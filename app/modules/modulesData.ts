@@ -20,8 +20,8 @@ export const modulesData = {
         title: "SJF",
         subtitle: "Shortest Job First Non-Preemptive",
         levels: [
-          { id: "sjf-l1", title: "Equal Arrival", description: "All processes arriving together", difficulty: 2, status: "completed", xpReward: 60 },
-          { id: "sjf-l2", title: "Arrival Spread", description: "Staggered process arrival times", difficulty: 3, status: "available", xpReward: 80 },
+          { id: "sjf-l1", title: "Equal Arrival", description: "All processes arriving together", difficulty: 2, status: "available", xpReward: 60 },
+          { id: "sjf-l2", title: "Arrival Spread", description: "Staggered process arrival times", difficulty: 3, status: "locked", xpReward: 80 },
           { id: "sjf-l3", title: "Starvation Traps", description: "Handle processes that never execute", difficulty: 4, status: "locked", xpReward: 120 },
         ],
       },

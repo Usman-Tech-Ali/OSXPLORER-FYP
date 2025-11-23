@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 
 const FirstFitGame = dynamic(() => import("@/components/games/memory-management/first-fit/FirstFitGame"), { ssr: false })
 const FirstFCFSGame = dynamic(() => import("@/components/games/cpu-scheduling/fcfs-l1/FirstFCFSGame"), { ssr: false })
+const FirstSJFGame = dynamic(() => import("@/components/games/cpu-scheduling/sjf-l1/FirstSJFGame"), { ssr: false })
 const FirstCSGame = dynamic(() => import("@/components/games/process-synchronization/critical-section-l1/FirstCSGame"), { ssr: false })
 
 export default function GamePage() {
@@ -14,6 +15,7 @@ export default function GamePage() {
   // Check which game to show
   const isFirstFitBasic = moduleId === "memory-management" && gameId === "first-fit-l1"
   const isFCFSBasic = moduleId === "cpu-scheduling" && gameId === "fcfs-l1"
+  const isSJFBasic = moduleId === "cpu-scheduling" && gameId === "sjf-l1"
   const isCSBasic = moduleId === "process-synchronization" && gameId === "critical-section-l1"
 
   return (
@@ -25,6 +27,10 @@ export default function GamePage() {
       ) : isFCFSBasic ? (
         <div className="w-full h-screen overflow-hidden">
           <FirstFCFSGame />
+        </div>
+      ) : isSJFBasic ? (
+        <div className="w-full h-screen overflow-hidden">
+          <FirstSJFGame />
         </div>
       ) : isCSBasic ? (
         <div className="w-full h-screen overflow-hidden">
