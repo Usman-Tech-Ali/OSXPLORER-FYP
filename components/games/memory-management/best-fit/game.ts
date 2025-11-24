@@ -65,8 +65,8 @@ export class BestFitGame extends Phaser.Scene {
 
   // Layout constants
   private readonly CUPBOARD_X = 900; // Right side - cupboard area
-  private readonly TABLE_X = 200; // Left side - table area (where gifts appear)
-  private readonly TABLE_Y = 500; // Y position of the table
+  private readonly TABLE_X = 250; // Left side - table area (where gifts appear on counter)
+  private readonly TABLE_Y = 650; // Y position of the table/counter (lower on screen)
 
   // Gift configurations - based on existing assets
   private readonly GIFT_CONFIGS = {
@@ -75,68 +75,64 @@ export class BestFitGame extends Phaser.Scene {
       size: 15, 
       asset: 'gift1',
       emoji: '🎁',
-      scale: 0.25  // Reduced from 0.4
+      scale: 0.15  // Much smaller
     },
     gift2: { 
       name: 'Medium Gift', 
       size: 35, 
       asset: 'gift2',
       emoji: '🎁',
-      scale: 0.3   // Reduced from 0.5
+      scale: 0.18  // Much smaller
     },
     gift3: { 
       name: 'Large Gift', 
       size: 55, 
       asset: 'gift3',
       emoji: '🎁',
-      scale: 0.35  // Reduced from 0.6
+      scale: 0.2   // Much smaller
     },
     gift4: { 
       name: 'Extra Large Gift', 
       size: 75, 
       asset: 'gift4',
       emoji: '🎁',
-      scale: 0.4   // Reduced from 0.7
+      scale: 0.22  // Much smaller
     },
     gift5: { 
       name: 'Huge Gift', 
       size: 95, 
       asset: 'gift5',
       emoji: '🎁',
-      scale: 0.45  // Reduced from 0.8
+      scale: 0.25  // Much smaller
     },
     gift6: { 
       name: 'Massive Gift', 
       size: 120, 
       asset: 'gift6',
       emoji: '🎁',
-      scale: 0.5   // Reduced from 0.9
+      scale: 0.28  // Much smaller
     }
   };
 
   // Cupboard compartments - based on screenshot layout
   // Matching the actual cupboard structure from background image
+  // Top row, middle row, bottom row layout
   private readonly COMPARTMENT_CONFIGS = [
-    // Left section - top compartment (tall, spans 2 rows)
-    { compartmentNumber: 1, size: 200, x: 900, y: 250, width: 180, height: 200, label: 'C1: 200' },
-    // Left section - middle compartment
-    { compartmentNumber: 2, size: 150, x: 900, y: 400, width: 180, height: 80, label: 'C2: 150' },
-    // Left section - bottom compartment
-    { compartmentNumber: 3, size: 120, x: 900, y: 520, width: 180, height: 80, label: 'C3: 120' },
+    // Top row - left to right
+    { compartmentNumber: 1, size: 200, x: 850, y: 220, width: 180, height: 180, label: 'C1: 200' },
+    { compartmentNumber: 2, size: 150, x: 1050, y: 220, width: 140, height: 180, label: 'C2: 150' },
+    { compartmentNumber: 3, size: 120, x: 1210, y: 220, width: 120, height: 180, label: 'C3: 120' },
+    { compartmentNumber: 4, size: 50, x: 1350, y: 220, width: 80, height: 85, label: 'C4: 50' },
+    { compartmentNumber: 5, size: 50, x: 1350, y: 315, width: 80, height: 85, label: 'C5: 50' },
+    { compartmentNumber: 6, size: 100, x: 1450, y: 220, width: 100, height: 85, label: 'C6: 100' },
+    { compartmentNumber: 7, size: 100, x: 1450, y: 315, width: 100, height: 85, label: 'C7: 100' },
+    { compartmentNumber: 8, size: 80, x: 1570, y: 220, width: 90, height: 85, label: 'C8: 80' },
     
-    // Right section - top left small compartment
-    { compartmentNumber: 4, size: 50, x: 1120, y: 220, width: 90, height: 60, label: 'C4: 50' },
-    // Right section - top right small compartment
-    { compartmentNumber: 5, size: 50, x: 1230, y: 220, width: 90, height: 60, label: 'C5: 50' },
-    // Right section - middle wide compartment
-    { compartmentNumber: 6, size: 100, x: 1120, y: 350, width: 200, height: 70, label: 'C6: 100' },
-    // Right section - bottom wide compartment
-    { compartmentNumber: 7, size: 100, x: 1120, y: 520, width: 200, height: 80, label: 'C7: 100' },
+    // Middle row
+    { compartmentNumber: 9, size: 90, x: 1570, y: 315, width: 90, height: 85, label: 'C9: 90' },
     
-    // Additional compartments on far right
-    { compartmentNumber: 8, size: 80, x: 1380, y: 220, width: 100, height: 60, label: 'C8: 80' },
-    { compartmentNumber: 9, size: 90, x: 1380, y: 350, width: 100, height: 70, label: 'C9: 90' },
-    { compartmentNumber: 10, size: 110, x: 1380, y: 520, width: 100, height: 80, label: 'C10: 110' }
+    // Bottom row
+    { compartmentNumber: 10, size: 110, x: 1570, y: 410, width: 90, height: 100, label: 'C10: 110' }
   ];
 
   // Gifts that will appear on the table sequentially
@@ -262,15 +258,15 @@ export class BestFitGame extends Phaser.Scene {
     }).setOrigin(0.5);
     this.phaseText.setDepth(200);
 
-    // Instruction text - bottom center, cleaner
-    this.instructionText = this.add.text(width / 2, height - 40, 'Welcome! Click to start...', {
-      fontSize: '18px',
-      color: '#FFFFFF',
+    // Instruction text - bottom center, cleaner, dark text
+    this.instructionText = this.add.text(width / 2, height - 30, 'Welcome! Click to start...', {
+      fontSize: '16px',
+      color: '#000000',
       fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 3,
-      backgroundColor: '#000000DD',
-      padding: { x: 15, y: 8 },
+      stroke: '#FFFFFF',
+      strokeThickness: 2,
+      backgroundColor: '#FFFFFFDD',
+      padding: { x: 12, y: 6 },
       align: 'center',
       fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setOrigin(0.5);
@@ -379,16 +375,16 @@ export class BestFitGame extends Phaser.Scene {
       }
     });
 
-    // Label showing size - smaller and cleaner
+    // Label showing size - dark text, visible
     const labelText = this.add.text(compartment.x, compartment.y, label, {
-      fontSize: '14px',
+      fontSize: '13px',
       color: '#000000',
       fontStyle: 'bold',
       stroke: '#FFFFFF',
-      strokeThickness: 1,
+      strokeThickness: 2,
       align: 'center',
-      backgroundColor: '#FFFFFFDD',
-      padding: { x: 6, y: 4 },
+      backgroundColor: '#FFFFFFEE',
+      padding: { x: 5, y: 3 },
       fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setOrigin(0.5);
     labelText.setDepth(10);
@@ -514,11 +510,11 @@ when many small unusable spaces accumulate!`;
     const giftNumber = this.currentGiftIndex + 1;
     const totalGifts = this.GIFTS_CONFIG.length;
 
-    // Calculate position on table (spread gifts horizontally)
-    const tableSpacing = 120;
+    // Calculate position on table (spread gifts horizontally on counter)
+    const tableSpacing = 100;
     const startX = this.TABLE_X;
     const giftX = startX + (this.currentGiftIndex * tableSpacing);
-    const giftY = this.TABLE_Y;
+    const giftY = this.TABLE_Y; // On the counter/table surface
 
     const gift: Gift = {
       id: giftConfig.id,
@@ -542,15 +538,15 @@ when many small unusable spaces accumulate!`;
     });
     gift.sprite = sprite;
 
-    // Size label - smaller
-    const sizeLabel = this.add.text(giftX, giftY - 35, `${config.size} units`, {
-      fontSize: '14px',
-      color: '#FFFFFF',
+    // Size label - dark text, no white
+    const sizeLabel = this.add.text(giftX, giftY - 25, `${config.size} units`, {
+      fontSize: '12px',
+      color: '#000000',
       fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 2,
-      backgroundColor: '#000000CC',
-      padding: { x: 6, y: 4 },
+      stroke: '#FFFFFF',
+      strokeThickness: 1,
+      backgroundColor: '#FFFFFFDD',
+      padding: { x: 5, y: 3 },
       fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setOrigin(0.5);
     sizeLabel.setDepth(6);
