@@ -4,6 +4,7 @@ import { useParams } from "next/navigation"
 import dynamic from "next/dynamic"
 
 const FirstFitGame = dynamic(() => import("@/components/games/memory-management/first-fit/FirstFitGame"), { ssr: false })
+const BestFitGame = dynamic(() => import("@/components/games/memory-management/best-fit/BestFitGame"), { ssr: false })
 const FirstFCFSGame = dynamic(() => import("@/components/games/cpu-scheduling/fcfs-l1/FirstFCFSGame"), { ssr: false })
 const FirstSJFGame = dynamic(() => import("@/components/games/cpu-scheduling/sjf-l1/FirstSJFGame"), { ssr: false })
 const FirstCSGame = dynamic(() => import("@/components/games/process-synchronization/critical-section-l1/FirstCSGame"), { ssr: false })
@@ -14,6 +15,7 @@ export default function GamePage() {
 
   // Check which game to show
   const isFirstFitBasic = moduleId === "memory-management" && gameId === "first-fit-l1"
+  const isBestFitBasic = moduleId === "memory-management" && gameId === "best-fit-l1"
   const isFCFSBasic = moduleId === "cpu-scheduling" && gameId === "fcfs-l1"
   const isSJFBasic = moduleId === "cpu-scheduling" && gameId === "sjf-l1"
   const isCSBasic = moduleId === "process-synchronization" && gameId === "critical-section-l1"
@@ -23,6 +25,10 @@ export default function GamePage() {
       {isFirstFitBasic ? (
         <div className="w-full h-screen overflow-hidden">
           <FirstFitGame />
+        </div>
+      ) : isBestFitBasic ? (
+        <div className="w-full h-screen overflow-hidden">
+          <BestFitGame />
         </div>
       ) : isFCFSBasic ? (
         <div className="w-full h-screen overflow-hidden">

@@ -42,53 +42,54 @@
 
 ---
 
-## 🎯 Best-Fit Game Scenario: **WAREHOUSE STORAGE**
+## 🎯 Best-Fit Game Scenario: **GIFT CUPBOARD**
 
-### Why Warehouse Storage?
-1. **Intuitive**: Everyone understands finding the smallest box that fits
-2. **Clear Size Matching**: Item size = process size, bin size = memory block size
+### Why Gift Cupboard?
+1. **Intuitive**: Everyone understands organizing gifts in a cupboard
+2. **Clear Size Matching**: Gift size = process size, cupboard compartment size = memory block size
 3. **Minimizes Waste**: Shows Best-Fit's goal of minimizing leftover space
-4. **Fragmentation Visible**: Small leftover spaces become unusable holes
-5. **Distinct from First-Fit**: Different setting and visual style
-6. **Professional Setting**: Matches educational context
+4. **Fragmentation Visible**: Small leftover spaces in compartments become unusable
+5. **Distinct from First-Fit**: Different setting and visual style (homey vs urban)
+6. **Relatable**: Everyone has organized items in cupboards/shelves
+7. **Visual Appeal**: Warm, inviting atmosphere (matches screenshot aesthetic)
 
 ### Scenario Mapping
 
-| OS Concept | Warehouse Equivalent |
-|------------|---------------------|
-| **Process** | Storage Item (Package/Box) |
-| **Process Size** | Item Size (Volume/Weight) |
-| **Memory Block** | Storage Bin/Shelf |
-| **Memory Size** | Bin Capacity |
-| **Allocation** | Placing item in bin |
-| **Fragmentation** | Leftover space in bins |
+| OS Concept | Gift Cupboard Equivalent |
+|------------|-------------------------|
+| **Process** | Gift (Package) |
+| **Process Size** | Gift Size (Volume) |
+| **Memory Block** | Cupboard Compartment |
+| **Memory Size** | Compartment Capacity |
+| **Allocation** | Placing gift in compartment |
+| **Fragmentation** | Leftover space in compartments |
 | **External Fragmentation** | Many small unusable spaces |
-| **Allocator** | Warehouse Manager |
+| **Allocator** | Player (Organizer) |
 
 ---
 
 ## 🎮 Game Flow
 
-### Phase 1: Item Arrival
-- **4-8 items** arrive at warehouse loading dock
-- Each item has different sizes (small, medium, large, extra-large)
-- Items appear on the **Loading Dock** (conveyor belt or truck)
-- Items show: Item name, Size (units), Type icon
+### Phase 1: Gift Arrival
+- **4-8 gifts** arrive on a table/counter (left side of screen)
+- Each gift has different sizes (small, medium, large, extra-large)
+- Gifts appear on the **Gift Table** (counter area)
+- Gifts show: Gift number, Size (units), Visual gift box
 
 ### Phase 2: Best-Fit Selection
-- Player (Warehouse Manager) must select a storage bin for each item
-- **Best-Fit Rule**: Always select the **SMALLEST bin** that can fit the item
-- If wrong bin selected → penalty points
-- Available bins show: Bin number, Total capacity, Remaining space
+- Player must select a cupboard compartment for each gift
+- **Best-Fit Rule**: Always select the **SMALLEST compartment** that can fit the gift
+- If wrong compartment selected → penalty points
+- Available compartments show: Compartment label, Total capacity, Remaining space
 
-### Phase 3: Storage Allocation
-- Item moves to selected bin
-- Visual feedback shows item placed in bin
-- Remaining space in bin is highlighted
+### Phase 3: Gift Allocation
+- Gift moves to selected compartment
+- Visual feedback shows gift placed in compartment
+- Remaining space in compartment is highlighted
 - Fragmentation counter updates
 
 ### Phase 4: Fragmentation Tracking
-- Show leftover space in each bin
+- Show leftover space in each compartment
 - Highlight small unusable fragments
 - Calculate total wasted space
 - Show memory utilization percentage
@@ -103,17 +104,18 @@
 
 ## 🎨 Visual Design
 
-### Setting: Modern Warehouse
-- **Left Side**: Loading dock with conveyor belt/truck
-- **Center**: Storage area with bins/shelves (grid layout)
-- **Right Side**: Control panel showing metrics
-- **Background**: Industrial warehouse interior
+### Setting: Cozy Room with Cupboard
+- **Left Side**: Counter/table with gifts (matching screenshot style)
+- **Center-Right**: Cupboard with different sized compartments (matching screenshot)
+- **Background**: Warm room with window (matching screenshot aesthetic)
+- **Character**: Friendly person behind counter (optional, from screenshot)
 
 ### Color Scheme
-- **Primary**: Green/Teal (efficiency, storage)
-- **Accent**: Orange/Yellow (items, alerts)
-- **Background**: Gray/White (industrial, clean)
-- **Fragment Warning**: Red (wasted space)
+- **Primary**: Warm Brown/Wood (cupboard, furniture)
+- **Accent**: Bright colors (gift boxes - red, blue, green, yellow)
+- **Background**: Warm cream/beige (cozy room)
+- **Fragment Warning**: Orange/Red (wasted space)
+- **Success**: Green (good fit)
 
 ---
 
@@ -121,131 +123,139 @@
 
 ### Backgrounds
 ```
-/games/memory-management/assets/best-fit/
-├── background.png              # Warehouse interior (1600x1000px)
-├── loading-dock.png            # Loading area background
-├── storage-area.png            # Storage bins area
-└── control-panel.png           # Metrics display panel
+/games/memory-management/bestfit/
+├── background.png              # Room with cupboard (1600x1000px) ✅ EXISTS
+└── cupboard-overlay.png       # Cupboard compartments overlay (optional)
 ```
 
-### Storage Bins
+### Gifts (Already Available!)
 ```
-├── bin-small.png               # Small storage bin (25-50 units)
-├── bin-medium.png              # Medium storage bin (75-100 units)
-├── bin-large.png               # Large storage bin (150-200 units)
-├── bin-xlarge.png              # Extra large bin (250+ units)
-├── bin-empty.png               # Empty bin state
-├── bin-partial.png             # Partially filled bin
-├── bin-full.png                # Full bin
-└── bin-fragment.png            # Bin with small leftover space
-```
-
-### Items (Packages/Boxes)
-```
-├── item-small.png              # Small package (10-20 units)
-├── item-medium.png             # Medium package (30-50 units)
-├── item-large.png              # Large package (60-80 units)
-├── item-xlarge.png             # Extra large package (100+ units)
-├── package-icon.png            # Generic package icon
-└── item-stack.png              # Stack of items
+/games/memory-management/bestfit/
+├── gift1.png                  # Small gift (10-20 units) ✅ EXISTS
+├── gift2.png                  # Medium gift (30-40 units) ✅ EXISTS
+├── gift3.png                  # Large gift (50-60 units) ✅ EXISTS
+├── gift4.png                  # Extra large gift (70-80 units) ✅ EXISTS
+├── gift5.png                  # Very large gift (90-100 units) ✅ EXISTS
+└── gift6.png                  # Huge gift (110+ units) ✅ EXISTS
 ```
 
-### Characters & People
+### Cupboard Compartments
 ```
-├── manager-standing.png        # Warehouse manager (player)
-├── manager-pointing.png        # Manager pointing at bins
-├── forklift-operator.png       # Forklift operator (optional)
-└── delivery-truck.png          # Delivery truck at loading dock
+/games/memory-management/bestfit/
+├── compartment-small.png      # Small compartment (25-50 units)
+├── compartment-medium.png     # Medium compartment (75-100 units)
+├── compartment-large.png     # Large compartment (150-200 units)
+├── compartment-xlarge.png    # Extra large compartment (250+ units)
+├── compartment-empty.png      # Empty compartment state
+├── compartment-partial.png   # Partially filled compartment
+└── compartment-full.png      # Full compartment
+```
+
+### Characters & People (Optional)
+```
+├── person-behind-counter.png  # Person behind counter (from screenshot)
+└── person-pointing.png        # Person pointing at compartments
 ```
 
 ### UI Elements
 ```
-├── bin-label-bg.png            # Background for bin labels
-├── size-badge.png              # Badge showing item/bin size
-├── fragment-indicator.png      # Visual indicator for fragments
-├── utilization-bar.png         # Memory utilization progress bar
-└── metrics-panel.png           # Metrics display background
+├── compartment-label-bg.png   # Background for compartment labels
+├── size-badge.png             # Badge showing gift/compartment size
+├── fragment-indicator.png     # Visual indicator for fragments
+├── utilization-bar.png        # Memory utilization progress bar
+└── metrics-panel.png          # Metrics display background
 ```
 
-### Equipment & Environment
+### Furniture & Environment
 ```
-├── conveyor-belt.png           # Conveyor belt at loading dock
-├── forklift.png                # Forklift sprite
-├── storage-rack.png            # Storage rack/shelf structure
-├── loading-dock-door.png       # Loading dock door
-└── warehouse-floor.png         # Warehouse floor texture
+├── counter-table.png          # Counter/table for gifts
+├── cupboard-frame.png         # Cupboard frame structure
+└── window-background.png      # Window with outdoor scene (from screenshot)
 ```
 
 ### Sound Effects
 ```
 sounds/
-├── background-music.flac       # Ambient warehouse music
-├── item-arrive.wav             # Item arriving sound
-├── forklift-moving.mp3         # Forklift movement sound
-├── item-place.wav              # Item placed in bin sound
+├── background-music.flac      # Ambient cozy room music
+├── gift-arrive.wav            # Gift arriving sound
+├── gift-place.wav             # Gift placed in compartment sound
 ├── fragment-warning.wav       # Fragmentation warning sound
-└── success-ding.wav            # Completion sound
+└── success-ding.wav           # Completion sound
 ```
 
 ---
 
-## 📋 Item Types Configuration
+## 📋 Gift Types Configuration
 
 ```typescript
-const ITEM_CONFIGS = {
-  small: { 
-    name: 'Small Package', 
-    emoji: '📦', 
+const GIFT_CONFIGS = {
+  gift1: { 
+    name: 'Small Gift', 
+    emoji: '🎁', 
     size: 15, 
-    asset: 'item-small',
+    asset: 'gift1',  // ✅ EXISTS
     color: '#4CAF50'  // Green (small)
   },
-  medium: { 
-    name: 'Medium Box', 
-    emoji: '📦', 
-    size: 40, 
-    asset: 'item-medium',
+  gift2: { 
+    name: 'Medium Gift', 
+    emoji: '🎁', 
+    size: 35, 
+    asset: 'gift2',  // ✅ EXISTS
     color: '#2196F3'  // Blue (medium)
   },
-  large: { 
-    name: 'Large Crate', 
-    emoji: '📦', 
-    size: 75, 
-    asset: 'item-large',
+  gift3: { 
+    name: 'Large Gift', 
+    emoji: '🎁', 
+    size: 55, 
+    asset: 'gift3',  // ✅ EXISTS
     color: '#FF9800'  // Orange (large)
   },
-  xlarge: { 
-    name: 'Pallet', 
-    emoji: '📦', 
-    size: 120, 
-    asset: 'item-xlarge',
+  gift4: { 
+    name: 'Extra Large Gift', 
+    emoji: '🎁', 
+    size: 75, 
+    asset: 'gift4',  // ✅ EXISTS
     color: '#F44336'  // Red (very large)
   },
-  xxlarge: {
-    name: 'Container',
-    emoji: '📦',
-    size: 180,
-    asset: 'item-xlarge',
+  gift5: { 
+    name: 'Huge Gift', 
+    emoji: '🎁', 
+    size: 95, 
+    asset: 'gift5',  // ✅ EXISTS
     color: '#9C27B0'  // Purple (extremely large)
+  },
+  gift6: {
+    name: 'Massive Gift',
+    emoji: '🎁',
+    size: 120,
+    asset: 'gift6',  // ✅ EXISTS
+    color: '#E91E63'  // Pink (huge)
   }
 };
 ```
 
-### Storage Bin Configuration
+### Cupboard Compartment Configuration
 
 ```typescript
-const BIN_CONFIGS = [
-  { id: 1, size: 50, x: 850, y: 300, label: 'B1: 50 units' },
-  { id: 2, size: 100, x: 1040, y: 300, label: 'B2: 100 units' },
-  { id: 3, size: 150, x: 1210, y: 300, label: 'B3: 150 units' },
-  { id: 4, size: 200, x: 1340, y: 300, label: 'B4: 200 units' },
-  { id: 5, size: 50, x: 830, y: 430, label: 'B5: 50 units' },
-  { id: 6, size: 75, x: 970, y: 430, label: 'B6: 75 units' },
-  { id: 7, size: 100, x: 1120, y: 430, label: 'B7: 100 units' },
-  { id: 8, size: 150, x: 1260, y: 430, label: 'B8: 150 units' },
-  { id: 9, size: 200, x: 1400, y: 430, label: 'B9: 200 units' },
-  { id: 10, size: 250, x: 850, y: 560, label: 'B10: 250 units' },
-  { id: 11, size: 300, x: 1040, y: 560, label: 'B11: 300 units' }
+// Based on screenshot: 3 columns, 3 rows with different sized compartments
+const COMPARTMENT_CONFIGS = [
+  // Left column - 2 large compartments
+  { id: 1, size: 200, x: 850, y: 300, label: 'C1: 200 units', row: 0, col: 0, height: 2 },
+  { id: 2, size: 150, x: 850, y: 500, label: 'C2: 150 units', row: 2, col: 0, height: 1 },
+  
+  // Middle column - 2 small top, 1 large bottom
+  { id: 3, size: 50, x: 1040, y: 300, label: 'C3: 50 units', row: 0, col: 1, height: 1 },
+  { id: 4, size: 50, x: 1040, y: 400, label: 'C4: 50 units', row: 1, col: 1, height: 1 },
+  { id: 5, size: 100, x: 1040, y: 500, label: 'C5: 100 units', row: 2, col: 1, height: 1 },
+  
+  // Right column - 3 medium compartments
+  { id: 6, size: 75, x: 1210, y: 300, label: 'C6: 75 units', row: 0, col: 2, height: 1 },
+  { id: 7, size: 75, x: 1210, y: 400, label: 'C7: 75 units', row: 1, col: 2, height: 1 },
+  { id: 8, size: 75, x: 1210, y: 500, label: 'C8: 75 units', row: 2, col: 2, height: 1 },
+  
+  // Additional compartments if needed
+  { id: 9, size: 120, x: 1340, y: 300, label: 'C9: 120 units', row: 0, col: 3, height: 1 },
+  { id: 10, size: 180, x: 1340, y: 400, label: 'C10: 180 units', row: 1, col: 3, height: 1 }
 ];
 ```
 
@@ -256,44 +266,44 @@ const BIN_CONFIGS = [
 ### Best-Fit Algorithm Implementation
 
 ```typescript
-// Find best fit (smallest bin that fits the item)
-const fittingBins = this.storageBins.filter(bin => 
-  bin.remainingSpace >= item.size
+// Find best fit (smallest compartment that fits the gift)
+const fittingCompartments = this.compartments.filter(comp => 
+  comp.remainingSpace >= gift.size
 );
 
-if (fittingBins.length === 0) {
-  // No bin available - external fragmentation
-  this.showError('❌ No bin available! External fragmentation occurred!');
+if (fittingCompartments.length === 0) {
+  // No compartment available - external fragmentation
+  this.showError('❌ No compartment available! External fragmentation occurred!');
   this.externalFragmentationCount++;
   return;
 }
 
-// Find the smallest fitting bin
-const bestFitBin = fittingBins.reduce((smallest, bin) => {
-  return bin.remainingSpace < smallest.remainingSpace ? bin : smallest;
-}, fittingBins[0]);
+// Find the smallest fitting compartment
+const bestFitCompartment = fittingCompartments.reduce((smallest, comp) => {
+  return comp.remainingSpace < smallest.remainingSpace ? comp : smallest;
+}, fittingCompartments[0]);
 
 // Validate user selection
-if (selectedBin.id !== bestFitBin.id) {
-  // Wrong! Must select smallest fitting bin
-  this.showError(`❌ Wrong! Best Fit = SMALLEST bin that fits!\nB${bestFitBin.id} (${bestFitBin.remainingSpace} units) is smaller than B${selectedBin.id} (${selectedBin.remainingSpace} units)!`);
+if (selectedCompartment.id !== bestFitCompartment.id) {
+  // Wrong! Must select smallest fitting compartment
+  this.showError(`❌ Wrong! Best Fit = SMALLEST compartment that fits!\nC${bestFitCompartment.id} (${bestFitCompartment.remainingSpace} units) is smaller than C${selectedCompartment.id} (${selectedCompartment.remainingSpace} units)!`);
   this.score -= 20;
   return;
 }
 
 // Correct allocation!
-this.allocateItemToBin(item, bestFitBin);
+this.allocateGiftToCompartment(gift, bestFitCompartment);
 ```
 
 ### Key Differences from First-Fit
 
 1. **Selection Logic**: 
-   - First-Fit: First bin that fits (sequential search)
-   - Best-Fit: Smallest bin that fits (minimizes leftover space)
+   - First-Fit: First compartment that fits (sequential search)
+   - Best-Fit: Smallest compartment that fits (minimizes leftover space)
 
 2. **Search Method**:
    - First-Fit: Linear search, stop at first match
-   - Best-Fit: Must check all bins, find minimum
+   - Best-Fit: Must check all compartments, find minimum
 
 3. **Fragmentation Pattern**:
    - First-Fit: May leave larger fragments
@@ -305,22 +315,24 @@ this.allocateItemToBin(item, bestFitBin);
 
 ### Visual Indicators
 
-1. **Bin Display**:
+1. **Compartment Display**:
    - Show total capacity and remaining space
    - Color-code by utilization: Green (well-used) → Red (wasted)
-   - Highlight bins that can fit current item
+   - Highlight compartments that can fit current gift
    - Show fragment size if leftover space is small
+   - Visual gift inside compartment when allocated
 
 2. **Selection Feedback**:
-   - Highlight smallest fitting bin
-   - Show size comparison with other fitting bins
-   - Flash correct bin if wrong selected
+   - Highlight smallest fitting compartment
+   - Show size comparison with other fitting compartments
+   - Flash correct compartment if wrong selected
    - Display leftover space after allocation
+   - Animate gift moving from table to compartment
 
 3. **Fragmentation Warning**:
    - If many small fragments exist, show warning
    - "⚠️ Many small fragments! This is external fragmentation in Best-Fit"
-   - Visual indicator showing unusable small spaces
+   - Visual indicator showing unusable small spaces in compartments
 
 ---
 
@@ -328,28 +340,34 @@ this.allocateItemToBin(item, bestFitBin);
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│              WAREHOUSE STORAGE - BEST-FIT SIMULATOR           │
+│              GIFT CUPBOARD - BEST-FIT SIMULATOR               │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
-│  [Loading Dock]                                               │
+│  [Counter/Table - Left Side]                                  │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │  📦 15u  📦 40u  📦 75u  📦 120u                    │    │
-│  │  Item 1  Item 2  Item 3  Item 4                    │    │
+│  │  🎁 15u  🎁 35u  🎁 55u  🎁 75u                    │    │
+│  │  Gift 1  Gift 2  Gift 3  Gift 4                    │    │
 │  └─────────────────────────────────────────────────────┘    │
 │                                                               │
+│  [Person behind counter] (optional)                           │
+│                                                               │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │         STORAGE BINS (Best-Fit Selection)           │    │
+│  │         CUPBOARD COMPARTMENTS (Best-Fit)            │    │
 │  │  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐            │    │
-│  │  │ B1:50│  │ B2:100│ │ B3:150│ │ B4:200│            │    │
-│  │  │ 35/50│  │ 60/100│ │ 75/150│ │ 80/200│            │    │
+│  │  │C1:200│  │C3:50 │  │C4:50 │  │C6:75 │            │    │
+│  │  │🎁/200│  │ 0/50 │  │ 0/50 │  │ 0/75 │            │    │
 │  │  └──────┘  └──────┘  └──────┘  └──────┘            │    │
 │  │  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐            │    │
-│  │  │ B5:50│  │ B6:75│  │ B7:100│ │ B8:150│            │    │
-│  │  │ 0/50 │  │ 0/75 │  │ 0/100│ │ 0/150│            │    │
+│  │  │C1:200│  │C5:100│  │C7:75 │  │C8:75 │            │    │
+│  │  │(cont)│  │ 0/100│  │ 0/75 │  │ 0/75 │            │    │
 │  │  └──────┘  └──────┘  └──────┘  └──────┘            │    │
+│  │  ┌──────┐  ┌──────┐  ┌──────┐                       │    │
+│  │  │C2:150│  │C5:100│  │C8:75 │                       │    │
+│  │  │ 0/150│  │(cont)│  │(cont)│                       │    │
+│  │  └──────┘  └──────┘  └──────┘                       │    │
 │  └─────────────────────────────────────────────────────┘    │
 │                                                               │
-│  [Manager]                                                    │
+│  [Window with outdoor scene - Background]                    │
 │                                                               │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │  Metrics: Utilization: 65% | Fragments: 3 small     │    │
@@ -402,36 +420,36 @@ this.allocateItemToBin(item, bestFitBin);
 - **Memory utilization**: Higher initially, but degrades with fragmentation
 
 ### Common Mistakes to Address
-1. **Selecting first fitting bin**: Wrong! Must find smallest
-2. **Selecting largest bin**: Wrong! That's Worst-Fit
+1. **Selecting first fitting compartment**: Wrong! Must find smallest
+2. **Selecting largest compartment**: Wrong! That's Worst-Fit
 3. **Ignoring small fragments**: Show how they accumulate
-4. **Not checking all bins**: Best-Fit requires full search
+4. **Not checking all compartments**: Best-Fit requires full search
 
 ---
 
 ## 🚀 Implementation Checklist
 
 ### Phase 1: Assets
-- [ ] Create/acquire warehouse background
-- [ ] Design storage bin sprites (different sizes)
-- [ ] Create item/package sprites (different sizes)
-- [ ] Design warehouse manager character
-- [ ] Create loading dock UI
+- [x] Background image (✅ exists: background.png)
+- [x] Gift sprites (✅ exists: gift1.png - gift6.png)
+- [ ] Design cupboard compartment sprites (different sizes)
+- [ ] Create compartment overlay/mask for cupboard
+- [ ] Optional: Person behind counter sprite
 - [ ] Record/generate sound effects
 
 ### Phase 2: Core Game Logic
-- [ ] Implement item arrival system
-- [ ] Create storage bin grid
+- [ ] Implement gift arrival system (on counter/table)
+- [ ] Create cupboard compartment grid (matching screenshot layout)
 - [ ] Implement Best-Fit selection validation
-- [ ] Add item-to-bin allocation animation
+- [ ] Add gift-to-compartment allocation animation
 - [ ] Create fragmentation tracking system
 
 ### Phase 3: UI & Feedback
-- [ ] Bin display with capacity/remaining space
-- [ ] Highlight fitting bins
+- [ ] Compartment display with capacity/remaining space
+- [ ] Highlight fitting compartments
 - [ ] Error messages for wrong selections
-- [ ] Success animations
-- [ ] Fragmentation visualization
+- [ ] Success animations (gift moving to cupboard)
+- [ ] Fragmentation visualization in compartments
 
 ### Phase 4: Metrics & Results
 - [ ] Calculate memory utilization
@@ -442,7 +460,7 @@ this.allocateItemToBin(item, bestFitBin);
 
 ### Phase 5: Polish
 - [ ] Add sound effects
-- [ ] Smooth animations
+- [ ] Smooth animations (gift movement)
 - [ ] Tutorial/intro screen
 - [ ] Results screen
 - [ ] Testing & bug fixes
@@ -469,7 +487,7 @@ this.allocateItemToBin(item, bestFitBin);
 - **Pros**: Very relatable, clear size differences
 - **Cons**: Less scalable, may seem too simple
 
-**Recommendation**: **Warehouse Storage** is the best choice - professional, clear, distinct from First-Fit parking lot, and shows fragmentation well.
+**Recommendation**: **Gift Cupboard** is the perfect choice - relatable, visually appealing (matches screenshot), distinct from First-Fit parking lot, and clearly demonstrates Best-Fit with existing assets!
 
 ---
 
@@ -492,13 +510,15 @@ this.allocateItemToBin(item, bestFitBin);
 ## 🎨 Color Palette
 
 ```css
-Primary Green: #4CAF50    /* Efficiency, storage */
-Accent Orange: #FF9800    /* Items, alerts */
+Primary Brown: #8B4513    /* Cupboard, wood */
+Gift Colors: #FF0000, #00FF00, #0000FF, #FFFF00, #FF00FF, #00FFFF  /* Various gift box colors */
+Accent Orange: #FF9800    /* Alerts, highlights */
 Warning Red: #F44336      /* Fragments, errors */
 Info Blue: #2196F3        /* Metrics, info */
-Background: #F5F5F5       /* Light gray */
+Background: #F5F5DC       /* Warm cream (cozy room) */
 Text: #212121            /* Dark gray */
 Fragment: #FFC107        /* Yellow (small fragments) */
+Success Green: #4CAF50    /* Good fit */
 ```
 
 ---
@@ -507,26 +527,27 @@ Fragment: #FFC107        /* Yellow (small fragments) */
 
 ### Phase 1: Introduction
 - Welcome screen explaining Best-Fit
-- Tutorial showing how to select smallest fitting bin
-- Example: Item of 40 units, bins of 50, 100, 150 → Select 50 (smallest fit)
+- Tutorial showing how to select smallest fitting compartment
+- Example: Gift of 40 units, compartments of 50, 100, 150 → Select 50 (smallest fit)
 
-### Phase 2: Item Arrival
-- Items arrive one by one on loading dock
-- Each item shows size clearly
-- Player can see all available bins
-- Instruction: "Select the SMALLEST bin that fits!"
+### Phase 2: Gift Arrival
+- Gifts appear one by one on counter/table (left side)
+- Each gift shows size clearly
+- Player can see all available compartments
+- Instruction: "Select the SMALLEST compartment that fits!"
 
 ### Phase 3: Allocation
-- Player clicks item, then clicks bin
-- Validation checks if bin is smallest fit
-- If correct: Item moves to bin, space updates
-- If wrong: Error message, highlight correct bin
+- Player clicks gift, then clicks compartment
+- Validation checks if compartment is smallest fit
+- If correct: Gift moves to compartment, space updates
+- If wrong: Error message, highlight correct compartment
+- Animate gift moving from table to cupboard
 
 ### Phase 4: Fragmentation Tracking
-- After each allocation, show leftover space
-- If leftover < smallest item size → Fragment warning
+- After each allocation, show leftover space in compartment
+- If leftover < smallest gift size → Fragment warning
 - Update fragmentation counter
-- Show visual fragment indicators
+- Show visual fragment indicators in compartments
 
 ### Phase 5: Results & Analysis
 - Show final memory utilization
@@ -539,41 +560,41 @@ Fragment: #FFC107        /* Yellow (small fragments) */
 ## 🎯 Algorithm Validation Logic
 
 ```typescript
-private validateBestFitSelection(item: Item, selectedBin: StorageBin): boolean {
-  // Check if bin has enough space
-  if (selectedBin.remainingSpace < item.size) {
-    this.showError(`❌ Bin ${selectedBin.id} doesn't have enough space!`);
+private validateBestFitSelection(gift: Gift, selectedCompartment: Compartment): boolean {
+  // Check if compartment has enough space
+  if (selectedCompartment.remainingSpace < gift.size) {
+    this.showError(`❌ Compartment ${selectedCompartment.id} doesn't have enough space!`);
     return false;
   }
 
-  // Find all bins that can fit this item
-  const fittingBins = this.storageBins.filter(bin => 
-    bin.remainingSpace >= item.size && !bin.isFull
+  // Find all compartments that can fit this gift
+  const fittingCompartments = this.compartments.filter(comp => 
+    comp.remainingSpace >= gift.size && !comp.isFull
   );
 
-  if (fittingBins.length === 0) {
-    this.showError('❌ No bin available! External fragmentation!');
+  if (fittingCompartments.length === 0) {
+    this.showError('❌ No compartment available! External fragmentation!');
     this.externalFragmentationCount++;
     return false;
   }
 
-  // Find the smallest fitting bin (Best-Fit)
-  const bestFitBin = fittingBins.reduce((smallest, bin) => {
-    return bin.remainingSpace < smallest.remainingSpace ? bin : smallest;
-  }, fittingBins[0]);
+  // Find the smallest fitting compartment (Best-Fit)
+  const bestFitCompartment = fittingCompartments.reduce((smallest, comp) => {
+    return comp.remainingSpace < smallest.remainingSpace ? comp : smallest;
+  }, fittingCompartments[0]);
 
-  // Check if selected bin is the best fit
-  if (selectedBin.id !== bestFitBin.id) {
-    const otherFittingBins = fittingBins
-      .filter(b => b.id !== selectedBin.id)
+  // Check if selected compartment is the best fit
+  if (selectedCompartment.id !== bestFitCompartment.id) {
+    const otherFittingCompartments = fittingCompartments
+      .filter(c => c.id !== selectedCompartment.id)
       .sort((a, b) => a.remainingSpace - b.remainingSpace);
     
     this.showError(
-      `❌ Wrong! Best Fit = SMALLEST bin that fits!\n` +
-      `B${bestFitBin.id} (${bestFitBin.remainingSpace} units) is smaller!\n` +
-      `Selected: B${selectedBin.id} (${selectedBin.remainingSpace} units)`
+      `❌ Wrong! Best Fit = SMALLEST compartment that fits!\n` +
+      `C${bestFitCompartment.id} (${bestFitCompartment.remainingSpace} units) is smaller!\n` +
+      `Selected: C${selectedCompartment.id} (${selectedCompartment.remainingSpace} units)`
     );
-    this.flashCorrectBin(bestFitBin);
+    this.flashCorrectCompartment(bestFitCompartment);
     return false;
   }
 
@@ -585,10 +606,10 @@ private validateBestFitSelection(item: Item, selectedBin: StorageBin): boolean {
 
 ## 📝 Next Steps
 
-1. **Asset Creation**: Start with warehouse background and basic bin sprites
-2. **Prototype**: Build minimal playable version with 3-4 bins and 2-3 items
+1. **Asset Review**: ✅ Background and gifts already exist! Create compartment sprites
+2. **Prototype**: Build minimal playable version with 3-4 compartments and 2-3 gifts
 3. **Test Algorithm**: Verify Best-Fit logic is correct
-4. **Add Polish**: Animations, sounds, UI feedback
+4. **Add Polish**: Animations (gift movement), sounds, UI feedback
 5. **Integration**: Connect to module system and AI feedback
 
 ---
