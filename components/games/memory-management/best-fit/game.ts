@@ -75,42 +75,42 @@ export class BestFitGame extends Phaser.Scene {
       size: 15, 
       asset: 'gift1',
       emoji: '🎁',
-      scale: 0.15  // Much smaller
+      scale: 0.12  // Smaller scale
     },
     gift2: { 
       name: 'Medium Gift', 
       size: 35, 
       asset: 'gift2',
       emoji: '🎁',
-      scale: 0.18  // Much smaller
+      scale: 0.14  // Smaller scale
     },
     gift3: { 
       name: 'Large Gift', 
       size: 55, 
       asset: 'gift3',
       emoji: '🎁',
-      scale: 0.2   // Much smaller
+      scale: 0.16  // Smaller scale
     },
     gift4: { 
       name: 'Extra Large Gift', 
       size: 75, 
       asset: 'gift4',
       emoji: '🎁',
-      scale: 0.22  // Much smaller
+      scale: 0.18  // Smaller scale
     },
     gift5: { 
       name: 'Huge Gift', 
       size: 95, 
       asset: 'gift5',
       emoji: '🎁',
-      scale: 0.25  // Much smaller
+      scale: 0.20  // Smaller scale
     },
     gift6: { 
       name: 'Massive Gift', 
       size: 120, 
       asset: 'gift6',
       emoji: '🎁',
-      scale: 0.28  // Much smaller
+      scale: 0.22  // Smaller scale
     }
   };
 
@@ -119,20 +119,20 @@ export class BestFitGame extends Phaser.Scene {
   // Top row, middle row, bottom row layout
   private readonly COMPARTMENT_CONFIGS = [
     // Top row - left to right
-    { compartmentNumber: 1, size: 200, x: 850, y: 220, width: 180, height: 180, label: 'C1: 200' },
-    { compartmentNumber: 2, size: 150, x: 1050, y: 220, width: 140, height: 180, label: 'C2: 150' },
-    { compartmentNumber: 3, size: 120, x: 1210, y: 220, width: 120, height: 180, label: 'C3: 120' },
-    { compartmentNumber: 4, size: 50, x: 1350, y: 220, width: 80, height: 85, label: 'C4: 50' },
-    { compartmentNumber: 5, size: 50, x: 1350, y: 315, width: 80, height: 85, label: 'C5: 50' },
-    { compartmentNumber: 6, size: 100, x: 1450, y: 220, width: 100, height: 85, label: 'C6: 100' },
-    { compartmentNumber: 7, size: 100, x: 1450, y: 315, width: 100, height: 85, label: 'C7: 100' },
-    { compartmentNumber: 8, size: 80, x: 1570, y: 220, width: 90, height: 85, label: 'C8: 80' },
+    { compartmentNumber: 1, size: 300, x: 760, y: 240, width: 180, height: 230, label: 'C1: 300' },
+    { compartmentNumber: 2, size: 150, x: 960, y: 190, width: 130, height: 160, label: 'C2: 150' },
+    { compartmentNumber: 3, size: 130, x: 960, y: 320, width: 150, height: 80, label: 'C3: 120' },
+    { compartmentNumber: 4, size: 50, x: 1160, y: 170, width: 70, height: 75, label: 'C4: 50' },
+    { compartmentNumber: 5, size: 50, x: 1280, y: 170, width: 70, height: 75, label: 'C5: 50' },
+    { compartmentNumber: 6, size: 100, x: 1430, y: 170, width: 90, height: 75, label: 'C6: 100' },
+    { compartmentNumber: 7, size: 100, x: 1200, y: 450, width: 150, height: 80, label: 'C7: 100' },
+    { compartmentNumber: 8, size: 200, x: 1300, y: 300, width: 400, height: 100, label: 'C8: 200' },
     
     // Middle row
-    { compartmentNumber: 9, size: 90, x: 1570, y: 315, width: 90, height: 85, label: 'C9: 90' },
+    { compartmentNumber: 9, size: 90, x: 1400, y: 450, width: 140, height: 80, label: 'C9: 90' },
     
     // Bottom row
-    { compartmentNumber: 10, size: 110, x: 1570, y: 410, width: 90, height: 100, label: 'C10: 110' }
+    { compartmentNumber: 10, size: 140, x: 760, y: 450, width: 140, height: 80, label: 'C10: 110' }
   ];
 
   // Gifts that will appear on the table sequentially
@@ -333,6 +333,29 @@ export class BestFitGame extends Phaser.Scene {
   }
 
   private createCompartmentVisual(compartment: Compartment, label: string) {
+    // Label showing size - dark text, visible, smaller font
+    const labelText = this.add.text(compartment.x, compartment.y, label, {
+      fontSize: '11px',
+      color: '#000000',
+      fontStyle: 'bold',
+      stroke: '#FFFFFF',
+      strokeThickness: 1.5,
+      align: 'center',
+      backgroundColor: '#FFFFFFEE',
+      padding: { x: 4, y: 2 },
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5);
+    labelText.setDepth(10);
+    labelText.setInteractive({ useHandCursor: true });
+    compartment.compartmentLabel = labelText;
+    
+    // Make label clickable
+    labelText.on('pointerdown', () => {
+      if (this.selectedGift && this.gamePhase === 'placing') {
+        this.attemptPlaceGift(this.selectedGift, compartment);
+      }
+    });
+    
     // Create invisible clickable area (no visual box - cupboard already has boxes)
     const clickArea = this.add.zone(
       compartment.x,
@@ -340,7 +363,7 @@ export class BestFitGame extends Phaser.Scene {
       compartment.width,
       compartment.height
     );
-    clickArea.setInteractive();
+    clickArea.setInteractive({ useHandCursor: true });
     clickArea.setDepth(5);
     
     clickArea.on('pointerdown', () => {
@@ -368,27 +391,37 @@ export class BestFitGame extends Phaser.Scene {
       }
     });
     
+    labelText.on('pointerover', () => {
+      if (this.selectedGift && this.gamePhase === 'placing') {
+        // Just show a subtle glow effect, no box
+        if (!compartment.compartmentBg) {
+          const glow = this.add.graphics();
+          glow.lineStyle(2, 0xFFD700, 0.5);
+          glow.strokeRect(
+            compartment.x - compartment.width / 2,
+            compartment.y - compartment.height / 2,
+            compartment.width,
+            compartment.height
+          );
+          glow.setDepth(4);
+          compartment.compartmentBg = glow;
+        }
+      }
+    });
+    
     clickArea.on('pointerout', () => {
       if (compartment.compartmentBg) {
         compartment.compartmentBg.destroy();
         compartment.compartmentBg = undefined;
       }
     });
-
-    // Label showing size - dark text, visible
-    const labelText = this.add.text(compartment.x, compartment.y, label, {
-      fontSize: '13px',
-      color: '#000000',
-      fontStyle: 'bold',
-      stroke: '#FFFFFF',
-      strokeThickness: 2,
-      align: 'center',
-      backgroundColor: '#FFFFFFEE',
-      padding: { x: 5, y: 3 },
-      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
-    }).setOrigin(0.5);
-    labelText.setDepth(10);
-    compartment.compartmentLabel = labelText;
+    
+    labelText.on('pointerout', () => {
+      if (compartment.compartmentBg) {
+        compartment.compartmentBg.destroy();
+        compartment.compartmentBg = undefined;
+      }
+    });
   }
 
   private showIntroScenario(width: number, height: number) {
@@ -410,7 +443,7 @@ export class BestFitGame extends Phaser.Scene {
     box.setDepth(301);
 
     // Title
-    this.add.text(width / 2, boxY + 50, '🎁 BEST FIT Algorithm', {
+    const titleText = this.add.text(width / 2, boxY + 50, '🎁 BEST FIT Algorithm', {
       fontSize: '36px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -437,7 +470,7 @@ space but may create many small fragments.
 Best-Fit can cause external fragmentation
 when many small unusable spaces accumulate!`;
 
-    this.add.text(width / 2, boxY + 180, explanation, {
+    const explanationText = this.add.text(width / 2, boxY + 180, explanation, {
       fontSize: '18px',
       color: '#E0E0E0',
       align: 'center',
@@ -493,6 +526,8 @@ when many small unusable spaces accumulate!`;
       box.destroy();
       button.destroy();
       buttonText.destroy();
+      titleText.destroy();
+      explanationText.destroy();
       this.gamePhase = 'placing';
       this.phaseText.setText('Phase: Placing Gifts');
       this.bringNextGift();
@@ -538,15 +573,15 @@ when many small unusable spaces accumulate!`;
     });
     gift.sprite = sprite;
 
-    // Size label - dark text, no white
-    const sizeLabel = this.add.text(giftX, giftY - 25, `${config.size} units`, {
-      fontSize: '12px',
+    // Size label - dark text, smaller
+    const sizeLabel = this.add.text(giftX, giftY - 20, `${config.size}u`, {
+      fontSize: '11px',
       color: '#000000',
       fontStyle: 'bold',
       stroke: '#FFFFFF',
       strokeThickness: 1,
       backgroundColor: '#FFFFFFDD',
-      padding: { x: 5, y: 3 },
+      padding: { x: 4, y: 2 },
       fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setOrigin(0.5);
     sizeLabel.setDepth(6);
@@ -700,9 +735,9 @@ when many small unusable spaces accumulate!`;
       });
     }
 
-    // Update compartment label
+    // Update compartment label - shorter format
     if (compartment.compartmentLabel) {
-      compartment.compartmentLabel.setText(`C${compartment.compartmentNumber}\n${compartment.remainingSpace}/${compartment.size} units`);
+      compartment.compartmentLabel.setText(`C${compartment.compartmentNumber}: ${compartment.remainingSpace}`);
     }
   }
 
@@ -730,24 +765,24 @@ when many small unusable spaces accumulate!`;
       let warningColor = '';
       
       if (!isUsable) {
-        warningText = `⚠️ ${compartment.remainingSpace} units wasted`;
+        warningText = `⚠️ ${compartment.remainingSpace}u`;
         warningColor = '#FF0000';
       } else {
-        warningText = `✓ ${compartment.remainingSpace} units free`;
+        warningText = `✓ ${compartment.remainingSpace}u`;
         warningColor = '#00FF88';
       }
       
       const fragmentationText = this.add.text(
         compartment.x,
-        compartment.y + compartment.height / 2 + 20,
+        compartment.y + compartment.height / 2 + 15,
         warningText,
         {
-          fontSize: '14px',
+          fontSize: '11px',
           color: warningColor,
           fontStyle: 'bold',
           align: 'center',
           stroke: '#000000',
-          strokeThickness: 2,
+          strokeThickness: 1.5,
           fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
         }
       ).setOrigin(0.5);
@@ -757,15 +792,15 @@ when many small unusable spaces accumulate!`;
       // Compartment is perfectly full
       const fragmentationText = this.add.text(
         compartment.x,
-        compartment.y + compartment.height / 2 + 20,
+        compartment.y + compartment.height / 2 + 15,
         `✓ Full`,
         {
-          fontSize: '14px',
+          fontSize: '11px',
           color: '#00FF88',
           fontStyle: 'bold',
           align: 'center',
           stroke: '#000000',
-          strokeThickness: 2,
+          strokeThickness: 1.5,
           fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
         }
       ).setOrigin(0.5);
