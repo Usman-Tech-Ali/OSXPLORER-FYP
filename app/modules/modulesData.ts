@@ -30,7 +30,7 @@ export const modulesData = {
         title: "SRTF",
         subtitle: "Shortest Remaining Time First Preemptive",
         levels: [
-          { id: "srtf-l1", title: "Simple Burst", description: "Basic preemptive scheduling", difficulty: 2, status: "locked", xpReward: 70 },
+          { id: "srtf-l1", title: "Simple Burst", description: "Basic preemptive scheduling", difficulty: 2, status: "available", xpReward: 70 },
           { id: "srtf-l2", title: "Frequent Interrupts", description: "Handle multiple preemptions", difficulty: 3, status: "locked", xpReward: 90 },
           { id: "srtf-l3", title: "Runtime Arrival", description: "Processes arriving during execution", difficulty: 4, status: "locked", xpReward: 110 },
           { id: "srtf-l4", title: "Large Queues", description: "Manage complex queue management", difficulty: 5, status: "locked", xpReward: 150 },
