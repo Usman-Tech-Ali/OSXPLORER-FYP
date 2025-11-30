@@ -11,6 +11,7 @@ const FirstSJFGame = dynamic(() => import("@/components/games/cpu-scheduling/sjf
 const FirstSRTFGame = dynamic(() => import("@/components/games/cpu-scheduling/srtf-l1/FirstSRTFGame"), { ssr: false })
 const FirstCSGame = dynamic(() => import("@/components/games/process-synchronization/critical-section-l1/FirstCSGame"), { ssr: false })
 const MutexGame = dynamic(() => import("@/components/games/process-synchronization/mutex-l1/MutexGame"), { ssr: false })
+const BinarySemaphoreGame = dynamic(() => import("@/components/games/process-synchronization/binary-semaphore-l1/BinarySemaphoreGame"), { ssr: false })
 
 export default function GamePage() {
   const params = useParams()
@@ -25,6 +26,7 @@ export default function GamePage() {
   const isSRTFBasic = moduleId === "cpu-scheduling" && gameId === "srtf-l1"
   const isCSBasic = moduleId === "process-synchronization" && gameId === "critical-section-l1"
   const isMutexBasic = moduleId === "process-synchronization" && gameId === "mutex-l1"
+  const isBinarySemaphoreBasic = moduleId === "process-synchronization" && gameId === "binary-semaphore-l1"
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -59,6 +61,10 @@ export default function GamePage() {
       ) : isMutexBasic ? (
         <div className="w-full h-screen overflow-hidden">
           <MutexGame />
+        </div>
+      ) : isBinarySemaphoreBasic ? (
+        <div className="w-full h-screen overflow-hidden">
+          <BinarySemaphoreGame />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-screen">

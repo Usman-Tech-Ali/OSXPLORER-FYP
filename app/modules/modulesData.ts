@@ -185,6 +185,15 @@ export const modulesData = {
         title: "Binary Semaphore",
         subtitle: "Binary signaling mechanisms",
         levels: [
+          { id: "binary-semaphore-l1", title: "One-Lane Bridge", description: "Control bridge access with binary semaphore", difficulty: 2, status: "available", xpReward: 80, visualType: "semaphore" },
+          { id: "binary-semaphore-l2", title: "Pre-loaded Queues", description: "Handle queued semaphore requests", difficulty: 3, status: "locked", xpReward: 100, visualType: "semaphore" },
+        ],
+      },
+      {
+        id: "binary-semaphore",
+        title: "Binary Semaphore",
+        subtitle: "Binary signaling mechanisms",
+        levels: [
           { id: "binary-semaphore-l1", title: "Simple Wait-Signal", description: "Basic binary semaphore operations", difficulty: 2, status: "locked", xpReward: 80, visualType: "semaphore" },
           { id: "binary-semaphore-l2", title: "Pre-loaded Queues", description: "Handle queued semaphore requests", difficulty: 3, status: "locked", xpReward: 100, visualType: "semaphore" },
         ],
