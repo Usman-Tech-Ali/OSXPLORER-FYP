@@ -104,7 +104,7 @@ export const modulesData = {
         title: "Worst Fit",
         subtitle: "Use largest available hole",
         levels: [
-          { id: "worst-fit-l1", title: "Blast Match", description: "Allocate using largest holes", difficulty: 2, status: "locked", xpReward: 70, visualType: "blocks" },
+          { id: "worst-fit-l1", title: "Blast Match", description: "Allocate using largest holes", difficulty: 2, status: "available", xpReward: 70, visualType: "blocks" },
           { id: "worst-fit-l2", title: "Fragmentation Evolution", description: "Observe fragmentation patterns", difficulty: 3, status: "locked", xpReward: 90, visualType: "blocks" },
         ],
       },

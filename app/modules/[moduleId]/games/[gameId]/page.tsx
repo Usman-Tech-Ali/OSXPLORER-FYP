@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 
 const FirstFitGame = dynamic(() => import("@/components/games/memory-management/first-fit/FirstFitGame"), { ssr: false })
 const BestFitGame = dynamic(() => import("@/components/games/memory-management/best-fit/BestFitGame"), { ssr: false })
+const WorstFitGame = dynamic(() => import("@/components/games/memory-management/worst-fit/WorstFitGame"), { ssr: false })
 const FirstFCFSGame = dynamic(() => import("@/components/games/cpu-scheduling/fcfs-l1/FirstFCFSGame"), { ssr: false })
 const FirstSJFGame = dynamic(() => import("@/components/games/cpu-scheduling/sjf-l1/FirstSJFGame"), { ssr: false })
 const FirstSRTFGame = dynamic(() => import("@/components/games/cpu-scheduling/srtf-l1/FirstSRTFGame"), { ssr: false })
@@ -18,6 +19,7 @@ export default function GamePage() {
   // Check which game to show
   const isFirstFitBasic = moduleId === "memory-management" && gameId === "first-fit-l1"
   const isBestFitBasic = moduleId === "memory-management" && gameId === "best-fit-l1"
+  const isWorstFitBasic = moduleId === "memory-management" && gameId === "worst-fit-l1"
   const isFCFSBasic = moduleId === "cpu-scheduling" && gameId === "fcfs-l1"
   const isSJFBasic = moduleId === "cpu-scheduling" && gameId === "sjf-l1"
   const isSRTFBasic = moduleId === "cpu-scheduling" && gameId === "srtf-l1"
@@ -33,6 +35,10 @@ export default function GamePage() {
       ) : isBestFitBasic ? (
         <div className="w-full h-screen overflow-hidden">
           <BestFitGame />
+        </div>
+      ) : isWorstFitBasic ? (
+        <div className="w-full h-screen overflow-hidden">
+          <WorstFitGame />
         </div>
       ) : isFCFSBasic ? (
         <div className="w-full h-screen overflow-hidden">
