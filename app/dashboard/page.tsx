@@ -1,5 +1,8 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,18 +21,38 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
-// Mock user data
-const userData = {
-  name: "Abdullah Daoud",
-  username: "alexchen",
-  avatar: "/placeholder.svg?height=40&width=40",
-  level: 5,
-  currentXP: 2450,
-  nextLevelXP: 3000,
-  totalXP: 12450,
-  levelsCompleted: 12,
-  totalLevels: 18,
-  badgesEarned: 3,
+interface UserProgress {
+  user: {
+    id: string
+    username: string
+    email: string
+    totalXP: number
+    level: number
+    completedLevels: string[]
+    achievements: string[]
+    createdAt: string
+    lastLogin: string
+  }
+  stats: {
+    totalGamesPlayed: number
+    averageScore: number
+    completedLevelsCount: number
+  }
+  recentScores: Array<{
+    gameId: string
+    levelId: string
+    score: number
+    timeSpent: number
+    accuracy: number
+    completedAt: string
+  }>
+  bestScores: Array<{
+    gameId: string
+    levelId: string
+    bestScore: number
+    bestTime: number
+    attempts: number
+  }>
 }
 
 const modules = [
@@ -59,17 +82,7 @@ const modules = [
   },
 ]
 
-const recentActivity = [
-  { action: "Completed SJF Level 2", xp: 80, time: "2 hours ago" },
-  { action: "Unlocked Memory Badge", xp: 150, time: "1 day ago" },
-  { action: "Finished Round Robin Challenge", xp: 120, time: "2 days ago" },
-]
 
-const leaderboard = [
-  { name: "Sarah Kim", avatar: "/placeholder.svg?height=32&width=32", xp: 15420, rank: 1 },
-  { name: "Marcus Johnson", avatar: "/placeholder.svg?height=32&width=32", xp: 14890, rank: 2 },
-  { name: "Alex Chen", avatar: "/placeholder.svg?height=32&width=32", xp: 12450, rank: 3 },
-]
 
 function CircularProgress({
   value,
@@ -114,6 +127,68 @@ function CircularProgress({
 }
 
 export default function Dashboard() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [progress, setProgress] = useState<UserProgress | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
+    if (status === "unauthenticated") {
+      router.push("/login")
+      return
+    }
+
+    if (status === "authenticated") {
+      fetchProgress()
+    }
+  }, [status, router, mounted])
+
+  const fetchProgress = async () => {
+    try {
+      const response = await fetch("/api/user/progress")
+      if (response.ok) {
+        const data = await response.json()
+        setProgress(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch progress:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!mounted || status === "loading" || loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-cyan-500"></div>
+      </div>
+    )
+  }
+
+  if (!session || !progress) {
+    return null
+  }
+
+  const userData = {
+    name: progress.user.username,
+    username: progress.user.username,
+    avatar: "/placeholder.svg?height=40&width=40",
+    level: progress.user.level,
+    currentXP: progress.user.totalXP % 100,
+    nextLevelXP: 100,
+    totalXP: progress.user.totalXP,
+    levelsCompleted: progress.stats.completedLevelsCount,
+    totalLevels: 18,
+    badgesEarned: progress.user.achievements.length,
+  }
+
   const xpProgress = (userData.currentXP / userData.nextLevelXP) * 100
 
   return (
@@ -260,22 +335,30 @@ export default function Dashboard() {
                 <CardDescription className="text-gray-400">Your latest achievements and progress</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {recentActivity.map((activity, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-4 rounded-lg bg-gray-800/50 hover:bg-gray-800/70 transition-colors duration-200 activity-item"
-                    >
-                      <div className="flex-1">
-                        <p className="text-white font-medium mb-1">{activity.action}</p>
-                        <p className="text-sm text-gray-400">{activity.time}</p>
+                {progress.recentScores.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">No games played yet. Start playing to see your activity!</p>
+                ) : (
+                  <div className="space-y-4">
+                    {progress.recentScores.slice(0, 3).map((score, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-4 rounded-lg bg-gray-800/50 hover:bg-gray-800/70 transition-colors duration-200 activity-item"
+                      >
+                        <div className="flex-1">
+                          <p className="text-white font-medium mb-1">
+                            {score.gameId.replace(/-/g, " ").toUpperCase()}
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            {new Date(score.completedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Badge className="bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border-cyan-500/50 text-cyan-300 px-3 py-1">
+                          {score.score} pts
+                        </Badge>
                       </div>
-                      <Badge className="bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border-cyan-500/50 text-cyan-300 px-3 py-1">
-                        +{activity.xp} XP
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -289,48 +372,21 @@ export default function Dashboard() {
                     <Crown className="w-5 h-5 mr-2 text-yellow-500" />
                     Leaderboard Preview
                   </CardTitle>
-                  <CardDescription className="text-gray-400">Top performers this week</CardDescription>
+                  <CardDescription className="text-gray-400">Coming soon!</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {leaderboard.map((user, index) => (
-                      <div key={index} className="flex items-center space-x-3 leaderboard-item">
-                        <div className="flex-shrink-0">
-                          <Badge
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                              index === 0
-                                ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-black"
-                                : index === 1
-                                  ? "bg-gradient-to-r from-gray-300 to-gray-500 text-black"
-                                  : "bg-gradient-to-r from-orange-400 to-orange-600 text-black"
-                            }`}
-                          >
-                            {user.rank}
-                          </Badge>
-                        </div>
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
-                          <AvatarFallback className="bg-gradient-to-r from-cyan-500 to-purple-600 text-sm">
-                            {user.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">{user.name}</p>
-                          <p className="text-xs text-gray-400">{user.xp.toLocaleString()} XP</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="w-full mt-6 border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 bg-transparent"
-                  >
-                    <Users className="w-4 h-4 mr-2" />
-                    View All
-                  </Button>
+                  <p className="text-gray-500 text-center py-8">
+                    Leaderboard will be available once more players join
+                  </p>
+                  <Link href="/leaderboard">
+                    <Button
+                      variant="outline"
+                      className="w-full border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 bg-transparent"
+                    >
+                      <Users className="w-4 h-4 mr-2" />
+                      View All
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             </div>

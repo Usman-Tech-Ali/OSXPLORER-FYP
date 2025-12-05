@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
+import { useSession, signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -25,22 +26,51 @@ import {
 } from "lucide-react"
 import React, { useState } from "react"
 
-// Mock user data (replace with real user context in production)
-const userData = {
-  name: "Abdullah Daoud",
-  username: "alexchen",
-  avatar: "/placeholder.svg?height=40&width=40",
-  level: 5,
-  currentXP: 2450,
-  nextLevelXP: 3000,
-  totalXP: 12450,
-  levelsCompleted: 12,
-  totalLevels: 18,
-  badgesEarned: 3,
-}
-
 export function Navbar() {
+  const { data: session, status } = useSession()
   const [notifications] = useState(3)
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+  
+  // Use real user data from session or default values
+  const userData = {
+    name: session?.user?.name || "Guest",
+    username: session?.user?.email?.split('@')[0] || "guest",
+    avatar: "/placeholder.svg?height=40&width=40",
+    level: session?.user?.level || 1,
+    totalXP: session?.user?.totalXP || 0,
+  }
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/login' })
+  }
+
+  if (!mounted) {
+    return (
+      <header className="sticky top-0 z-20 border-b border-cyan-500/30 bg-black/80 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4">
+          <nav className="flex items-center justify-between">
+            <Link href="/">
+              <Image
+                src="/OSXplorer.png"
+                alt="OSXplorer Logo"
+                width={120}
+                height={60}
+                priority
+                className="object-contain h-auto w-auto hover:scale-110 transition-transform duration-200 cursor-pointer hover:drop-shadow-[0_0_16px_#00fff7]"
+              />
+            </Link>
+            <div className="flex items-center space-x-4">
+              <div className="w-8 h-8"></div>
+            </div>
+          </nav>
+        </div>
+      </header>
+    )
+  }
   const mockNotifications = [
     {
       id: 1,
@@ -162,7 +192,10 @@ export function Navbar() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-gray-700" />
-                <DropdownMenuItem className="hover:bg-gray-800 text-red-400 hover:text-red-300 px-2 py-2 rounded-md transition-colors">
+                <DropdownMenuItem 
+                  onClick={handleLogout}
+                  className="hover:bg-gray-800 text-red-400 hover:text-red-300 px-2 py-2 rounded-md transition-colors cursor-pointer"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   Logout
                 </DropdownMenuItem>

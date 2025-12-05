@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -458,16 +460,69 @@ function BadgeCard({ badge }: { badge: BadgeData }) {
 }
 
 export default function AchievementsPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [isVisible, setIsVisible] = useState(false)
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [filterModule, setFilterModule] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("recent")
   const [searchTerm, setSearchTerm] = useState("")
+  const [mounted, setMounted] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [userProgress, setUserProgress] = useState<any>(null)
 
   useEffect(() => {
+    setMounted(true)
     setIsVisible(true)
   }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    
+    if (status === "unauthenticated") {
+      router.push("/login")
+      return
+    }
+
+    if (status === "authenticated") {
+      fetchUserProgress()
+    }
+  }, [status, mounted, router])
+
+  const fetchUserProgress = async () => {
+    try {
+      const response = await fetch("/api/user/progress")
+      if (response.ok) {
+        const data = await response.json()
+        setUserProgress(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch user progress:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!mounted || status === "loading" || loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-cyan-500"></div>
+      </div>
+    )
+  }
+
+  if (!session || !userProgress) {
+    return null
+  }
+
+  // Update user stats with real data
+  const realUserStats = {
+    totalAchievements: userProgress.user.achievements.length,
+    totalPoints: userProgress.user.totalXP,
+    completionRate: Math.round((userProgress.stats.completedLevelsCount / 18) * 100),
+    rank: userProgress.user.level >= 10 ? "Achievement Hunter" : "Beginner"
+  }
 
   const filteredAchievements = achievements.filter((achievement) => {
     const matchesStatus = filterStatus === "all" || achievement.status === filterStatus
@@ -529,7 +584,7 @@ export default function AchievementsPage() {
                     <Trophy className="w-6 h-6 text-white" />
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-white mb-2">{userStats.totalAchievements}</div>
+                <div className="text-3xl font-bold text-white mb-2">{realUserStats.totalAchievements}</div>
                 <p className="text-gray-400">Achievements Unlocked</p>
               </CardContent>
             </Card>
@@ -541,7 +596,7 @@ export default function AchievementsPage() {
                     <Star className="w-6 h-6 text-white" />
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-white mb-2">{userStats.totalPoints.toLocaleString()}</div>
+                <div className="text-3xl font-bold text-white mb-2">{realUserStats.totalPoints.toLocaleString()}</div>
                 <p className="text-gray-400">Total Points</p>
               </CardContent>
             </Card>
@@ -553,7 +608,7 @@ export default function AchievementsPage() {
                     <TrendingUp className="w-6 h-6 text-white" />
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-white mb-2">{userStats.completionRate}%</div>
+                <div className="text-3xl font-bold text-white mb-2">{realUserStats.completionRate}%</div>
                 <p className="text-gray-400">Completion Rate</p>
               </CardContent>
             </Card>
@@ -565,7 +620,7 @@ export default function AchievementsPage() {
                     <Crown className="w-6 h-6 text-white" />
                   </div>
                 </div>
-                <div className="text-2xl md:text-xl font-bold text-white mb-2">{userStats.rank}</div>
+                <div className="text-2xl md:text-xl font-bold text-white mb-2">{realUserStats.rank}</div>
                 <p className="text-gray-400">Current Rank</p>
               </CardContent>
             </Card>

@@ -21,6 +21,8 @@ export default function LoginPage() {
     email: "",
     password: "",
   })
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -28,6 +30,31 @@ export default function LoginPage() {
       ...prev,
       [name]: value,
     }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+
+    try {
+      const { signIn } = await import("next-auth/react")
+      const result = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        window.location.href = "/dashboard"
+      }
+    } catch (error) {
+      setError("An error occurred. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const socialProviders = [
@@ -156,8 +183,15 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
             {/* Form */}
-            <form className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium text-gray-300">
@@ -224,12 +258,15 @@ export default function LoginPage() {
               </div>
 
               {/* Login Button */}
-              <Link href="/dashboard" className="block" passHref legacyBehavior>
-                <Button type="submit" className="w-full neon-button-primary group text-lg py-6" size="lg">
-                  <Gamepad2 className="w-5 h-5 mr-2 group-hover:animate-pulse" />
-                  Enter the Game
-                </Button>
-              </Link>
+              <Button 
+                type="submit" 
+                className="w-full neon-button-primary group text-lg py-6" 
+                size="lg"
+                disabled={loading}
+              >
+                <Gamepad2 className="w-5 h-5 mr-2 group-hover:animate-pulse" />
+                {loading ? "Signing in..." : "Enter the Game"}
+              </Button>
             </form>
 
             {/* Signup Link */}

@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,6 +50,8 @@ import {
 } from "lucide-react"
 
 export default function ProfileSettings() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("profile")
   const [isEditing, setIsEditing] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
@@ -56,24 +60,26 @@ export default function ProfileSettings() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
 
-  // User data state
+  // User data state - will be populated from session
   const [userData, setUserData] = useState({
-    displayName: "Abdullah Daoud",
-    username: "abdullahdaoud_dev",
-    email: "abdullah.daoud@example.com",
-    bio: "Passionate about operating systems and low-level programming. Currently mastering CPU scheduling algorithms and memory management.",
+    displayName: "",
+    username: "",
+    email: "",
+    bio: "Passionate about operating systems and low-level programming.",
     profilePicture: "/placeholder.svg?height=120&width=120",
     verified: true,
-    premium: true,
-    joinDate: "2024-01-15",
+    premium: false,
+    joinDate: "",
     stats: {
-      totalXP: 12450,
-      level: 15,
-      achievements: 23,
-      badges: 8,
-      streak: 12,
-      modulesCompleted: 7,
+      totalXP: 0,
+      level: 1,
+      achievements: 0,
+      badges: 0,
+      streak: 0,
+      modulesCompleted: 0,
     },
   })
 
@@ -120,6 +126,67 @@ export default function ProfileSettings() {
       animations: true,
     },
   })
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
+    if (status === "unauthenticated") {
+      router.push("/login")
+      return
+    }
+
+    if (status === "authenticated" && session?.user) {
+      // Fetch user progress data
+      fetchUserData()
+    }
+  }, [status, session, router, mounted])
+
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch("/api/user/progress")
+      if (response.ok) {
+        const data = await response.json()
+        setUserData({
+          displayName: data.user.username,
+          username: data.user.username,
+          email: data.user.email,
+          bio: "Passionate about operating systems and low-level programming.",
+          profilePicture: "/placeholder.svg?height=120&width=120",
+          verified: true,
+          premium: false,
+          joinDate: new Date(data.user.createdAt).toISOString().split('T')[0],
+          stats: {
+            totalXP: data.user.totalXP,
+            level: data.user.level,
+            achievements: data.user.achievements.length,
+            badges: data.user.achievements.length,
+            streak: 0,
+            modulesCompleted: data.stats.completedLevelsCount,
+          },
+        })
+      }
+    } catch (error) {
+      console.error("Failed to fetch user data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!mounted || status === "loading" || loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-cyan-500"></div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return null
+  }
 
   const handleSaveProfile = () => {
     setIsEditing(false)
@@ -657,7 +724,7 @@ export default function ProfileSettings() {
                         onValueChange={(value) => handleSettingChange("privacy", "profileVisibility", value)}
                       >
                         <SelectTrigger className="bg-transparent border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10">
-                          <SelectValue />
+                          <SelectValue placeholder="Select visibility" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="public">
@@ -735,7 +802,7 @@ export default function ProfileSettings() {
                         onValueChange={(value) => handleSettingChange("privacy", "allowMessages", value)}
                       >
                         <SelectTrigger className="bg-transparent border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10">
-                          <SelectValue />
+                          <SelectValue placeholder="Select who can message" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="everyone">Everyone</SelectItem>
@@ -849,10 +916,10 @@ export default function ProfileSettings() {
                       <Label className="text-white">Session Timeout</Label>
                       <Select
                         value={settings.security.sessionTimeout}
-                        onValueChange={(value) => handleSettingChange("security", "sessionTimeout", value)}
+                        onValueChange={(value) => handleSettingChange("privacy", "sessionTimeout", value)}
                       >
                         <SelectTrigger className="bg-transparent border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10">
-                          <SelectValue />
+                          <SelectValue placeholder="Select timeout" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="15">15 minutes</SelectItem>

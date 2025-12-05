@@ -20,6 +20,8 @@ export default function SignupPage() {
     email: "",
     password: "",
   })
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -27,6 +29,38 @@ export default function SignupPage() {
       ...prev,
       [name]: value,
     }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: formData.fullName,
+          email: formData.email,
+          password: formData.password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        window.location.href = "/login?message=Account created successfully"
+      } else {
+        setError(data.error || "An error occurred")
+      }
+    } catch (error) {
+      setError("An error occurred. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const socialProviders = [
@@ -155,8 +189,15 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
             {/* Form */}
-            <form className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Full Name */}
               <div className="space-y-2">
                 <Label htmlFor="fullName" className="text-sm font-medium text-gray-300">
@@ -238,12 +279,15 @@ export default function SignupPage() {
               </div>
 
               {/* Signup Button */}
-              <Link href="/dashboard" className="block" passHref legacyBehavior>
-                <Button type="submit" className="w-full neon-button-primary group text-lg py-6" size="lg">
-                  <Gamepad2 className="w-5 h-5 mr-2 group-hover:animate-pulse" />
-                  Create Account
-                </Button>
-              </Link>
+              <Button 
+                type="submit" 
+                className="w-full neon-button-primary group text-lg py-6" 
+                size="lg"
+                disabled={loading}
+              >
+                <Gamepad2 className="w-5 h-5 mr-2 group-hover:animate-pulse" />
+                {loading ? "Creating Account..." : "Create Account"}
+              </Button>
             </form>
 
             {/* Login Link */}
