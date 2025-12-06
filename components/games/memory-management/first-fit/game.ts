@@ -43,6 +43,7 @@ export class FirstFitGame extends Phaser.Scene {
   private score: number = 0;
   private wrongAttempts: number = 0;
   private externalFragmentationCount: number = 0; // Track rejected trucks
+  private gameStartTime: number = 0; // Track when game started
 
   // UI Elements
   private instructionText!: Phaser.GameObjects.Text;
@@ -516,7 +517,8 @@ export class FirstFitGame extends Phaser.Scene {
   }
 
   private startParkingPhase() {
-    this.gamePhase = 'parking';
+      this.gamePhase = 'parking';
+      this.gameStartTime = Date.now(); // Track game start time
     const totalVehicles = this.VEHICLES_CONFIG.length;
     this.phaseText.setText(`Phase: Parking (First Fit) | ${totalVehicles} Vehicles`);
     this.instructionText.setText(`🚗 ${totalVehicles} random vehicles will arrive! Click vehicle → Click FIRST available slot!`);
@@ -1291,6 +1293,9 @@ Memory exists but not in a single block!`;
       fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setOrigin(0.5).setDepth(402);
 
+    // Submit score to backend
+    this.submitScore();
+
     // AI Feedback Button (Left side)
     const aiFeedbackButtonWidth = 220;
     const aiFeedbackButtonHeight = 50;
@@ -1879,6 +1884,76 @@ Can you analyze my performance and give me tips to improve?`;
     this.chatMessages = [];
     this.chatScrollOffset = 0;
     this.maxChatScroll = 0;
+  }
+
+  private async submitScore() {
+    try {
+      const timeSpent = Math.floor((Date.now() - this.gameStartTime) / 1000);
+      const accuracy = this.totalAllocated > 0 
+        ? Math.round((1 - (this.totalFragmentation / this.totalAllocated)) * 100)
+        : 100;
+      
+      const internalFragPercent = this.totalAllocated > 0 
+        ? (this.totalFragmentation / this.totalAllocated) * 100 
+        : 0;
+      const efficiency = 100 - internalFragPercent;
+      const utilization = (this.totalAllocated / this.totalSlotSpace) * 100;
+
+      const response = await fetch('/api/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: 'first-fit-l1',
+          moduleId: 'memory-management',
+          levelId: 'l1',
+          score: Math.max(0, this.score),
+          timeSpent,
+          accuracy,
+          wrongAttempts: this.wrongAttempts,
+          metadata: {
+            parkedVehicles: this.vehicles.filter(v => v.isParked).length,
+            totalVehicles: this.vehicles.length,
+            efficiency,
+            utilization,
+            internalFragmentation: this.totalFragmentation,
+            externalFragmentation: this.externalFragmentationCount
+          }
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.achievementsUnlocked && result.achievementsUnlocked.length > 0) {
+          this.showMessage(
+            `🎉 Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
+            '#00FF00',
+            3000
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Failed to submit score:', error);
+    }
+  }
+
+  private showMessage(text: string, color: string, duration: number = 2000) {
+    const { width, height } = this.sys.game.canvas;
+    const message = this.add.text(width / 2, height / 2, text, {
+      fontSize: '24px',
+      color,
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(500);
+
+    this.tweens.add({
+      targets: message,
+      alpha: 0,
+      y: message.y - 50,
+      duration,
+      onComplete: () => message.destroy()
+    });
   }
 }
 

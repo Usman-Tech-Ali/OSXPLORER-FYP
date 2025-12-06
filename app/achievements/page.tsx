@@ -38,8 +38,8 @@ interface Achievement {
   status: AchievementStatus
   category: AchievementCategory
   module?: string
-  icon: any
-  color: string
+  icon?: any
+  color?: string
   progress?: number
   maxProgress?: number
   unlockedAt?: string
@@ -364,8 +364,8 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
           </div>
         </div>
         <div className="flex items-center space-x-3 mb-3">
-          <div className={`p-3 rounded-lg bg-gray-800/50 ${achievement.color}`}>
-            <achievement.icon className="w-6 h-6" />
+          <div className={`p-3 rounded-lg bg-gray-800/50 ${achievement.color || 'text-gray-400'}`}>
+            {achievement.icon && <achievement.icon className="w-6 h-6" />}
           </div>
           <div className="flex-1">
             <CardTitle className="text-lg text-white">{achievement.title}</CardTitle>
@@ -460,6 +460,7 @@ function BadgeCard({ badge }: { badge: BadgeData }) {
 }
 
 export default function AchievementsPage() {
+  // All hooks must be called at the top, before any conditional returns
   const { data: session, status } = useSession()
   const router = useRouter()
   const [isVisible, setIsVisible] = useState(false)
@@ -471,11 +472,91 @@ export default function AchievementsPage() {
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [userProgress, setUserProgress] = useState<any>(null)
+  const [achievementsData, setAchievementsData] = useState<Achievement[]>([])
+  const [achievementStats, setAchievementStats] = useState({
+    totalAchievements: 0,
+    totalPoints: 0,
+    completionRate: 0,
+    rank: 'Beginner'
+  })
+  // Removed unused notifications state - was causing hooks order violation
 
   useEffect(() => {
     setMounted(true)
     setIsVisible(true)
   }, [])
+
+  const fetchUserProgress = async () => {
+    try {
+      const response = await fetch("/api/user/progress")
+      if (response.ok) {
+        const data = await response.json()
+        setUserProgress(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch user progress:", error)
+    }
+  }
+
+  // Map achievement IDs to icons and colors
+  const getAchievementIcon = (id: string) => {
+    const iconMap: Record<string, any> = {
+      'fcfs-master': Cpu,
+      'scheduler-expert': Target,
+      'speed-demon': Zap,
+      'memory-architect': HardDrive,
+      'fragmentation-fighter': Shield,
+      'deadlock-detective': Target,
+      'sync-master': Zap,
+      'perfect-score': Star,
+      'consistency-king': Crown,
+      'first-steps': Trophy,
+      'level-crusher': Target,
+      'streak-master': Flame,
+      'night-owl': Clock
+    }
+    return iconMap[id] || Trophy
+  }
+
+  const getAchievementColor = (id: string) => {
+    const colorMap: Record<string, string> = {
+      'fcfs-master': 'text-cyan-400',
+      'scheduler-expert': 'text-blue-400',
+      'speed-demon': 'text-yellow-400',
+      'memory-architect': 'text-purple-400',
+      'fragmentation-fighter': 'text-green-400',
+      'deadlock-detective': 'text-red-400',
+      'sync-master': 'text-orange-400',
+      'perfect-score': 'text-yellow-400',
+      'consistency-king': 'text-purple-400',
+      'first-steps': 'text-green-400',
+      'level-crusher': 'text-cyan-400',
+      'streak-master': 'text-orange-400',
+      'night-owl': 'text-indigo-400'
+    }
+    return colorMap[id] || 'text-gray-400'
+  }
+
+  const fetchAchievements = async () => {
+    try {
+      const response = await fetch("/api/achievements")
+      if (response.ok) {
+        const data = await response.json()
+        // Map API data to include icons and colors
+        const mappedAchievements = data.achievements.map((ach: any) => ({
+          ...ach,
+          icon: getAchievementIcon(ach.id),
+          color: getAchievementColor(ach.id)
+        }))
+        setAchievementsData(mappedAchievements)
+        setAchievementStats(data.stats)
+      }
+    } catch (error) {
+      console.error("Failed to fetch achievements:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!mounted) return
@@ -487,22 +568,10 @@ export default function AchievementsPage() {
 
     if (status === "authenticated") {
       fetchUserProgress()
+      fetchAchievements()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, mounted, router])
-
-  const fetchUserProgress = async () => {
-    try {
-      const response = await fetch("/api/user/progress")
-      if (response.ok) {
-        const data = await response.json()
-        setUserProgress(data)
-      }
-    } catch (error) {
-      console.error("Failed to fetch user progress:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   if (!mounted || status === "loading" || loading) {
     return (
@@ -512,19 +581,20 @@ export default function AchievementsPage() {
     )
   }
 
-  if (!session || !userProgress) {
+  if (!session) {
     return null
   }
 
-  // Update user stats with real data
-  const realUserStats = {
-    totalAchievements: userProgress.user.achievements.length,
-    totalPoints: userProgress.user.totalXP,
-    completionRate: Math.round((userProgress.stats.completedLevelsCount / 18) * 100),
-    rank: userProgress.user.level >= 10 ? "Achievement Hunter" : "Beginner"
+  // Use real achievement data from API, fallback to mock data if not loaded yet
+  const achievementsToUse = achievementsData.length > 0 ? achievementsData : achievements
+  const realUserStats = achievementsData.length > 0 ? achievementStats : {
+    totalAchievements: userProgress?.user?.achievements?.length || 0,
+    totalPoints: userProgress?.user?.totalXP || 0,
+    completionRate: userProgress ? Math.round((userProgress.stats.completedLevelsCount / 18) * 100) : 0,
+    rank: userProgress?.user?.level >= 10 ? "Achievement Hunter" : "Beginner"
   }
 
-  const filteredAchievements = achievements.filter((achievement) => {
+  const filteredAchievements = achievementsToUse.filter((achievement) => {
     const matchesStatus = filterStatus === "all" || achievement.status === filterStatus
     const matchesCategory = filterCategory === "all" || achievement.category === filterCategory
     const matchesModule = filterModule === "all" || achievement.module === filterModule
@@ -552,8 +622,7 @@ export default function AchievementsPage() {
     }
   })
 
-  const modules = [...new Set(achievements.filter((a) => a.module).map((a) => a.module))]
-    const [notifications] = useState(3)
+  const modules = [...new Set(achievementsToUse.filter((a) => a.module).map((a) => a.module))]
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -742,7 +811,7 @@ export default function AchievementsPage() {
               Achievements
             </h2>
             <Badge className="bg-gray-800/50 border-gray-600 text-gray-300 px-3 py-1">
-              {sortedAchievements.length} of {achievements.length}
+              {sortedAchievements.length} of {achievementsToUse.length}
             </Badge>
           </div>
 

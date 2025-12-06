@@ -17,6 +17,7 @@ export class BinarySemaphoreGameScene extends Phaser.Scene {
   private score: number = 0;
   private crashes: number = 0;
   private carsPassed: number = 0;
+  private gameStartTime: number = 0; // Track when game started
   private scoreText!: Phaser.GameObjects.Text;
   private semaphoreText!: Phaser.GameObjects.Text;
   private instructionText!: Phaser.GameObjects.Text;
@@ -260,6 +261,7 @@ export class BinarySemaphoreGameScene extends Phaser.Scene {
 
   private startGame() {
     this.gamePhase = 'playing';
+    this.gameStartTime = Date.now(); // Track game start time
     this.instructionText.setText('Car arriving! Press WAIT() to lock bridge and let it cross.');
     
     // Spawn first car
@@ -539,5 +541,54 @@ Crashes: ${this.crashes}
     restartButton.on('pointerdown', () => {
       this.scene.restart();
     });
+  }
+
+  private async submitScore() {
+    try {
+      const timeSpent = Math.floor((Date.now() - this.gameStartTime) / 1000);
+      const response = await fetch('/api/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: 'binary-semaphore-l1',
+          moduleId: 'process-synchronization',
+          levelId: 'l1',
+          score: Math.max(0, this.carsPassed * 10), // Convert cars passed to score
+          timeSpent,
+          accuracy: this.crashes === 0 ? 100 : Math.max(0, 100 - (this.crashes * 10)),
+          wrongAttempts: this.crashes,
+          metadata: {
+            carsPassed: this.carsPassed,
+            crashes: this.crashes
+          }
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.achievementsUnlocked && result.achievementsUnlocked.length > 0) {
+          const { width, height } = this.scale;
+          const message = this.add.text(width / 2, height / 2, 
+            `🎉 Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
+            {
+              fontSize: '24px',
+              color: '#00FF00',
+              fontStyle: 'bold',
+              stroke: '#000000',
+              strokeThickness: 4
+            }).setOrigin(0.5).setDepth(500);
+
+          this.tweens.add({
+            targets: message,
+            alpha: 0,
+            y: message.y - 50,
+            duration: 3000,
+            onComplete: () => message.destroy()
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to submit score:', error);
+    }
   }
 }

@@ -15,6 +15,7 @@ export class MutexGameScene extends Phaser.Scene {
   private criticalSectionCar: Car | null = null;
   private score: number = 0;
   private crashes: number = 0;
+  private gameStartTime: number = 0; // Track when game started
   private scoreText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private instructionText!: Phaser.GameObjects.Text;
@@ -60,6 +61,7 @@ export class MutexGameScene extends Phaser.Scene {
 
   private startGame() {
     this.gamePhase = 'playing';
+    this.gameStartTime = Date.now(); // Track game start time
     
     // Spawn initial cars
     this.spawnCar('left');
@@ -458,6 +460,9 @@ export class MutexGameScene extends Phaser.Scene {
     modalBox.lineStyle(4, 0xFFD700, 1);
     modalBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     modalBox.setDepth(301);
+
+    // Submit score to backend
+    this.submitScore();
 
     // Title
     const title = this.add.text(width / 2, boxY + 60, '🎉 GAME COMPLETE!', {

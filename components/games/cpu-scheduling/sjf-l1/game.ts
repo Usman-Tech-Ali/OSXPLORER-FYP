@@ -380,6 +380,7 @@ export class SJFGame extends Phaser.Scene {
 
   private startArrivalPhase() {
     this.gamePhase = 'arrival';
+    this.gameStartTime = Date.now(); // Track game start time
     this.gameStartTime = this.time.now;
     this.currentTime = 0;
     
@@ -1149,6 +1150,9 @@ export class SJFGame extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(302);
 
+    // Submit score to backend
+    this.submitScore();
+
     const scoreText = this.add.text(width / 2, boxY + 120, `Final Score: ${this.totalScore}`, {
       fontSize: '28px',
       color: '#00FF00',
@@ -1193,6 +1197,61 @@ export class SJFGame extends Phaser.Scene {
 
     restartButton.on('pointerdown', () => {
       this.scene.restart();
+    });
+  }
+
+  private async submitScore() {
+    try {
+      const timeSpent = Math.floor((Date.now() - this.gameStartTime) / 1000);
+      const response = await fetch('/api/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: 'sjf-l1',
+          moduleId: 'cpu-scheduling',
+          levelId: 'l1',
+          score: Math.max(0, this.totalScore),
+          timeSpent,
+          accuracy: this.wrongAttempts === 0 ? 100 : Math.max(0, 100 - (this.wrongAttempts * 10)),
+          wrongAttempts: this.wrongAttempts,
+          metadata: {
+            totalRequests: this.completedRequests.length,
+            avgWaitingTime: this.completedRequests.reduce((sum, r) => sum + (r.waitingTime || 0), 0) / this.completedRequests.length || 0
+          }
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.achievementsUnlocked && result.achievementsUnlocked.length > 0) {
+          this.showMessage(
+            `🎉 Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
+            '#00FF00',
+            3000
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Failed to submit score:', error);
+    }
+  }
+
+  private showMessage(text: string, color: string, duration: number = 2000) {
+    const { width, height } = this.sys.game.canvas;
+    const message = this.add.text(width / 2, height / 2, text, {
+      fontSize: '24px',
+      color,
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(500);
+
+    this.tweens.add({
+      targets: message,
+      alpha: 0,
+      y: message.y - 50,
+      duration,
+      onComplete: () => message.destroy()
     });
   }
 }

@@ -29,6 +29,7 @@ export class WorstFitGame extends Phaser.Scene {
   private activeBoxes: Box[] = []; // Boxes currently on conveyor
   private activeTools: Tool[] = []; // Tools currently visible
   private score: number = 0;
+  private gameStartTime: number = 0; // Track when game started
   private wrongAttempts: number = 0;
   private missedBoxes: number = 0;
   private boxesProcessed: number = 0;
@@ -207,6 +208,7 @@ export class WorstFitGame extends Phaser.Scene {
 
   private startGame() {
     this.gamePhase = 'playing';
+    this.gameStartTime = Date.now(); // Track game start time
     this.instructionText.setText('Drag tools to the LARGEST available box! Don\'t let boxes pass empty!');
     
     // Initialize boxes and tools
@@ -573,6 +575,9 @@ export class WorstFitGame extends Phaser.Scene {
     resultsBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     resultsBox.setDepth(301);
 
+    // Submit score to backend
+    this.submitScore();
+
     const title = this.add.text(width / 2, boxY + 50, '🎉 GAME COMPLETE!', {
       fontSize: '32px',
       color: '#00FF00',
@@ -617,5 +622,55 @@ Wrong Attempts: ${this.wrongAttempts}
     restartButton.on('pointerdown', () => {
       this.scene.restart();
     });
+  }
+
+  private async submitScore() {
+    try {
+      const timeSpent = Math.floor((Date.now() - this.gameStartTime) / 1000);
+      const response = await fetch('/api/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: 'worst-fit-l1',
+          moduleId: 'memory-management',
+          levelId: 'l1',
+          score: Math.max(0, this.score),
+          timeSpent,
+          accuracy: this.wrongAttempts === 0 ? 100 : Math.max(0, 100 - (this.wrongAttempts * 10)),
+          wrongAttempts: this.wrongAttempts,
+          metadata: {
+            boxesProcessed: this.boxesProcessed,
+            missedBoxes: this.missedBoxes,
+            toolsUsed: this.toolsUsed
+          }
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.achievementsUnlocked && result.achievementsUnlocked.length > 0) {
+          const { width, height } = this.scale;
+          const message = this.add.text(width / 2, height / 2, 
+            `🎉 Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
+            {
+              fontSize: '24px',
+              color: '#00FF00',
+              fontStyle: 'bold',
+              stroke: '#000000',
+              strokeThickness: 4
+            }).setOrigin(0.5).setDepth(500);
+
+          this.tweens.add({
+            targets: message,
+            alpha: 0,
+            y: message.y - 50,
+            duration: 3000,
+            onComplete: () => message.destroy()
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to submit score:', error);
+    }
   }
 }

@@ -759,6 +759,7 @@ export class CriticalSectionGame extends Phaser.Scene {
         // Check if all persons completed
         if (this.completedCount >= this.totalPersons) {
           this.time.delayedCall(3000, () => {
+            this.submitScore();
             this.showEndGame();
           });
         }
@@ -1007,6 +1008,41 @@ export class CriticalSectionGame extends Phaser.Scene {
   private handleResize(gameSize: Phaser.Structs.Size) {
     this.GAME_WIDTH = gameSize.width;
     this.GAME_HEIGHT = gameSize.height;
+  }
+
+  private async submitScore() {
+    try {
+      const timeSpent = Math.floor((Date.now() - (this.gameStartTime + Date.now() - this.time.now)) / 1000);
+      const response = await fetch('/api/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: 'critical-section-l1',
+          moduleId: 'process-synchronization',
+          levelId: 'l1',
+          score: Math.max(0, this.totalScore),
+          timeSpent: Math.floor(this.currentTime),
+          accuracy: this.wrongAttempts === 0 ? 100 : Math.max(0, 100 - (this.wrongAttempts * 10)),
+          wrongAttempts: this.wrongAttempts,
+          metadata: {
+            completedPersons: this.completedCount,
+            totalPersons: this.totalPersons
+          }
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.achievementsUnlocked && result.achievementsUnlocked.length > 0) {
+          this.showMessage(
+            `🎉 Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
+            '#00FF00'
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Failed to submit score:', error);
+    }
   }
 }
 

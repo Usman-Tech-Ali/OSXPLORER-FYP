@@ -276,6 +276,7 @@ export class SRTFGame extends Phaser.Scene {
 
   private startArrivalPhase() {
     this.gamePhase = 'arrival';
+    this.gameStartTime = Date.now(); // Track game start time
     this.gameStartTime = this.time.now;
     this.currentTime = 0;
     
@@ -942,6 +943,9 @@ ${this.patientsDied === 0 ? '🎉 Perfect SRTF execution!' :
   this.patientsDied > 0 ? '💡 Remember: Always treat shortest remaining time!' : ''}
     `;
 
+    // Submit score to backend
+    this.submitScore();
+
     const statsText = this.add.text(width / 2, boxY + 150, stats, {
       fontSize: '20px',
       color: '#FFFFFF',
@@ -974,5 +978,42 @@ ${this.patientsDied === 0 ? '🎉 Perfect SRTF execution!' :
     restartButton.on('pointerdown', () => {
       this.scene.restart();
     });
+  }
+
+  private async submitScore() {
+    try {
+      const timeSpent = Math.floor((Date.now() - this.gameStartTime) / 1000);
+      const response = await fetch('/api/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: 'srtf-l1',
+          moduleId: 'cpu-scheduling',
+          levelId: 'l1',
+          score: Math.max(0, this.totalScore),
+          timeSpent,
+          accuracy: this.wrongAttempts === 0 ? 100 : Math.max(0, 100 - (this.wrongAttempts * 10)),
+          wrongAttempts: this.wrongAttempts,
+          metadata: {
+            patientsSaved: this.completedPatients.length,
+            patientsDied: this.patientsDied,
+            totalPatients: this.numPatients
+          }
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.achievementsUnlocked && result.achievementsUnlocked.length > 0) {
+          this.showMessage(
+            `🎉 Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
+            '#00FF00',
+            3000
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Failed to submit score:', error);
+    }
   }
 }

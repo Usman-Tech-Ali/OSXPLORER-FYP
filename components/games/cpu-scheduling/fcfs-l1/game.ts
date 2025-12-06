@@ -491,6 +491,7 @@ export class FCFSGame extends Phaser.Scene {
 
   private startArrivalPhase() {
     this.gamePhase = 'arrival';
+    this.gameStartTime = Date.now(); // Track game start time
     this.gameStartTime = this.time.now;
     this.currentTime = 0;
     
@@ -2125,6 +2126,9 @@ sortedOrders.forEach((order, index) => {
     // Store button reference for later access
     this.registry.set('nextLevelButton', button);
 
+    // Submit score to backend
+    this.submitScore();
+
     const buttonText = this.add.text(buttonX + buttonWidth / 2, buttonY + 25, 'Next Level', {
       fontSize: '24px',
       color: '#000000',
@@ -2759,6 +2763,68 @@ Please provide a brief welcome message and performance overview (2-3 sentences).
       this.waiterFoodSprite.x = this.waiterSprite.x + 8;
       this.waiterFoodSprite.y = this.waiterSprite.y - 20;
     }
+  }
+
+  private async submitScore() {
+    try {
+      const timeSpent = Math.floor((Date.now() - this.gameStartTime) / 1000);
+      const avgWaitingTime = this.orders.reduce((sum, o) => sum + (o.waitingTime || 0), 0) / this.orders.length;
+      const avgTurnaroundTime = this.orders.reduce((sum, o) => sum + (o.turnaroundTime || 0), 0) / this.orders.length;
+      const throughput = this.orders.length / (timeSpent || 1);
+
+      const response = await fetch('/api/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: 'fcfs-l1',
+          moduleId: 'cpu-scheduling',
+          levelId: 'l1',
+          score: Math.max(0, this.totalScore),
+          timeSpent,
+          accuracy: this.wrongAttempts === 0 ? 100 : Math.max(0, 100 - (this.wrongAttempts * 10)),
+          wrongAttempts: this.wrongAttempts,
+          metadata: {
+            totalOrders: this.orders.length,
+            avgWaitingTime,
+            avgTurnaroundTime,
+            throughput
+          }
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.achievementsUnlocked && result.achievementsUnlocked.length > 0) {
+          this.showMessage(
+            `🎉 Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
+            '#00FF00',
+            3000
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Failed to submit score:', error);
+    }
+  }
+
+  private showMessage(text: string, color: string, duration: number = 2000) {
+    const { width, height } = this.sys.game.canvas;
+    const message = this.add.text(width / 2, height / 2, text, {
+      fontSize: '24px',
+      color,
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }).setOrigin(0.5).setDepth(500);
+
+    this.tweens.add({
+      targets: message,
+      alpha: 0,
+      y: message.y - 50,
+      duration,
+      onComplete: () => message.destroy()
+    });
   }
 
   shutdown() {
