@@ -22,8 +22,14 @@ const FirstSRTFGame = dynamic(() => import("@/components/games/cpu-scheduling/sr
 const FirstSRTFGameL2 = dynamic(() => import("@/components/games/cpu-scheduling/srtf-l2/FirstSRTFGame"), { ssr: false })
 const FirstSRTFGameL3 = dynamic(() => import("@/components/games/cpu-scheduling/srtf-l3/FirstSRTFGame"), { ssr: false })
 const FirstCSGame = dynamic(() => import("@/components/games/process-synchronization/critical-section-l1/FirstCSGame"), { ssr: false })
+const CSGameL2 = dynamic(() => import("@/components/games/process-synchronization/critical-section-l2/FirstCSGame"), { ssr: false })
+const CSGameL3 = dynamic(() => import("@/components/games/process-synchronization/critical-section-l3/FirstCSGame"), { ssr: false })
 const MutexGame = dynamic(() => import("@/components/games/process-synchronization/mutex-l1/MutexGame"), { ssr: false })
+const MutexGameL2 = dynamic(() => import("@/components/games/process-synchronization/mutex-l2/MutexGame"), { ssr: false })
+const MutexGameL3 = dynamic(() => import("@/components/games/process-synchronization/mutex-l3/MutexGame"), { ssr: false })
 const BinarySemaphoreGame = dynamic(() => import("@/components/games/process-synchronization/binary-semaphore-l1/BinarySemaphoreGame"), { ssr: false })
+const BinarySemaphoreGameL2 = dynamic(() => import("@/components/games/process-synchronization/binary-semaphore-l2/BinarySemaphoreGame"), { ssr: false })
+const BinarySemaphoreGameL3 = dynamic(() => import("@/components/games/process-synchronization/binary-semaphore-l3/BinarySemaphoreGame"), { ssr: false })
 
 export default function GamePage() {
   const params = useParams()
@@ -49,8 +55,14 @@ export default function GamePage() {
   const isSRTFL2 = moduleId === "cpu-scheduling" && gameId === "srtf-l2"
   const isSRTFL3 = moduleId === "cpu-scheduling" && gameId === "srtf-l3"
   const isCSBasic = moduleId === "process-synchronization" && gameId === "critical-section-l1"
+  const isCSL2 = moduleId === "process-synchronization" && gameId === "critical-section-l2"
+  const isCSL3 = moduleId === "process-synchronization" && gameId === "critical-section-l3"
   const isMutexBasic = moduleId === "process-synchronization" && gameId === "mutex-l1"
+  const isMutexL2 = moduleId === "process-synchronization" && gameId === "mutex-l2"
+  const isMutexL3 = moduleId === "process-synchronization" && gameId === "mutex-l3"
   const isBinarySemaphoreBasic = moduleId === "process-synchronization" && gameId === "binary-semaphore-l1"
+  const isBinarySemaphoreL2 = moduleId === "process-synchronization" && gameId === "binary-semaphore-l2"
+  const isBinarySemaphoreL3 = moduleId === "process-synchronization" && gameId === "binary-semaphore-l3"
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -130,13 +142,37 @@ export default function GamePage() {
         <div className="w-full h-screen overflow-hidden">
           <FirstCSGame />
         </div>
+      ) : isCSL2 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <CSGameL2 />
+        </div>
+      ) : isCSL3 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <CSGameL3 />
+        </div>
       ) : isMutexBasic ? (
         <div className="w-full h-screen overflow-hidden">
           <MutexGame />
         </div>
+      ) : isMutexL2 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <MutexGameL2 />
+        </div>
+      ) : isMutexL3 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <MutexGameL3 />
+        </div>
       ) : isBinarySemaphoreBasic ? (
         <div className="w-full h-screen overflow-hidden">
           <BinarySemaphoreGame />
+        </div>
+      ) : isBinarySemaphoreL2 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <BinarySemaphoreGameL2 />
+        </div>
+      ) : isBinarySemaphoreL3 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <BinarySemaphoreGameL3 />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-screen">

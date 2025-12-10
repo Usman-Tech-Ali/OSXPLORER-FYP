@@ -8,7 +8,7 @@ interface Car {
   isWaiting: boolean;
 }
 
-export class MutexGameScene extends Phaser.Scene {
+export class MutexGameL2Scene extends Phaser.Scene {
   private background!: Phaser.GameObjects.Image;
   private cars: Car[] = [];
   private mutexLocked: boolean = false;
@@ -20,7 +20,7 @@ export class MutexGameScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private instructionText!: Phaser.GameObjects.Text;
   private gamePhase: 'intro' | 'playing' | 'completed' = 'intro';
-  private targetScore: number = 10; // Win condition: pass 10 cars successfully
+  private targetScore: number = 15; // L2: Increased from 10 to 15
   private spawnEvent?: Phaser.Time.TimerEvent;
 
   // Positions
@@ -31,7 +31,7 @@ export class MutexGameScene extends Phaser.Scene {
   private readonly ROAD_Y = 0.55;
 
   constructor() {
-    super({ key: 'MutexGameScene' });
+    super({ key: 'MutexGameL2Scene' });
   }
 
   preload() {
@@ -67,12 +67,16 @@ export class MutexGameScene extends Phaser.Scene {
     this.spawnCar('left');
     this.spawnCar('right');
 
-    // Spawn new cars periodically
+    // L2: Spawn new cars more frequently with slight randomization
     this.spawnEvent = this.time.addEvent({
-      delay: 5000,
+      delay: Phaser.Math.Between(3500, 4500), // Reduced from 5000, with variation
       callback: () => {
         const side = Phaser.Math.RND.pick(['left', 'right']) as 'left' | 'right';
         this.spawnCar(side);
+        // Reset with new random delay
+        if (this.spawnEvent) {
+          this.spawnEvent.delay = Phaser.Math.Between(3500, 4500);
+        }
       },
       loop: true,
     });
@@ -181,7 +185,7 @@ export class MutexGameScene extends Phaser.Scene {
 
   private moveCar(car: Car) {
     const { width } = this.scale;
-    const speed = 200;
+    const speed = Phaser.Math.Between(220, 250); // L2: Varied and slightly faster speed
     
     const startX = car.direction === 'left' ? 
       width * this.LEFT_WAITING_X : 
@@ -448,9 +452,9 @@ export class MutexGameScene extends Phaser.Scene {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gameId: 'mutex-l1',
+          gameId: 'mutex-l2',
           moduleId: 'process-synchronization',
-          levelId: 'l1',
+          levelId: 'l2',
           score: Math.round(accuracy),
           timeSpent,
           accuracy: Math.round(accuracy),

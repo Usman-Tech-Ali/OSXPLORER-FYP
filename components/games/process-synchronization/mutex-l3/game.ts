@@ -8,7 +8,7 @@ interface Car {
   isWaiting: boolean;
 }
 
-export class MutexGameScene extends Phaser.Scene {
+export class MutexGameL3Scene extends Phaser.Scene {
   private background!: Phaser.GameObjects.Image;
   private cars: Car[] = [];
   private mutexLocked: boolean = false;
@@ -20,7 +20,7 @@ export class MutexGameScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private instructionText!: Phaser.GameObjects.Text;
   private gamePhase: 'intro' | 'playing' | 'completed' = 'intro';
-  private targetScore: number = 10; // Win condition: pass 10 cars successfully
+  private targetScore: number = 20; // L3: Increased from 10 to 20 (hard mode)
   private spawnEvent?: Phaser.Time.TimerEvent;
 
   // Positions
@@ -31,7 +31,7 @@ export class MutexGameScene extends Phaser.Scene {
   private readonly ROAD_Y = 0.55;
 
   constructor() {
-    super({ key: 'MutexGameScene' });
+    super({ key: 'MutexGameL3Scene' });
   }
 
   preload() {
@@ -67,12 +67,16 @@ export class MutexGameScene extends Phaser.Scene {
     this.spawnCar('left');
     this.spawnCar('right');
 
-    // Spawn new cars periodically
+    // L3: Spawn new cars much more frequently with high randomization
     this.spawnEvent = this.time.addEvent({
-      delay: 5000,
+      delay: Phaser.Math.Between(2500, 3500), // Much faster spawning, with variation
       callback: () => {
         const side = Phaser.Math.RND.pick(['left', 'right']) as 'left' | 'right';
         this.spawnCar(side);
+        // Reset with new random delay for unpredictability
+        if (this.spawnEvent) {
+          this.spawnEvent.delay = Phaser.Math.Between(2500, 3500);
+        }
       },
       loop: true,
     });
@@ -181,7 +185,7 @@ export class MutexGameScene extends Phaser.Scene {
 
   private moveCar(car: Car) {
     const { width } = this.scale;
-    const speed = 200;
+    const speed = Phaser.Math.Between(250, 300); // L3: Much faster and more varied speed
     
     const startX = car.direction === 'left' ? 
       width * this.LEFT_WAITING_X : 
@@ -448,9 +452,9 @@ export class MutexGameScene extends Phaser.Scene {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gameId: 'mutex-l1',
+          gameId: 'mutex-l3',
           moduleId: 'process-synchronization',
-          levelId: 'l1',
+          levelId: 'l3',
           score: Math.round(accuracy),
           timeSpent,
           accuracy: Math.round(accuracy),
