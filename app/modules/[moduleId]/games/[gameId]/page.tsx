@@ -21,6 +21,12 @@ const FirstSJFGameL3 = dynamic(() => import("@/components/games/cpu-scheduling/s
 const FirstSRTFGame = dynamic(() => import("@/components/games/cpu-scheduling/srtf-l1/FirstSRTFGame"), { ssr: false })
 const FirstSRTFGameL2 = dynamic(() => import("@/components/games/cpu-scheduling/srtf-l2/FirstSRTFGame"), { ssr: false })
 const FirstSRTFGameL3 = dynamic(() => import("@/components/games/cpu-scheduling/srtf-l3/FirstSRTFGame"), { ssr: false })
+const FirstPriorityGame = dynamic(() => import("@/components/games/cpu-scheduling/priority-l1/FirstPriorityGame"), { ssr: false })
+const FirstPriorityGameL2 = dynamic(() => import("@/components/games/cpu-scheduling/priority-l2/FirstPriorityGame"), { ssr: false })
+const FirstPriorityGameL3 = dynamic(() => import("@/components/games/cpu-scheduling/priority-l3/FirstPriorityGame"), { ssr: false })
+const FirstRRGame = dynamic(() => import("@/components/games/cpu-scheduling/rr-l1/FirstRRGame"), { ssr: false })
+const FirstRRGameL2 = dynamic(() => import("@/components/games/cpu-scheduling/rr-l2/FirstRRGame"), { ssr: false })
+const FirstRRGameL3 = dynamic(() => import("@/components/games/cpu-scheduling/rr-l3/FirstRRGame"), { ssr: false })
 const FirstCSGame = dynamic(() => import("@/components/games/process-synchronization/critical-section-l1/FirstCSGame"), { ssr: false })
 const CSGameL2 = dynamic(() => import("@/components/games/process-synchronization/critical-section-l2/FirstCSGame"), { ssr: false })
 const CSGameL3 = dynamic(() => import("@/components/games/process-synchronization/critical-section-l3/FirstCSGame"), { ssr: false })
@@ -54,6 +60,12 @@ export default function GamePage() {
   const isSRTFBasic = moduleId === "cpu-scheduling" && gameId === "srtf-l1"
   const isSRTFL2 = moduleId === "cpu-scheduling" && gameId === "srtf-l2"
   const isSRTFL3 = moduleId === "cpu-scheduling" && gameId === "srtf-l3"
+  const isPriorityBasic = moduleId === "cpu-scheduling" && gameId === "priority-l1"
+  const isPriorityL2 = moduleId === "cpu-scheduling" && gameId === "priority-l2"
+  const isPriorityL3 = moduleId === "cpu-scheduling" && gameId === "priority-l3"
+  const isRRBasic = moduleId === "cpu-scheduling" && gameId === "rr-l1"
+  const isRRL2 = moduleId === "cpu-scheduling" && gameId === "rr-l2"
+  const isRRL3 = moduleId === "cpu-scheduling" && gameId === "rr-l3"
   const isCSBasic = moduleId === "process-synchronization" && gameId === "critical-section-l1"
   const isCSL2 = moduleId === "process-synchronization" && gameId === "critical-section-l2"
   const isCSL3 = moduleId === "process-synchronization" && gameId === "critical-section-l3"
@@ -137,6 +149,30 @@ export default function GamePage() {
       ) : isSRTFL3 ? (
         <div className="w-full h-screen overflow-hidden">
           <FirstSRTFGameL3 />
+        </div>
+      ) : isPriorityBasic ? (
+        <div className="w-full h-screen overflow-hidden">
+          <FirstPriorityGame />
+        </div>
+      ) : isPriorityL2 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <FirstPriorityGameL2 />
+        </div>
+      ) : isPriorityL3 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <FirstPriorityGameL3 />
+        </div>
+      ) : isRRBasic ? (
+        <div className="w-full h-screen overflow-hidden">
+          <FirstRRGame />
+        </div>
+      ) : isRRL2 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <FirstRRGameL2 />
+        </div>
+      ) : isRRL3 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <FirstRRGameL3 />
         </div>
       ) : isCSBasic ? (
         <div className="w-full h-screen overflow-hidden">

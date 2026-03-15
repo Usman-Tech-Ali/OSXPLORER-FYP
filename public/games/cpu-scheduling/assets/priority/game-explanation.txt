@@ -1,0 +1,64 @@
+### **Game Concept: Sky Marshals (Priority Scheduling)**
+
+**Objective:** You are the Air Traffic Controller. You must clear the queue of waiting planes by sending them to the runway based on their **Priority Level**.
+
+* **Core Rule:** **Lower Number = Higher Priority** (e.g., Priority 1 goes *before* Priority 4).
+* **The "CPU":** The Single Runway (only one plane can take off at a time).
+* **The "Ready Queue":** The Taxiway (where planes wait).
+
+---
+
+### **Asset Usage & Visual Hierarchy**
+
+We use 4 distinct planes to represent process priorities, making it instantly recognizable for the player:
+
+1. **Priority 1 (Highest): Red Medical Jet**
+* *Scenario:* "Medical Emergency." Must take off immediately.
+* *Asset:* Red Jet with White Cross.
+
+
+2. **Priority 2: Gold VIP Jet**
+* *Scenario:* "Presidential/VIP Flight." Important, but waits for emergencies.
+* *Asset:* Golden Private Jet.
+
+
+3. **Priority 3: Blue Commercial Plane**
+* *Scenario:* "Passenger Flight." Standard traffic.
+* *Asset:* Large Blue Airliner.
+
+
+4. **Priority 4 (Lowest): Green Cargo Plane**
+* *Scenario:* "Mail/Cargo." Can wait forever if needed.
+* *Asset:* Propeller Cargo Plane.
+
+
+
+---
+
+### **Level Breakdown (The Mechanics)**
+
+**Level 1: The Rookie (Non-Preemptive)**
+
+* **Logic:** Simple sorting.
+* **How it plays:** Planes spawn on the Taxiway. The player must click them in order (P1  P2  P3  P4).
+* **Constraint:** Once a plane enters the runway, it **cannot be stopped**. Even if a Red Jet (P1) appears, it must wait for the current Green Cargo (P4) to finish taking off.
+
+**Level 2: Crisis Mode (Preemptive)**
+
+* **Logic:** Context Switching.
+* **How it plays:**
+1. A Green Cargo Plane (P4) starts taking off.
+2. Suddenly, a Red Medical Jet (P1) spawns in the queue.
+3. **Action:** The player must click the Red Jet.
+4. **Visual:** The Green Plane stops, turns around (using the directional sprites), and goes back to the queue. The Red Jet takes over the runway.
+
+
+
+**Level 3: Gridlock (Aging)**
+
+* **Logic:** Starvation Prevention.
+* **How it plays:** A constant stream of Red and Gold jets keeps the Green Cargo planes stuck in the queue.
+* **Visual:** After waiting 10 seconds, a **"Thundercloud"** asset appears over the Green Plane.
+* **Action:** The player must realize this plane is "starving" and prioritize it, or it crashes the system (Game Over).
+
+This structure ensures you cover the entire academic syllabus (Non-Preemptive, Preemptive, Aging) using a single, cohesive, and intuitive visual metaphor.

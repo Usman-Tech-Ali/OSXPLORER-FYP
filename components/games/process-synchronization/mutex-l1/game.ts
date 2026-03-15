@@ -19,6 +19,8 @@ export class MutexGameScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private instructionText!: Phaser.GameObjects.Text;
+  private consolePanel!: Phaser.GameObjects.Container;
+  private consoleText!: Phaser.GameObjects.Text;
   private gamePhase: 'intro' | 'playing' | 'completed' = 'intro';
   private targetScore: number = 10; // Win condition: pass 10 cars successfully
   private spawnEvent?: Phaser.Time.TimerEvent;
@@ -62,6 +64,8 @@ export class MutexGameScene extends Phaser.Scene {
   private startGame() {
     this.gamePhase = 'playing';
     this.gameStartTime = Date.now(); // Track game start time
+    
+    this.updateConsole('Game started!\n\nCars are arriving...\nClick on a car to let it pass.\n\nRemember: Only ONE car can use\nthe critical section at a time!');
     
     // Spawn initial cars
     this.spawnCar('left');
@@ -114,6 +118,54 @@ export class MutexGameScene extends Phaser.Scene {
       padding: { x: 15, y: 10 },
       align: 'center',
     }).setOrigin(0.5, 0);
+
+    // Create console panel
+    this.createConsole();
+  }
+
+  private createConsole() {
+    const { width, height } = this.scale;
+    const panelWidth = 350;
+    const panelHeight = 280;
+    const panelX = width - panelWidth / 2 - 20;
+    const panelY = panelHeight / 2 + 20;
+
+    this.consolePanel = this.add.container(panelX, panelY);
+    this.consolePanel.setDepth(100);
+
+    // Panel background
+    const bg = this.add.graphics();
+    bg.fillStyle(0x1a1a1a, 0.9);
+    bg.lineStyle(2, 0x00ff88);
+    bg.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 10);
+    bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 10);
+
+    // Title
+    const title = this.add.text(0, -panelHeight / 2 + 20, 'Console', {
+      fontSize: '18px',
+      color: '#00ff88',
+      fontFamily: 'Consolas, monospace',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // Console text
+    this.consoleText = this.add.text(-panelWidth / 2 + 15, -panelHeight / 2 + 50, '', {
+      fontSize: '12px',
+      color: '#ffffff',
+      fontFamily: 'Consolas, monospace',
+      align: 'left',
+      lineSpacing: 4,
+      wordWrap: { width: panelWidth - 30 }
+    }).setOrigin(0, 0);
+
+    this.consolePanel.add([bg, title, this.consoleText]);
+    this.updateConsole('Mutex Lock Simulation\n\nSystem initialized...\nConstruction lane is ready...\n\nCars will arrive shortly...');
+  }
+
+  private updateConsole(message: string) {
+    if (this.consoleText) {
+      this.consoleText.setText(message);
+    }
   }
 
   private spawnCar(side: 'left' | 'right') {
@@ -140,6 +192,10 @@ export class MutexGameScene extends Phaser.Scene {
     };
 
     this.cars.push(car);
+
+    const direction = side === 'left' ? 'LEFT' : 'RIGHT';
+    const waitingCars = this.cars.filter(c => c.isWaiting).length;
+    this.updateConsole(`🚗 New car arrived from ${direction}!\n\nWaiting cars: ${waitingCars}\n\nCritical section: ${this.mutexLocked ? 'LOCKED' : 'UNLOCKED'}\n\nClick on a car to let it pass.`);
 
     // Add click handler
     sprite.on('pointerdown', () => this.onCarClick(car));
@@ -172,6 +228,9 @@ export class MutexGameScene extends Phaser.Scene {
     car.isWaiting = false;
     car.isMoving = true;
 
+    const direction = car.direction === 'left' ? 'LEFT' : 'RIGHT';
+    this.updateConsole(`🔒 MUTEX LOCKED!\n\nCar from ${direction} is entering\nthe critical section...\n\nConstruction lane is now OCCUPIED.\n\nWait for the car to finish!`);
+
     // Update status
     this.updateStatus();
 
@@ -202,6 +261,9 @@ export class MutexGameScene extends Phaser.Scene {
         this.score++;
         this.scoreText.setText(`Cars Passed: ${this.score}`);
         
+        const direction = car.direction === 'left' ? 'LEFT' : 'RIGHT';
+        this.updateConsole(`✅ Car from ${direction} completed!\n\n🔓 MUTEX UNLOCKED!\n\nCritical section is now FREE.\n\nCars passed: ${this.score}/${this.targetScore}\n\nClick another car to continue...`);
+        
         // Release mutex lock
         this.mutexLocked = false;
         this.criticalSectionCar = null;
@@ -220,6 +282,7 @@ export class MutexGameScene extends Phaser.Scene {
           if (this.spawnEvent) {
             this.spawnEvent.remove();
           }
+          this.updateConsole(`🎉 GAME COMPLETE!\n\nAll ${this.targetScore} cars passed safely!\n\nYou successfully demonstrated\nmutual exclusion using mutex locks!`);
           this.time.delayedCall(1000, () => {
             this.showResultsModal();
           });
@@ -230,6 +293,9 @@ export class MutexGameScene extends Phaser.Scene {
 
   private handleCrash(car: Car) {
     this.crashes++;
+    
+    const direction = car.direction === 'left' ? 'LEFT' : 'RIGHT';
+    this.updateConsole(`❌ RACE CONDITION!\n\n💥 CRASH!\n\nCar from ${direction} tried to enter\nwhile critical section was LOCKED!\n\nThis violates mutual exclusion!\n\nCrashes: ${this.crashes}`);
     
     // Update crash text
     const crashText = this.children.getByName('crashText') as Phaser.GameObjects.Text;
@@ -251,6 +317,7 @@ export class MutexGameScene extends Phaser.Scene {
     
     this.time.delayedCall(1500, () => {
       this.updateStatus();
+      this.updateConsole(`System recovered.\n\nCritical section status:\n${this.mutexLocked ? 'LOCKED' : 'UNLOCKED'}\n\nWait for UNLOCKED status\nbefore clicking next car!`);
     });
 
     // Show crash effect
@@ -326,6 +393,9 @@ export class MutexGameScene extends Phaser.Scene {
       color: '#FFD700',
       fontStyle: 'bold',
       fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+
+
+      
     }).setDepth(302);
 
     const concept = `   The narrow construction lane is a CRITICAL SECTION.

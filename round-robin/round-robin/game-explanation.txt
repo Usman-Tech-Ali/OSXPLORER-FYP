@@ -1,0 +1,81 @@
+### **Game Title: Court Kings (Round Robin Scheduling)**
+
+**The Core Concept:**
+This is a **side-scrolling management game**. We visualize the **Round Robin Algorithm** as a basketball shooting drill. The "Time Quantum" is the number of balls in the rack. If a player runs out of balls before finishing their target score, they must go to the back of the line.
+
+---
+
+### **1. The Metaphor (How to Code It)**
+
+* **The CPU = The Hoop.** (Single resource, only one person can use it at a time).
+* **The Process = The Player.**
+* **Burst Time = Target Score.** (e.g., Rookie needs 3 baskets to finish).
+
+
+* **Time Quantum = The Ball Rack.** (e.g., Rack holds 3 balls. You get 3 shots per turn).
+* **Context Switch = Rotation.** (The time it takes for Player A to leave and Player B to step up).
+
+---
+
+### **2. Asset Usage & Game Flow**
+
+Here is the step-by-step loop your team needs to implement:
+
+1. **Spawn (Arrival):**
+* Players (Rookie/Pro/MVP) spawn on the **Left** side of the screen.
+* They line up in the **Queue** (The Gym Background).
+
+
+2. **Dispatch (Context Switch):**
+* The first player in line runs to the **Hoop** (Asset 2) on the Right.
+* *Animation:* `Run Right` sprite.
+
+
+3. **Execution (Processing):**
+* The player shoots the ball.
+* **Logic:** `Ball Count - 1` AND `Target Score - 1`.
+* *Animation:* `Shoot` sprite + `Ball` sprite flying.
+
+
+4. **Quantum Check (The Rule):**
+* **Condition A (Process Finished):** If `Target Score == 0`, the player cheers and runs off-screen (Task Complete).
+* **Condition B (Quantum Expired):** If `Ball Rack == 0` but `Target Score > 0`...
+* **Preemption:** The Coach blows the **Whistle** (Asset 7).
+* The player runs back to the **Left** side (behind the queue).
+* *Animation:* `Run Left` sprite.
+
+
+
+
+
+---
+
+### **3. Level Mechanics**
+
+* **Level 1: The Basics (Fixed Quantum)**
+* **Quantum:** 3 Balls.
+* **Logic:** Pure Round Robin. Rookie (Needs 3) finishes in one turn. MVP (Needs 9) must rotate 3 times.
+* *Goal:* Clear the queue.
+
+
+* **Level 2: The Fumble (Context Switch Overhead)**
+* **Mechanic:** We introduce a **Delay**.
+* When players switch places, show the **Sweat Drop** (Asset 7) and pause for **1.5 seconds**.
+* *Lesson:* If the Quantum is too short, the player spends all their time "Fumbling" (Switching) and no time shooting.
+
+
+* **Level 3: The Tryouts (Arrival Time & Overflow)**
+* **Mechanic:** New players spawn continuously on the Left.
+* **Fail Condition:** If the line gets too long (goes off the left side of the screen), it's Game Over.
+* *Strategy:* You must balance clearing short tasks (Rookies) to make space in the gym.
+
+
+
+### **Summary for the Devs**
+
+* **View:** 2D Side View.
+* **Movement:** Left  Right.
+* **Key Variable:** `BallsInRack` (resets every turn).
+* **Winning:** All players reach `Score == 0`.
+
+This setup covers the entire academic requirement for Round Robin (Cyclic execution, Time Quantums, Context Switching) in a fun, visual loop.

@@ -67,7 +67,7 @@ export class BestFitGame extends Phaser.Scene {
   // Layout constants
   private readonly CUPBOARD_X = 900; // Right side - cupboard area
   private readonly TABLE_X = 250; // Left side - table area (where gifts appear on counter)
-  private readonly TABLE_Y = 650; // Y position of the table/counter (lower on screen)
+  private readonly TABLE_Y = 520; // Y position of the table/counter (lower on screen)
 
   // Gift configurations - based on existing assets
   private readonly GIFT_CONFIGS = {
@@ -244,7 +244,7 @@ export class BestFitGame extends Phaser.Scene {
       padding: { x: 15, y: 8 },
       fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setOrigin(0.5);
-    titleText.setDepth(200);
+    titleText.setDepth(10);
 
     // Phase indicator - smaller
     this.phaseText = this.add.text(width / 2, 65, 'Phase: Intro', {
@@ -257,7 +257,7 @@ export class BestFitGame extends Phaser.Scene {
       padding: { x: 10, y: 5 },
       fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setOrigin(0.5);
-    this.phaseText.setDepth(200);
+    this.phaseText.setDepth(10);
 
     // Instruction text - bottom center, cleaner, dark text
     this.instructionText = this.add.text(width / 2, height - 30, 'Welcome! Click to start...', {
@@ -271,7 +271,7 @@ export class BestFitGame extends Phaser.Scene {
       align: 'center',
       fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setOrigin(0.5);
-    this.instructionText.setDepth(200);
+    this.instructionText.setDepth(10);
 
     // Metrics panel - top left, compact
     const metricsBg = this.add.graphics();
