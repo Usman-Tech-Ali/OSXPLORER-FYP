@@ -12,6 +12,9 @@ const BestFitGameL3 = dynamic(() => import("@/components/games/memory-management
 const WorstFitGame = dynamic(() => import("@/components/games/memory-management/worst-fit/WorstFitGame"), { ssr: false })
 const WorstFitGameL2 = dynamic(() => import("@/components/games/memory-management/worst-fit-l2/WorstFitGame"), { ssr: false })
 const WorstFitGameL3 = dynamic(() => import("@/components/games/memory-management/worst-fit-l3/WorstFitGame"), { ssr: false })
+const HeistGameL1 = dynamic(() => import("@/components/games/memory-management/paging-l1/HeistGame"), { ssr: false })
+const HeistGameL2 = dynamic(() => import("@/components/games/memory-management/paging-l2/HeistGame"), { ssr: false })
+const HeistGameL3 = dynamic(() => import("@/components/games/memory-management/paging-l3/HeistGame"), { ssr: false })
 const FirstFCFSGame = dynamic(() => import("@/components/games/cpu-scheduling/fcfs-l1/FirstFCFSGame"), { ssr: false })
 const FirstFCFSGameL2 = dynamic(() => import("@/components/games/cpu-scheduling/fcfs-l2/FirstFCFSGame"), { ssr: false })
 const FirstFCFSGameL3 = dynamic(() => import("@/components/games/cpu-scheduling/fcfs-l3/FirstFCFSGame"), { ssr: false })
@@ -51,6 +54,9 @@ export default function GamePage() {
   const isWorstFitBasic = moduleId === "memory-management" && gameId === "worst-fit-l1"
   const isWorstFitL2 = moduleId === "memory-management" && gameId === "worst-fit-l2"
   const isWorstFitL3 = moduleId === "memory-management" && gameId === "worst-fit-l3"
+  const isPagingL1 = moduleId === "memory-management" && gameId === "paging-l1"
+  const isPagingL2 = moduleId === "memory-management" && gameId === "paging-l2"
+  const isPagingL3 = moduleId === "memory-management" && gameId === "paging-l3"
   const isFCFSBasic = moduleId === "cpu-scheduling" && gameId === "fcfs-l1"
   const isFCFSL2 = moduleId === "cpu-scheduling" && gameId === "fcfs-l2"
   const isFCFSL3 = moduleId === "cpu-scheduling" && gameId === "fcfs-l3"
@@ -113,6 +119,18 @@ export default function GamePage() {
       ) : isWorstFitL3 ? (
         <div className="w-full h-screen overflow-hidden">
           <WorstFitGameL3 />
+        </div>
+      ) : isPagingL1 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <HeistGameL1 />
+        </div>
+      ) : isPagingL2 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <HeistGameL2 />
+        </div>
+      ) : isPagingL3 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <HeistGameL3 />
         </div>
       ) : isFCFSBasic ? (
         <div className="w-full h-screen overflow-hidden">
