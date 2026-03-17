@@ -15,6 +15,24 @@ const WorstFitGameL3 = dynamic(() => import("@/components/games/memory-managemen
 const HeistGameL1 = dynamic(() => import("@/components/games/memory-management/paging-l1/HeistGame"), { ssr: false })
 const HeistGameL2 = dynamic(() => import("@/components/games/memory-management/paging-l2/HeistGame"), { ssr: false })
 const HeistGameL3 = dynamic(() => import("@/components/games/memory-management/paging-l3/HeistGame"), { ssr: false })
+const SegmentationGameL1 = dynamic(() => import("@/components/games/memory-management/segmentation-l1/SegmentationGame"), {
+  ssr: false,
+})
+const FragmentationGameL1 = dynamic(
+  () =>
+    import("@/components/games/memory-management/compaction-l1/FragmentationGame").then((m) => m.FragmentationGameL1),
+  { ssr: false }
+)
+const FragmentationGameL2 = dynamic(
+  () =>
+    import("@/components/games/memory-management/compaction-l2/FragmentationGame").then((m) => m.FragmentationGameL2),
+  { ssr: false }
+)
+const FragmentationGameL3 = dynamic(
+  () =>
+    import("@/components/games/memory-management/compaction-l3/FragmentationGame").then((m) => m.FragmentationGameL3),
+  { ssr: false }
+)
 const FirstFCFSGame = dynamic(() => import("@/components/games/cpu-scheduling/fcfs-l1/FirstFCFSGame"), { ssr: false })
 const FirstFCFSGameL2 = dynamic(() => import("@/components/games/cpu-scheduling/fcfs-l2/FirstFCFSGame"), { ssr: false })
 const FirstFCFSGameL3 = dynamic(() => import("@/components/games/cpu-scheduling/fcfs-l3/FirstFCFSGame"), { ssr: false })
@@ -57,6 +75,10 @@ export default function GamePage() {
   const isPagingL1 = moduleId === "memory-management" && gameId === "paging-l1"
   const isPagingL2 = moduleId === "memory-management" && gameId === "paging-l2"
   const isPagingL3 = moduleId === "memory-management" && gameId === "paging-l3"
+  const isSegmentationL1 = moduleId === "memory-management" && gameId === "segmentation-l1"
+  const isFragmentationL1 = moduleId === "memory-management" && gameId === "fragmentation-l1"
+  const isFragmentationL2 = moduleId === "memory-management" && gameId === "fragmentation-l2"
+  const isFragmentationL3 = moduleId === "memory-management" && gameId === "fragmentation-l3"
   const isFCFSBasic = moduleId === "cpu-scheduling" && gameId === "fcfs-l1"
   const isFCFSL2 = moduleId === "cpu-scheduling" && gameId === "fcfs-l2"
   const isFCFSL3 = moduleId === "cpu-scheduling" && gameId === "fcfs-l3"
@@ -131,6 +153,22 @@ export default function GamePage() {
       ) : isPagingL3 ? (
         <div className="w-full h-screen overflow-hidden">
           <HeistGameL3 />
+        </div>
+      ) : isSegmentationL1 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <SegmentationGameL1 />
+        </div>
+      ) : isFragmentationL1 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <FragmentationGameL1 />
+        </div>
+      ) : isFragmentationL2 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <FragmentationGameL2 />
+        </div>
+      ) : isFragmentationL3 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <FragmentationGameL3 />
         </div>
       ) : isFCFSBasic ? (
         <div className="w-full h-screen overflow-hidden">
