@@ -1,0 +1,51 @@
+### **The Game Concept: Skydiving Logistics (Counting Semaphore)**
+
+This game simulates a **Counting Semaphore ($S$)** where a finite number of resources must be shared among multiple processes.
+
+* **The Resource ($S$):** Parachute Packs.
+* **The Processes:** Skydivers.
+* **The Critical Section:** The Free-Fall (The jump).
+* **The Blocked Queue:** The Hangar Bench.
+
+---
+
+### **Game Flow & Level Logic**
+
+#### **Level 1: Clear Skies (Basic Allocation)**
+
+* **The Goal:** Successfully launch 5 divers.
+* **The Play:** The **Asset 5 (Plane)** spawns divers. Players click a diver to perform a `Wait()` operation. If **Asset 3 (Rack)** has an available **Asset 4 (Pack)**, the diver grabs it ($S$ decrements) and boards the plane.
+* **The Visual:** The LED on the rack shows the count dropping from 5 down to 0.
+* **Lesson:** Resources are finite. You can't jump without a permit (the pack).
+
+#### **Level 2: The Hangar Jam (The Blocked Queue)**
+
+* **The Goal:** Manage a crowd of 10 divers with only 3 packs.
+* **The Play:** When the rack is empty ($S=0$), new divers cannot board the plane. They automatically move to **Asset 7 (Bench)**.
+* **The Visual:** This is the **Blocked Queue**. Divers sit and wait until a `Signal()` occurs. When a diver lands on **Asset 2 (Landing Pad)** and the player clicks them to "Return Pack," the pack teleports back to the rack ($S$ increments), and the first diver on the bench immediately stands up to take it.
+* **Lesson:** When $S \le 0$, processes must block and wait for a signal from a departing process.
+
+#### **Level 3: The Infinite Fall (Resource Leak/Deadlock)**
+
+* **The Goal:** Prevent a system freeze.
+* **The Play:** Some divers get "stuck" in a glide or refuse to land (simulating a process that doesn't exit the Critical Section).
+* **The Visual:** The **Asset 8 (Warning Light)** flashes as the bench fills up and no packs are being returned. The player must use "Management Tools" to force a landing to free up the semaphore.
+* **Lesson:** If resources are held and never released, the system reaches a deadlock where no new processes can progress.
+
+---
+
+### **Asset Assembly Guide for the Team**
+
+| Layer | Component | Function |
+| --- | --- | --- |
+| **Background** | **Asset 1 (Sky)** | The vertical scrolling canvas for the jump. |
+| **The Resource** | **Asset 3 & 4** | The Semaphore counter and the "Permit" objects. |
+| **The Queue** | **Asset 7 (Bench)** | The visual container for "Blocked" process threads. |
+| **The Process** | **Asset 6 (Divers)** | The entities that cycle through states: Ready → Running (Falling) → Terminated (Landed). |
+| **The UI** | **Asset 8 (HUD)** | The real-time monitor for the Integer value of $S$ and the Queue size. |
+
+### **Summary for the Team**
+
+1. **Logic:** Every time a diver is equipped, `S--`. Every time a pack is returned, `S++`.
+2. **State Machine:** Use the **Asset 6 Sprite Sheet** to switch the diver’s look based on whether they are "Waiting," "Equipped," or "Falling."
+3. **The Trigger:** The "Return Pack" click is the most important part—it is the `V()` or `Signal()` operation that "wakes up" the next diver in the blocked queue.

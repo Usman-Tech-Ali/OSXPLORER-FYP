@@ -57,12 +57,15 @@ const MutexGameL3 = dynamic(() => import("@/components/games/process-synchroniza
 const BinarySemaphoreGame = dynamic(() => import("@/components/games/process-synchronization/binary-semaphore-l1/BinarySemaphoreGame"), { ssr: false })
 const BinarySemaphoreGameL2 = dynamic(() => import("@/components/games/process-synchronization/binary-semaphore-l2/BinarySemaphoreGame"), { ssr: false })
 const BinarySemaphoreGameL3 = dynamic(() => import("@/components/games/process-synchronization/binary-semaphore-l3/BinarySemaphoreGame"), { ssr: false })
+const CountingSemaphoreGameL1 = dynamic(() => import("@/components/games/process-synchronization/counting-semaphore-l1/CountingSemaphoreGame"), { ssr: false })
+const CountingSemaphoreGameL2 = dynamic(() => import("@/components/games/process-synchronization/counting-semaphore-l2/CountingSemaphoreGame"), { ssr: false })
+const CountingSemaphoreGameL3 = dynamic(() => import("@/components/games/process-synchronization/counting-semaphore-l3/CountingSemaphoreGame"), { ssr: false })
 
 export default function GamePage() {
   const params = useParams()
   const { moduleId, gameId } = params
 
-  // Check which game to show
+  // Memory Management
   const isFirstFitBasic = moduleId === "memory-management" && gameId === "first-fit-l1"
   const isFirstFitL2 = moduleId === "memory-management" && gameId === "first-fit-l2"
   const isFirstFitL3 = moduleId === "memory-management" && gameId === "first-fit-l3"
@@ -79,6 +82,8 @@ export default function GamePage() {
   const isFragmentationL1 = moduleId === "memory-management" && gameId === "fragmentation-l1"
   const isFragmentationL2 = moduleId === "memory-management" && gameId === "fragmentation-l2"
   const isFragmentationL3 = moduleId === "memory-management" && gameId === "fragmentation-l3"
+
+  // CPU Scheduling
   const isFCFSBasic = moduleId === "cpu-scheduling" && gameId === "fcfs-l1"
   const isFCFSL2 = moduleId === "cpu-scheduling" && gameId === "fcfs-l2"
   const isFCFSL3 = moduleId === "cpu-scheduling" && gameId === "fcfs-l3"
@@ -94,6 +99,8 @@ export default function GamePage() {
   const isRRBasic = moduleId === "cpu-scheduling" && gameId === "rr-l1"
   const isRRL2 = moduleId === "cpu-scheduling" && gameId === "rr-l2"
   const isRRL3 = moduleId === "cpu-scheduling" && gameId === "rr-l3"
+
+  // Process Synchronization
   const isCSBasic = moduleId === "process-synchronization" && gameId === "critical-section-l1"
   const isCSL2 = moduleId === "process-synchronization" && gameId === "critical-section-l2"
   const isCSL3 = moduleId === "process-synchronization" && gameId === "critical-section-l3"
@@ -103,6 +110,9 @@ export default function GamePage() {
   const isBinarySemaphoreBasic = moduleId === "process-synchronization" && gameId === "binary-semaphore-l1"
   const isBinarySemaphoreL2 = moduleId === "process-synchronization" && gameId === "binary-semaphore-l2"
   const isBinarySemaphoreL3 = moduleId === "process-synchronization" && gameId === "binary-semaphore-l3"
+  const isCountingSemaphoreL1 = moduleId === "process-synchronization" && gameId === "counting-semaphore-l1"
+  const isCountingSemaphoreL2 = moduleId === "process-synchronization" && gameId === "counting-semaphore-l2"
+  const isCountingSemaphoreL3 = moduleId === "process-synchronization" && gameId === "counting-semaphore-l3"
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -265,6 +275,18 @@ export default function GamePage() {
       ) : isBinarySemaphoreL3 ? (
         <div className="w-full h-screen overflow-hidden">
           <BinarySemaphoreGameL3 />
+        </div>
+      ) : isCountingSemaphoreL1 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <CountingSemaphoreGameL1 />
+        </div>
+      ) : isCountingSemaphoreL2 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <CountingSemaphoreGameL2 />
+        </div>
+      ) : isCountingSemaphoreL3 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <CountingSemaphoreGameL3 />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-screen">
