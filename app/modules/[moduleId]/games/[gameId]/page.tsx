@@ -60,6 +60,9 @@ const BinarySemaphoreGameL3 = dynamic(() => import("@/components/games/process-s
 const CountingSemaphoreGameL1 = dynamic(() => import("@/components/games/process-synchronization/counting-semaphore-l1/CountingSemaphoreGame"), { ssr: false })
 const CountingSemaphoreGameL2 = dynamic(() => import("@/components/games/process-synchronization/counting-semaphore-l2/CountingSemaphoreGame"), { ssr: false })
 const CountingSemaphoreGameL3 = dynamic(() => import("@/components/games/process-synchronization/counting-semaphore-l3/CountingSemaphoreGame"), { ssr: false })
+const ProducerConsumerGameL1 = dynamic(() => import("@/components/games/process-synchronization/producer-consumer-l1/ProducerConsumerGame"), { ssr: false })
+const ProducerConsumerGameL2 = dynamic(() => import("@/components/games/process-synchronization/producer-consumer-l2/ProducerConsumerGame"), { ssr: false })
+const ProducerConsumerGameL3 = dynamic(() => import("@/components/games/process-synchronization/producer-consumer-l3/ProducerConsumerGame"), { ssr: false })
 
 export default function GamePage() {
   const params = useParams()
@@ -113,6 +116,9 @@ export default function GamePage() {
   const isCountingSemaphoreL1 = moduleId === "process-synchronization" && gameId === "counting-semaphore-l1"
   const isCountingSemaphoreL2 = moduleId === "process-synchronization" && gameId === "counting-semaphore-l2"
   const isCountingSemaphoreL3 = moduleId === "process-synchronization" && gameId === "counting-semaphore-l3"
+  const isProducerConsumerL1 = moduleId === "process-synchronization" && gameId === "producer-consumer-l1"
+  const isProducerConsumerL2 = moduleId === "process-synchronization" && gameId === "producer-consumer-l2"
+  const isProducerConsumerL3 = moduleId === "process-synchronization" && gameId === "producer-consumer-l3"
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -287,6 +293,18 @@ export default function GamePage() {
       ) : isCountingSemaphoreL3 ? (
         <div className="w-full h-screen overflow-hidden">
           <CountingSemaphoreGameL3 />
+        </div>
+      ) : isProducerConsumerL1 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <ProducerConsumerGameL1 />
+        </div>
+      ) : isProducerConsumerL2 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <ProducerConsumerGameL2 />
+        </div>
+      ) : isProducerConsumerL3 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <ProducerConsumerGameL3 />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-screen">
