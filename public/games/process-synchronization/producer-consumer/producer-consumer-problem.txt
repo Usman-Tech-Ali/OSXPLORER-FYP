@@ -1,0 +1,52 @@
+### **The Game Concept: Data Relay Station (Producer-Consumer Problem)**
+
+This game is a direct simulation of a **Bounded Buffer** problem.
+
+* **The Producer:** **Asset 4 (Drones)** create **Asset 3 (Data Packets)**.
+* **The Consumer:** **Asset 5 (Satellite)** consumes packets to beam them to Earth.
+* **The Buffer:** **Asset 2 (Pedestal)** has 10 slots.
+* **The Guard:** **Asset 6 (Mutex Shield)** ensures only one entity touches the Pedestal at a time.
+
+---
+
+### **Game Flow & Level Logic**
+
+#### **Level 1: Manual Transmission (The Bounded Buffer)**
+
+* **The Goal:** Fill the buffer and empty it without errors.
+* **The Play:** The player manually clicks Drones to "Drop Data" and the Satellite to "Transmit."
+* **The Logic:** If the player tries to drop data when `EMPTY_SLOTS == 0`, a warning sounds. If they try to transmit when `FULL_SLOTS == 0`, the system stalls.
+* **Lesson:** A Producer cannot add to a full buffer; a Consumer cannot take from an empty one.
+
+#### **Level 2: Automated Sync (Race Conditions & Mutex)**
+
+* **The Goal:** Let the system run automatically without "Corrupting Data."
+* **The Play:** Drones and the Satellite now move on their own timers. The player must click **Asset 6 (Mutex Shield)** to "Lock" the pedestal when a Drone or Satellite is near.
+* **The Penalty:** If a Drone and the Satellite both touch the pedestal at the exact same time without the shield, a "Race Condition" occurs, the data packet explodes, and the player loses a life.
+* **Lesson:** Mutual Exclusion (Mutex) is required to protect the "Critical Section" (the shared buffer).
+
+#### **Level 3: The Solar Storm (Throughput & Congestion)**
+
+* **The Goal:** Prevent a total system overflow.
+* **The Play:** A "Starstorm" makes the Drones produce data 3x faster. The buffer fills up almost instantly.
+* **The Challenge:** The player must manage the **Asset 8 (HUD)** counters. If the Drones are forced to wait too long because the buffer is full ($S_{empty} = 0$), they start losing battery. The player must "Overclock" the Satellite to consume faster.
+* **Lesson:** Balancing the rate of Production vs. Consumption is vital for system stability.
+
+---
+
+### **Asset Assembly Guide for the Team**
+
+| Layer | Component | Function |
+| --- | --- | --- |
+| **Background** | **Asset 1 (Space)** | The static backdrop for the relay station. |
+| **The Buffer** | **Asset 2 (Pedestal)** | The shared memory area (Array of 10 slots). |
+| **The Payload** | **Asset 3 (Packets)** | The data units moved between Producer and Consumer. |
+| **The Actors** | **Asset 4 & 5** | The Producer (Drone) and Consumer (Satellite) objects. |
+| **Sync FX** | **Asset 6 & 7** | The visual proof of Mutex locks and Data Beams. |
+| **The HUD** | **Asset 8 (Dashboard)** | Displays the Semaphores: $S_{empty}$, $S_{full}$, and Mutex state. |
+
+### **Summary for the Team**
+
+1. **The Wait:** Producers must block when $S_{empty} = 0$. Consumers must block when $S_{full} = 0$.
+2. **The Mutex:** Use **Asset 6** to visually represent the `wait(mutex)` and `signal(mutex)` operations. When the shield is up, the "Critical Section" code is locked.
+3. **The Flow:** The game is won by maintaining a steady "Heartbeat" where the buffer is never totally empty or totally full.
