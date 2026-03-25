@@ -1,0 +1,52 @@
+### **The Game Concept: Nuclear Cooling Logic (Dining Philosopher)**
+
+This game is a high-stakes simulation of the **Dining Philosophers Problem**.
+
+* **The Philosophers:** **Asset 2 (Consoles)** representing the 5 reactor sectors.
+* **The Resources:** **Asset 3 (Valves)**. There are only 5 valves for 5 sectors.
+* **The Goal:** A sector must "own" both the valve to its left and its right to start **Asset 4 (Coolant Flow)** and lower its temperature.
+
+---
+
+### **Game Flow & Level Logic**
+
+#### **Level 1: The Training Run (Resource Contention)**
+
+* **The Play:** The player manually assigns valves to sectors as they heat up.
+* **The Lesson:** You cannot cool two adjacent sectors at the same time because they share a valve. If Sector 1 is cooling, Sector 2 is blocked.
+* **Goal:** Successfully complete 10 "Cooling Cycles."
+
+#### **Level 2: The Logic Lock (Deadlock Management)**
+
+* **The Play:** Consoles now automatically grab their left valve as soon as they get "warm."
+* **The Hazard:** If all 5 sectors grab their left valve at the same time, no one can grab a right valve.
+* **The Visual:** **Asset 3 (Valves)** start hissing steam and turn red. This is **Deadlock**.
+* **The Fix:** The player must hit **Asset 6 (SCRAM Button)** to force everyone to release their valves and reset the system.
+
+#### **Level 3: Critical Mass (Starvation Prevention)**
+
+* **The Play:** Heat levels rise at different, random speeds for each sector.
+* **The Hazard:** If the player focuses only on Sectors 1 and 3, Sector 2 might never get the valves it needs.
+* **The Visual:** **Asset 5 (Heat Gauge)** for the ignored sector will hit the flashing red zone. This is **Starvation**.
+* **Goal:** Prioritize "starving" sectors to prevent a localized meltdown.
+
+---
+
+### **Asset Assembly Guide for the Team**
+
+| Layer | Component | Function |
+| --- | --- | --- |
+| **Background** | **Asset 1 (Reactor Floor)** | The static circular stage for the game. |
+| **The Philosophers** | **Asset 2 (Consoles)** | The 5 active workstations placed in a circle. |
+| **The Resources** | **Asset 3 (Valves)** | The 5 shared "Forks" placed *between* each console. |
+| **The Execution** | **Asset 4 (Coolant)** | The visual reward when a console holds 2 valves. |
+| **The Monitors** | **Asset 5 (Gauges)** | The "Health Bars" for each philosopher/sector. |
+| **The Rescue** | **Asset 6 (SCRAM)** | The global "Signal" to break a Deadlock. |
+
+---
+
+### **Summary for the Team**
+
+1. **The Constraint:** A valve object can only be "locked" by one console at a time.
+2. **The Deadlock Rule:** If `TotalValvesHeld == 5` and `ActiveCoolingCycles == 0`, trigger the "Hissing Steam" effect.
+3. **The Starvation Rule:** Every second a console is "Hungry" (needs valves but doesn't have them), its **Asset 5 (Gauge)** must increase.
