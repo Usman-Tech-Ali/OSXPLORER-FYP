@@ -63,6 +63,9 @@ const CountingSemaphoreGameL3 = dynamic(() => import("@/components/games/process
 const ProducerConsumerGameL1 = dynamic(() => import("@/components/games/process-synchronization/producer-consumer-l1/ProducerConsumerGame"), { ssr: false })
 const ProducerConsumerGameL2 = dynamic(() => import("@/components/games/process-synchronization/producer-consumer-l2/ProducerConsumerGame"), { ssr: false })
 const ProducerConsumerGameL3 = dynamic(() => import("@/components/games/process-synchronization/producer-consumer-l3/ProducerConsumerGame"), { ssr: false })
+const DiningPhilosophersGameL1 = dynamic(() => import("@/components/games/process-synchronization/dining-philosopher-l1/DiningPhilosophersGame"), { ssr: false })
+const DiningPhilosophersGameL2 = dynamic(() => import("@/components/games/process-synchronization/dining-philosopher-l2/DiningPhilosophersGame"), { ssr: false })
+const DiningPhilosophersGameL3 = dynamic(() => import("@/components/games/process-synchronization/dining-philosopher-l3/DiningPhilosophersGame"), { ssr: false })
 
 export default function GamePage() {
   const params = useParams()
@@ -119,6 +122,9 @@ export default function GamePage() {
   const isProducerConsumerL1 = moduleId === "process-synchronization" && gameId === "producer-consumer-l1"
   const isProducerConsumerL2 = moduleId === "process-synchronization" && gameId === "producer-consumer-l2"
   const isProducerConsumerL3 = moduleId === "process-synchronization" && gameId === "producer-consumer-l3"
+    const isDiningPhilosophersL1 = moduleId === "process-synchronization" && gameId === "dining-philosophers-l1"
+  const isDiningPhilosophersL2 = moduleId === "process-synchronization" && gameId === "dining-philosophers-l2"
+  const isDiningPhilosophersL3 = moduleId === "process-synchronization" && gameId === "dining-philosophers-l3"
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -306,6 +312,9 @@ export default function GamePage() {
         <div className="w-full h-screen overflow-hidden">
           <ProducerConsumerGameL3 />
         </div>
+        ) : isDiningPhilosophersL1 ? (<div className="w-full h-screen overflow-hidden"><DiningPhilosophersGameL1 /></div>
+      ) : isDiningPhilosophersL2 ? (<div className="w-full h-screen overflow-hidden"><DiningPhilosophersGameL2 /></div>
+      ) : isDiningPhilosophersL3 ? (<div className="w-full h-screen overflow-hidden"><DiningPhilosophersGameL3 /></div>
       ) : (
         <div className="flex flex-col items-center justify-center h-screen">
           <p className="text-xl mb-8">This is a placeholder for the game content.</p>
