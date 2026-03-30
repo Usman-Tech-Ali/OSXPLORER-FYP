@@ -57,9 +57,10 @@ export async function POST(req: NextRequest) {
     await newScore.save();
 
     // Update user's completed levels (if not already added)
-    const levelKey = `${moduleId}/${gameId}/${levelId}`;
-    if (!user.completedLevels.includes(levelKey)) {
-      user.completedLevels.push(levelKey);
+    // Store in format: gameId (e.g., "fcfs-l1", "sjf-l2")
+    // This matches the level IDs in modulesData
+    if (!user.completedLevels.includes(gameId)) {
+      user.completedLevels.push(gameId);
     }
 
     // Update user XP and level
