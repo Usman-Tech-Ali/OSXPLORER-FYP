@@ -188,32 +188,101 @@ export default function ProfileSettings() {
     return null
   }
 
-  const handleSaveProfile = () => {
-    setIsEditing(false)
-    // Here you would typically save to backend
-    console.log("Saving profile:", userData)
+  const handleSaveProfile = async () => {
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          displayName: userData.displayName,
+          username: userData.username,
+          email: userData.email,
+          bio: userData.bio,
+        }),
+      })
+
+      if (response.ok) {
+        setIsEditing(false)
+        alert('Profile updated successfully!')
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to update profile')
+      }
+    } catch (error) {
+      console.error('Profile update error:', error)
+      alert('Failed to update profile')
+    }
   }
 
-  const handleSettingChange = (category: string, setting: string, value: any) => {
-    setSettings((prev) => ({
-      ...prev,
+  const handleSettingChange = async (category: string, setting: string, value: any) => {
+    const newSettings = {
+      ...settings,
       [category]: {
-        ...prev[category as keyof typeof prev],
+        ...settings[category as keyof typeof settings],
         [setting]: value,
       },
-    }))
+    }
+    
+    setSettings(newSettings)
+
+    // Save to backend
+    try {
+      await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: newSettings }),
+      })
+    } catch (error) {
+      console.error('Settings update error:', error)
+    }
   }
 
-  const handlePasswordChange = () => {
-    setShowPasswordDialog(false)
-    // Handle password change logic
-    console.log("Password changed")
+  const handlePasswordChange = async () => {
+    const currentPassword = (document.getElementById('currentPassword') as HTMLInputElement)?.value
+    const newPassword = (document.getElementById('newPassword') as HTMLInputElement)?.value
+    const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement)?.value
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      alert('Please fill in all fields')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert('New passwords do not match')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/user/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+
+      if (response.ok) {
+        setShowPasswordDialog(false)
+        alert('Password changed successfully!')
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to change password')
+      }
+    } catch (error) {
+      console.error('Password change error:', error)
+      alert('Failed to change password')
+    }
   }
 
-  const handleAccountDeletion = () => {
+  const handleAccountDeletion = async () => {
+    const confirmText = (document.getElementById('confirmDelete') as HTMLInputElement)?.value
+    
+    if (confirmText !== 'DELETE') {
+      alert('Please type DELETE to confirm')
+      return
+    }
+
+    // TODO: Implement account deletion API
     setShowDeleteDialog(false)
-    // Handle account deletion logic
-    console.log("Account deletion requested")
+    alert('Account deletion requested. This feature will be implemented soon.')
   }
 
   const handleToggle2FA = () => {

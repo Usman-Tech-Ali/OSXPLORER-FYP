@@ -268,9 +268,10 @@ export async function checkAchievement(
       return recentScores.every(s => s.score >= threshold);
 
     case 'streak':
-      // Check login streak - simplified version
-      // You'd need to track daily logins for this
-      return false; // Placeholder - implement based on your login tracking
+      // Check login streak
+      const user = await User.findById(userId);
+      if (!user) return false;
+      return (user.currentStreak || 0) >= criteria.value;
 
     default:
       return false;

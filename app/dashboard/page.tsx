@@ -18,6 +18,7 @@ import {
   Clock,
   Crown,
   Users,
+  Flame,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -132,6 +133,7 @@ export default function Dashboard() {
   const [progress, setProgress] = useState<UserProgress | null>(null)
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const [streakData, setStreakData] = useState({ currentStreak: 0, longestStreak: 0 })
 
   useEffect(() => {
     setMounted(true)
@@ -156,6 +158,13 @@ export default function Dashboard() {
       if (response.ok) {
         const data = await response.json()
         setProgress(data)
+      }
+      
+      // Fetch streak data
+      const streakResponse = await fetch("/api/user/streak")
+      if (streakResponse.ok) {
+        const streakData = await streakResponse.json()
+        setStreakData(streakData.streak)
       }
     } catch (error) {
       console.error("Failed to fetch progress:", error)
@@ -284,7 +293,7 @@ export default function Dashboard() {
             {/* Quick Stats Row */}
             <div>
               <h2 className="text-2xl font-bold mb-6 text-white">Quick Stats</h2>
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-4 gap-6">
                 <Card className="bg-gray-900/50 border-gray-700/50 backdrop-blur-sm stats-card hover:border-yellow-500/50 transition-all duration-300">
                   <CardContent className="p-6 text-center">
                     <div className="flex items-center justify-center mb-4">
@@ -320,6 +329,18 @@ export default function Dashboard() {
                     </div>
                     <div className="text-3xl font-bold text-white mb-2">{userData.badgesEarned}</div>
                     <p className="text-gray-400">Badges Earned</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gray-900/50 border-gray-700/50 backdrop-blur-sm stats-card hover:border-orange-500/50 transition-all duration-300">
+                  <CardContent className="p-6 text-center">
+                    <div className="flex items-center justify-center mb-4">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-r from-orange-500 to-red-600 flex items-center justify-center">
+                        <Flame className="w-6 h-6 text-white" />
+                      </div>
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">{streakData.currentStreak}</div>
+                    <p className="text-gray-400">Day Streak 🔥</p>
                   </CardContent>
                 </Card>
               </div>

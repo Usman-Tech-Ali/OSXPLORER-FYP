@@ -21,8 +21,10 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { miniQuestData } from "../miniQuestData"
+import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 
-function getSidebar(module: any) {
+function getSidebar(module: any, realStats: any) {
   if (module.sidebarType === "scheduler") {
     return (
       <>
@@ -37,17 +39,17 @@ function getSidebar(module: any) {
           <CardContent className="space-y-4">
             <div className="flex justify-between">
               <span className="text-gray-400">Total XP:</span>
-              <span className="text-white font-bold">{module.statsData.totalXP}</span>
+              <span className="text-white font-bold">{realStats.totalXP}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Levels Completed:</span>
-              <span className="text-white font-bold">{module.statsData.levelsCompleted}</span>
+              <span className="text-white font-bold">{realStats.levelsCompleted}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Current Streak:</span>
               <span className="text-white font-bold flex items-center">
                 <Flame className="w-5 h-4 text-orange-500 mr-1" />
-                {module.statsData.currentStreak} days
+                {realStats.currentStreak} days
               </span>
             </div>
           </CardContent>
@@ -63,11 +65,11 @@ function getSidebar(module: any) {
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-white font-medium">{module.statsData.nextAchievement.name}</span>
-                <span className="text-sm text-gray-400">{module.statsData.nextAchievement.progress}%</span>
+                <span className="text-white font-medium">{realStats.nextAchievement.name}</span>
+                <span className="text-sm text-gray-400">{realStats.nextAchievement.progress}%</span>
               </div>
-              <Progress value={module.statsData.nextAchievement.progress} className="h-2" />
-              <p className="text-sm text-gray-400">{module.statsData.nextAchievement.description}</p>
+              <Progress value={realStats.nextAchievement.progress} className="h-2" />
+              <p className="text-sm text-gray-400">{realStats.nextAchievement.description}</p>
             </div>
           </CardContent>
         </Card>
@@ -123,17 +125,17 @@ function getSidebar(module: any) {
           <CardContent className="space-y-4">
             <div className="flex justify-between">
               <span className="text-gray-400">Total XP:</span>
-              <span className="text-white font-bold">{module.statsData.totalXP}</span>
+              <span className="text-white font-bold">{realStats.totalXP}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Levels Completed:</span>
-              <span className="text-white font-bold">{module.statsData.levelsCompleted}</span>
+              <span className="text-white font-bold">{realStats.levelsCompleted}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Current Streak:</span>
               <span className="text-white font-bold flex items-center">
                 <Flame className="w-5 h-4 text-orange-500 mr-1" />
-                {module.statsData.currentStreak} days
+                {realStats.currentStreak} days
               </span>
             </div>
           </CardContent>
@@ -149,11 +151,11 @@ function getSidebar(module: any) {
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-white font-medium">{module.statsData.nextAchievement.name}</span>
-                <span className="text-sm text-gray-400">{module.statsData.nextAchievement.progress}%</span>
+                <span className="text-white font-medium">{realStats.nextAchievement.name}</span>
+                <span className="text-sm text-gray-400">{realStats.nextAchievement.progress}%</span>
               </div>
-              <Progress value={module.statsData.nextAchievement.progress} className="h-2" />
-              <p className="text-sm text-gray-400">{module.statsData.nextAchievement.description}</p>
+              <Progress value={realStats.nextAchievement.progress} className="h-2" />
+              <p className="text-sm text-gray-400">{realStats.nextAchievement.description}</p>
             </div>
           </CardContent>
         </Card>
@@ -209,15 +211,15 @@ function getSidebar(module: any) {
           <CardContent className="space-y-4">
             <div className="flex justify-between">
               <span className="text-gray-400">Total XP:</span>
-              <span className="text-white font-bold">{module.statsData.totalXP}</span>
+              <span className="text-white font-bold">{realStats.totalXP}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Current Threshold:</span>
-              <span className="text-white font-bold">Level {module.statsData.currentThreshold}</span>
+              <span className="text-white font-bold">Level {realStats.currentThreshold || 2}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Next Unlock:</span>
-              <span className="text-white font-bold">Level {module.statsData.nextUnlock}</span>
+              <span className="text-white font-bold">Level {realStats.nextUnlock || 3}</span>
             </div>
           </CardContent>
         </Card>
@@ -232,11 +234,11 @@ function getSidebar(module: any) {
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-white font-medium">{module.statsData.nextAchievement.name}</span>
-                <span className="text-sm text-gray-400">{module.statsData.nextAchievement.progress}%</span>
+                <span className="text-white font-medium">{realStats.nextAchievement.name}</span>
+                <span className="text-sm text-gray-400">{realStats.nextAchievement.progress}%</span>
               </div>
-              <Progress value={module.statsData.nextAchievement.progress} className="h-2" />
-              <p className="text-sm text-gray-400">{module.statsData.nextAchievement.description}</p>
+              <Progress value={realStats.nextAchievement.progress} className="h-2" />
+              <p className="text-sm text-gray-400">{realStats.nextAchievement.description}</p>
             </div>
           </CardContent>
         </Card>
@@ -281,18 +283,27 @@ function getSidebar(module: any) {
   return null
 }
 
-function MiniQuestCard({ moduleId, sectionIndex, unlocked, topicId }: { moduleId: string; sectionIndex: number; unlocked: boolean; topicId: string }) {
+function MiniQuestCard({ moduleId, sectionIndex, unlocked, topicId, completed }: { moduleId: string; sectionIndex: number; unlocked: boolean; topicId: string; completed: boolean }) {
   return (
     <div className="md:col-span-2 lg:col-span-3 mb-6">
       <Card className="w-full bg-gradient-to-r from-red-900 to-red-500 border-red-500/50 text-white shadow-lg transition-all duration-300 hover:scale-105">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-400" />
-              Mini-Quest
-            </CardTitle>
+            <div className="flex items-center gap-2 mb-2">
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-yellow-400" />
+                Mini-Quest
+              </CardTitle>
+              {completed && (
+                <Badge className="bg-green-500 text-white border-green-600">
+                  ✓ DONE
+                </Badge>
+              )}
+            </div>
             <CardDescription className="text-gray-200 mt-1 text-xs">
-              Complete this Mini-Quest to unlock the next topic!
+              {completed 
+                ? "You've completed this mini-quest! Play again to improve your score."
+                : "Complete this Mini-Quest to unlock the next topic!"}
             </CardDescription>
           </div>
           <div className="mt-4 sm:mt-0">
@@ -300,7 +311,7 @@ function MiniQuestCard({ moduleId, sectionIndex, unlocked, topicId }: { moduleId
               <Button className="neon-button-primary bg-white hover:bg-red-200 font-bold" asChild>
                 <Link href={`/modules/${moduleId}/mini-quest/${topicId}`}>
                   <Flame className="w-4 h-4 mr-2 text-white" />
-                  Start Mini-Quest
+                  {completed ? "Play Again" : "Start Mini-Quest"}
                 </Link>
               </Button>
             ) : (
@@ -516,16 +527,102 @@ export default function ModulePage() {
   const params = useParams()
   const moduleId = params.moduleId as string
   const module = modulesData[moduleId as keyof typeof modulesData]
+  const { data: session } = useSession()
+  
+  const [userProgress, setUserProgress] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [completedLevels, setCompletedLevels] = useState<string[]>([])
+
+  useEffect(() => {
+    const fetchUserProgress = async () => {
+      if (!session?.user) {
+        setLoading(false)
+        return
+      }
+      
+      try {
+        const response = await fetch('/api/user/progress')
+        if (response.ok) {
+          const data = await response.json()
+          setUserProgress(data)
+          setCompletedLevels(data.user.completedLevels || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch user progress:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserProgress()
+  }, [session])
 
   if (!module) {
     return <div className="min-h-screen flex items-center justify-center text-white">Module not found</div>
   }
 
+  // Update level statuses based on user progress
+  const getUpdatedModule = () => {
+    if (!userProgress) return module
+    
+    return {
+      ...module,
+      levelSections: module.levelSections.map((section: any) => ({
+        ...section,
+        levels: section.levels.map((level: any) => ({
+          ...level,
+          status: completedLevels.includes(level.id) ? 'completed' : 'available'
+        }))
+      }))
+    }
+  }
+
+  const updatedModule = getUpdatedModule() as typeof module
+
+  // Calculate real stats from user progress
+  const getRealStats = () => {
+    if (!userProgress) return module.statsData
+    
+    const moduleCompletedLevels = completedLevels.filter((levelId: string) => 
+      updatedModule.levelSections.some((section: any) => 
+        section.levels.some((level: any) => level.id === levelId)
+      )
+    )
+    
+    const totalXPForModule = moduleCompletedLevels.reduce((sum: number, levelId: string) => {
+      const level = updatedModule.levelSections
+        .flatMap((s: any) => s.levels)
+        .find((l: any) => l.id === levelId)
+      return sum + (level?.xpReward || 0)
+    }, 0)
+    
+    const totalLevelsInModule = updatedModule.levelSections.reduce(
+      (sum: any, section: any) => sum + section.levels.length, 
+      0
+    )
+    
+    const progress = totalLevelsInModule > 0 
+      ? Math.round((moduleCompletedLevels.length / totalLevelsInModule) * 100)
+      : 0
+
+    return {
+      ...module.statsData,
+      totalXP: totalXPForModule,
+      levelsCompleted: moduleCompletedLevels.length,
+      currentStreak: userProgress.user.currentStreak || 0,
+      nextAchievement: {
+        ...module.statsData.nextAchievement,
+        progress: progress
+      }
+    }
+  }
+
+  const realStats = getRealStats()
+
   // Determine unlock state for each section's mini-quest
   const isSectionCompleted = (sectionIdx: number) => {
-    if (sectionIdx === 0) return true // First section always unlocked
-    const prevSection = module.levelSections[sectionIdx - 1]
-    return prevSection.levels.every((lvl: any) => lvl.status === "completed")
+    const section = updatedModule.levelSections[sectionIdx]
+    return section.levels.every((lvl: any) => completedLevels.includes(lvl.id))
   }
 
   return (
@@ -550,7 +647,7 @@ export default function ModulePage() {
             </div>
             {/* Level Sections with Mini-Quest Cards */}
             <div className="space-y-12">
-              {module.levelSections.map((section: any, idx: number) => (
+              {updatedModule.levelSections.map((section: any, idx: number) => (
                 <div key={section.id}>
                   {/* Topic Title and Description */}
                   <div className="mb-6">
@@ -565,7 +662,13 @@ export default function ModulePage() {
                   {/* Mini-Quest Card after the end of each topic/section if mini-quest exists for this topic in any module */}
                   {(miniQuestData as any)[moduleId] && (miniQuestData as any)[moduleId][section.id] && (
                     <div className="mt-8">
-                      <MiniQuestCard moduleId={moduleId} sectionIndex={idx} unlocked={section.levels.every((lvl: any) => lvl.status === 'completed')} topicId={section.id} />
+                      <MiniQuestCard 
+                        moduleId={moduleId} 
+                        sectionIndex={idx} 
+                        unlocked={isSectionCompleted(idx)} 
+                        topicId={section.id}
+                        completed={completedLevels.includes(`miniquest-${section.id}`)}
+                      />
                     </div>
                   )}
                 </div>
@@ -574,7 +677,7 @@ export default function ModulePage() {
           </div>
           {/* Sidebar */}
           <div className="xl:col-span-1">
-            <div className="sticky top-8 space-y-6">{getSidebar(module)}</div>
+            <div className="sticky top-8 space-y-6">{getSidebar(module, realStats)}</div>
           </div>
         </div>
       </main>

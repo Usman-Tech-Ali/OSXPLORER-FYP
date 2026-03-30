@@ -48,6 +48,15 @@ export default function LoginPage() {
       if (result?.error) {
         setError(result.error)
       } else {
+        // Update login streak
+        try {
+          await fetch("/api/user/streak", {
+            method: "POST",
+          })
+        } catch (streakError) {
+          console.error("Failed to update streak:", streakError)
+        }
+        
         window.location.href = "/dashboard"
       }
     } catch (error) {
