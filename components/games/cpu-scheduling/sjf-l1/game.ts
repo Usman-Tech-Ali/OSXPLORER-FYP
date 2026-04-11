@@ -1,4 +1,5 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
+import { openAIFeedbackChat } from '../../shared/aiFeedbackChat';
 
 interface FileRequest {
   id: string;
@@ -64,9 +65,9 @@ export class SJFGame extends Phaser.Scene {
 
   private readonly PERSON_NAMES = ['Alice', 'Bob', 'Carol', 'Dave', 'Emma'];
   private readonly FILE_CONFIGS = {
-    small: { name: 'Small File', size: '📄', burstTime: 3 },
-    medium: { name: 'Medium File', size: '📋', burstTime: 5 },
-    large: { name: 'Large File', size: '📁', burstTime: 7 }
+    small: { name: 'Small File', size: 'ðŸ“„', burstTime: 3 },
+    medium: { name: 'Medium File', size: 'ðŸ“‹', burstTime: 5 },
+    large: { name: 'Large File', size: 'ðŸ“', burstTime: 7 }
   };
 
   private numPeople: number = 0;
@@ -173,7 +174,7 @@ export class SJFGame extends Phaser.Scene {
 
   private createUI(width: number, height: number) {
     // Title - cleaner and more prominent
-    const titleText = this.add.text(width / 2, 35, '🖨️ SJF CPU Scheduling Simulator', {
+    const titleText = this.add.text(width / 2, 35, 'ðŸ–¨ï¸ SJF CPU Scheduling Simulator', {
       fontSize: '32px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -275,7 +276,7 @@ export class SJFGame extends Phaser.Scene {
     scenarioBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     scenarioBox.setDepth(301);
 
-    const title = this.add.text(width / 2, boxY + 50, '🎯 SJF SCHEDULING', {
+    const title = this.add.text(width / 2, boxY + 50, 'ðŸŽ¯ SJF SCHEDULING', {
       fontSize: '36px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -291,7 +292,7 @@ export class SJFGame extends Phaser.Scene {
 
     const contentY = boxY + 145;
 
-    const howToPlayTitle = this.add.text(boxX + 50, contentY, '🎮 How to Play', {
+    const howToPlayTitle = this.add.text(boxX + 50, contentY, 'ðŸŽ® How to Play', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold'
@@ -308,16 +309,16 @@ export class SJFGame extends Phaser.Scene {
       lineSpacing: 6
     }).setDepth(302);
 
-    const rulesTitle = this.add.text(boxX + 50, contentY + 145, '⚠️ SJF Rules', {
+    const rulesTitle = this.add.text(boxX + 50, contentY + 145, 'âš ï¸ SJF Rules', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold'
     }).setDepth(302);
 
-    const rules = `   • Always select the SHORTEST file in queue
-   • Minimize average waiting time
-   • Process one file at a time
-   • Correct selection: +20 pts | Wrong: -10 pts`;
+    const rules = `   â€¢ Always select the SHORTEST file in queue
+   â€¢ Minimize average waiting time
+   â€¢ Process one file at a time
+   â€¢ Correct selection: +20 pts | Wrong: -10 pts`;
 
     const rulesText = this.add.text(boxX + 50, contentY + 180, rules, {
       fontSize: '16px',
@@ -325,7 +326,7 @@ export class SJFGame extends Phaser.Scene {
       lineSpacing: 6
     }).setDepth(302);
 
-    const goalTitle = this.add.text(boxX + 50, contentY + 280, '🎯 Goal', {
+    const goalTitle = this.add.text(boxX + 50, contentY + 280, 'ðŸŽ¯ Goal', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold'
@@ -349,7 +350,7 @@ export class SJFGame extends Phaser.Scene {
     startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
     startButton.setDepth(302);
 
-    const buttonText = this.add.text(width / 2, buttonY + 27, '🚀 START GAME', {
+    const buttonText = this.add.text(width / 2, buttonY + 27, 'ðŸš€ START GAME', {
       fontSize: '22px',
       color: '#000000',
       fontStyle: 'bold'
@@ -387,7 +388,7 @@ export class SJFGame extends Phaser.Scene {
     this.numPeople = Phaser.Math.Between(3, 5);
     
     this.phaseText.setText('Phase: People Arriving');
-    this.instructionText.setText(`🎲 ${this.numPeople} people have arrived with files!`);
+    this.instructionText.setText(`ðŸŽ² ${this.numPeople} people have arrived with files!`);
     
     this.timeEvent = this.time.addEvent({
       delay: 100,
@@ -471,7 +472,7 @@ export class SJFGame extends Phaser.Scene {
 
   private startCollectingRequests() {
     this.phaseText.setText('Phase: People Arriving');
-    this.instructionText.setText('⏳ Watch people arrive with their files...');
+    this.instructionText.setText('â³ Watch people arrive with their files...');
     
     // Animate people arriving one by one
     this.people.forEach((person, index) => {
@@ -759,7 +760,7 @@ export class SJFGame extends Phaser.Scene {
   private startProcessingPhase() {
     this.gamePhase = 'processing';
     this.phaseText.setText('Phase: Processing (SJF)');
-    this.instructionText.setText('🎯 Click on the SHORTEST file for delivery boy to process!');
+    this.instructionText.setText('ðŸŽ¯ Click on the SHORTEST file for delivery boy to process!');
     
     // Make board items clickable
     this.orderBoardTexts.forEach(container => {
@@ -781,7 +782,7 @@ export class SJFGame extends Phaser.Scene {
     }
 
     if (this.currentProcessingRequest) {
-      this.showMessage('⚠️ Delivery boy is busy processing!', '#FF0000');
+      this.showMessage('âš ï¸ Delivery boy is busy processing!', '#FF0000');
       return;
     }
 
@@ -799,7 +800,7 @@ export class SJFGame extends Phaser.Scene {
       this.wrongAttempts++;
       this.totalScore = Math.max(0, this.totalScore - 10);
       this.scoreText.setText(`Score: ${this.totalScore}`);
-      this.showMessage(`❌ Wrong! Select the SHORTEST file (${shortestRequest.burstTime}s)!`, '#FF0000');
+      this.showMessage(`âŒ Wrong! Select the SHORTEST file (${shortestRequest.burstTime}s)!`, '#FF0000');
       
       // Flash correct file
       if (shortestRequest.requestContainer) {
@@ -820,7 +821,7 @@ export class SJFGame extends Phaser.Scene {
   }
 
   private animateDeliveryBoyPickup(request: FileRequest) {
-    this.instructionText.setText(`🚶 Delivery boy picking up ${request.personName}'s file...`);
+    this.instructionText.setText(`ðŸš¶ Delivery boy picking up ${request.personName}'s file...`);
     
     // Process the file
     this.time.delayedCall(1000, () => {
@@ -876,7 +877,7 @@ export class SJFGame extends Phaser.Scene {
       // Better error message
       const fileConfig = this.FILE_CONFIGS[shortestRequest.fileSize];
       this.showMessage(
-        `❌ Wrong! SJF = Shortest Job First!\n` +
+        `âŒ Wrong! SJF = Shortest Job First!\n` +
         `Select Request #${shortestRequest.requestNumber} (${shortestRequest.burstTime}s) first!\n` +
         `You selected Request #${clickedRequest.requestNumber} (${clickedRequest.burstTime}s)`,
         '#FF0000'
@@ -906,7 +907,7 @@ export class SJFGame extends Phaser.Scene {
     this.scoreText.setText(`Score: ${this.totalScore}`);
     
     const fileConfig = this.FILE_CONFIGS[request.fileSize];
-    this.instructionText.setText(`📁 Processing ${fileConfig.name} (${request.burstTime}s)`);
+    this.instructionText.setText(`ðŸ“ Processing ${fileConfig.name} (${request.burstTime}s)`);
     
     this.progressBarBg.setVisible(true);
     this.progressBar.setVisible(true);
@@ -952,7 +953,7 @@ export class SJFGame extends Phaser.Scene {
             this.showResults();
           });
         } else {
-          this.instructionText.setText('🎯 Click on the SHORTEST file for delivery boy to process!');
+          this.instructionText.setText('ðŸŽ¯ Click on the SHORTEST file for delivery boy to process!');
         }
       }
     });
@@ -1035,7 +1036,7 @@ export class SJFGame extends Phaser.Scene {
           this.showResults();
         });
       } else {
-        this.instructionText.setText('🎯 Click on the SHORTEST file in the queue!');
+        this.instructionText.setText('ðŸŽ¯ Click on the SHORTEST file in the queue!');
       }
       return;
     }
@@ -1094,7 +1095,7 @@ export class SJFGame extends Phaser.Scene {
             });
             
             // Show success message
-            this.showMessage(`✅ File delivered to ${customer.name}!`, '#00FF00');
+            this.showMessage(`âœ… File delivered to ${customer.name}!`, '#00FF00');
             
             // Return delivery person to starting position
             this.tweens.add({
@@ -1110,7 +1111,7 @@ export class SJFGame extends Phaser.Scene {
                     this.showResults();
                   });
                 } else {
-                  this.instructionText.setText('🎯 Click on the SHORTEST file in the queue!');
+                  this.instructionText.setText('ðŸŽ¯ Click on the SHORTEST file in the queue!');
                 }
               }
             });
@@ -1144,14 +1145,31 @@ export class SJFGame extends Phaser.Scene {
     resultsBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     resultsBox.setDepth(301);
 
-    const title = this.add.text(width / 2, boxY + 60, '🎉 GAME COMPLETE!', {
+    const title = this.add.text(width / 2, boxY + 60, 'ðŸŽ‰ GAME COMPLETE!', {
       fontSize: '32px',
       color: '#FFD700',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(302);
 
     // Submit score to backend
-    this.submitScore();
+
+    const aiFeedbackBtn = this.add.text(140, height - 36, '💬 Chat with AI', {
+      fontSize: '16px',
+      color: '#FFFFFF',
+      backgroundColor: '#4CAF50',
+      padding: { x: 12, y: 8 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(500).setInteractive({ useHandCursor: true });
+
+    aiFeedbackBtn.on('pointerdown', () => {
+      const sceneAny = this as any;
+      openAIFeedbackChat({
+        gameType: this.scene.key,
+        score: sceneAny.totalScore ?? sceneAny.score ?? 0,
+        wrongAttempts: sceneAny.wrongAttempts ?? 0,
+        phase: sceneAny.gamePhase ?? 'results'
+      });
+    });
 
     const scoreText = this.add.text(width / 2, boxY + 120, `Final Score: ${this.totalScore}`, {
       fontSize: '28px',
@@ -1184,7 +1202,7 @@ export class SJFGame extends Phaser.Scene {
     restartButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 10);
     restartButton.setDepth(302);
 
-    const restartText = this.add.text(width / 2, buttonY + 25, '🔄 PLAY AGAIN', {
+    const restartText = this.add.text(width / 2, buttonY + 25, 'ðŸ”„ PLAY AGAIN', {
       fontSize: '20px',
       color: '#000000',
       fontStyle: 'bold'
@@ -1225,7 +1243,7 @@ export class SJFGame extends Phaser.Scene {
         const result = await response.json();
         if (result.achievementsUnlocked && result.achievementsUnlocked.length > 0) {
           this.showMessage(
-            `🎉 Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
+            `ðŸŽ‰ Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
             '#00FF00',
             3000
           );
@@ -1255,3 +1273,4 @@ export class SJFGame extends Phaser.Scene {
     });
   }
 }
+

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { openAIFeedbackChat } from '../../shared/aiFeedbackChat';
 
 const ASSET_PATH = '/games/memory-management/paging/';
 
@@ -203,9 +204,104 @@ export class PagingL2Game extends Phaser.Scene {
 
   private win() {
     this.gamePhase = 'results';
+    const { width, height } = this.cameras.main;
     this.phaseText.setText('Phase: Complete!');
     this.instructionText.setText('All gates open! Page faults: ' + this.pageFaults + ' (fewer is better – locality!)');
-    this.time.delayedCall(2500, () => this.scene.restart());
+    this.submitScore();
+
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.82);
+    overlay.fillRect(0, 0, width, height);
+    overlay.setDepth(28);
+
+    const boxWidth = 640;
+    const boxHeight = 400;
+    const boxX = width / 2 - boxWidth / 2;
+    const boxY = height / 2 - boxHeight / 2;
+
+    const resultsBox = this.add.graphics();
+    resultsBox.fillStyle(0x0a0e27, 0.98);
+    resultsBox.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
+    resultsBox.lineStyle(4, 0x00ffcc, 1);
+    resultsBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
+    resultsBox.setDepth(29);
+
+    this.add.text(width / 2, boxY + 42, '🎉 GAME COMPLETE!', {
+      fontSize: '32px',
+      color: '#00FFCC',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(30);
+
+    this.add.text(width / 2, boxY + 140, `Page Faults: ${this.pageFaults}\nGates Opened: ${this.gates.filter(g => g.passed).length}/${this.gates.length}`, {
+      fontSize: '22px',
+      color: '#FFFFFF',
+      align: 'center',
+      lineSpacing: 10
+    }).setOrigin(0.5).setDepth(30);
+
+    const aiButton = this.add.text(width / 2 - 210, boxY + 310, '💬 Chat with AI', {
+      fontSize: '18px',
+      color: '#FFFFFF',
+      backgroundColor: '#4CAF50',
+      padding: { x: 14, y: 10 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(30);
+
+    aiButton.on('pointerdown', () => {
+      openAIFeedbackChat({
+        gameType: this.scene.key,
+        score: Math.max(0, 100 - this.pageFaults * 10),
+        wrongAttempts: this.pageFaults,
+        phase: this.gamePhase,
+      });
+    });
+
+    const miniQuestButton = this.add.text(width / 2, boxY + 310, 'Mini-Quest', {
+      fontSize: '18px',
+      color: '#000000',
+      backgroundColor: '#00E5FF',
+      padding: { x: 18, y: 10 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(30);
+
+    miniQuestButton.on('pointerdown', () => {
+      window.location.assign('/modules/memory-management/mini-quest/paging');
+    });
+
+    const replayButton = this.add.text(width / 2 + 210, boxY + 310, 'Play Again', {
+      fontSize: '18px',
+      color: '#FFFFFF',
+      backgroundColor: '#4CAF50',
+      padding: { x: 18, y: 10 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(30);
+
+    replayButton.on('pointerdown', () => this.scene.restart());
+  }
+
+  private async submitScore() {
+    try {
+      await fetch('/api/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: 'paging-l2',
+          moduleId: 'memory-management',
+          levelId: 'l2',
+          score: Math.max(0, 100 - this.pageFaults * 10),
+          timeSpent: 1,
+          accuracy: Math.max(0, 100 - this.pageFaults * 10),
+          wrongAttempts: this.pageFaults,
+          metadata: {
+            pageFaults: this.pageFaults,
+            gatesOpened: this.gates.filter(g => g.passed).length,
+            totalGates: this.gates.length,
+          },
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to submit paging L2 score:', error);
+    }
   }
 
   private atVan(): boolean {

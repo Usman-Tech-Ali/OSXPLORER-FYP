@@ -1,4 +1,5 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
+import { openAIFeedbackChat } from '../../shared/aiFeedbackChat';
 
 interface Car {
   sprite: Phaser.GameObjects.Sprite;
@@ -306,7 +307,7 @@ export class MutexGameL3Scene extends Phaser.Scene {
     modalBox.setDepth(301);
 
     // Title
-    const title = this.add.text(width / 2, boxY + 50, '🚗 MUTEX LOCK GAME', {
+    const title = this.add.text(width / 2, boxY + 50, 'ðŸš— MUTEX LOCK GAME', {
       fontSize: '36px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -325,7 +326,7 @@ export class MutexGameL3Scene extends Phaser.Scene {
     const contentY = boxY + 145;
 
     // Concept
-    const conceptTitle = this.add.text(boxX + 50, contentY, '💡 Concept', {
+    const conceptTitle = this.add.text(boxX + 50, contentY, 'ðŸ’¡ Concept', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -344,7 +345,7 @@ export class MutexGameL3Scene extends Phaser.Scene {
     }).setDepth(302);
 
     // How to Play
-    const howToPlayTitle = this.add.text(boxX + 50, contentY + 135, '🎮 How to Play', {
+    const howToPlayTitle = this.add.text(boxX + 50, contentY + 135, 'ðŸŽ® How to Play', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -364,16 +365,16 @@ export class MutexGameL3Scene extends Phaser.Scene {
     }).setDepth(302);
 
     // Rules
-    const rulesTitle = this.add.text(boxX + 50, contentY + 280, '⚠️ Rules', {
+    const rulesTitle = this.add.text(boxX + 50, contentY + 280, 'âš ï¸ Rules', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold',
       fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setDepth(302);
 
-    const rules = `   • Only ONE car can use the critical section at a time
-   • Wait for "UNLOCKED" status before clicking next car
-   • Clicking during "LOCKED" causes a crash!`;
+    const rules = `   â€¢ Only ONE car can use the critical section at a time
+   â€¢ Wait for "UNLOCKED" status before clicking next car
+   â€¢ Clicking during "LOCKED" causes a crash!`;
 
     const rulesText = this.add.text(boxX + 50, contentY + 315, rules, {
       fontSize: '16px',
@@ -395,7 +396,7 @@ export class MutexGameL3Scene extends Phaser.Scene {
     startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
     startButton.setDepth(302);
 
-    const buttonText = this.add.text(width / 2, buttonY + 27, '🚀 START GAME', {
+    const buttonText = this.add.text(width / 2, buttonY + 27, 'ðŸš€ START GAME', {
       fontSize: '22px',
       color: '#000000',
       fontStyle: 'bold',
@@ -493,10 +494,27 @@ export class MutexGameL3Scene extends Phaser.Scene {
     modalBox.setDepth(301);
 
     // Submit score to backend
-    this.submitScore();
+
+    const aiFeedbackBtn = this.add.text(140, height - 36, '💬 Chat with AI', {
+      fontSize: '16px',
+      color: '#FFFFFF',
+      backgroundColor: '#4CAF50',
+      padding: { x: 12, y: 8 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(500).setInteractive({ useHandCursor: true });
+
+    aiFeedbackBtn.on('pointerdown', () => {
+      const sceneAny = this as any;
+      openAIFeedbackChat({
+        gameType: this.scene.key,
+        score: sceneAny.totalScore ?? sceneAny.score ?? 0,
+        wrongAttempts: sceneAny.wrongAttempts ?? 0,
+        phase: sceneAny.gamePhase ?? 'results'
+      });
+    });
 
     // Title
-    const title = this.add.text(width / 2, boxY + 60, '🎉 GAME COMPLETE!', {
+    const title = this.add.text(width / 2, boxY + 60, 'ðŸŽ‰ GAME COMPLETE!', {
       fontSize: '36px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -523,13 +541,13 @@ export class MutexGameL3Scene extends Phaser.Scene {
     let performanceColor = '#FFFFFF';
     
     if (this.crashes === 0) {
-      performanceMsg = '🌟 PERFECT! No race conditions!';
+      performanceMsg = 'ðŸŒŸ PERFECT! No race conditions!';
       performanceColor = '#FFD700';
     } else if (this.crashes <= 2) {
-      performanceMsg = '👍 Good job! Few race conditions.';
+      performanceMsg = 'ðŸ‘ Good job! Few race conditions.';
       performanceColor = '#00FF00';
     } else {
-      performanceMsg = '💡 Practice more to avoid race conditions!';
+      performanceMsg = 'ðŸ’¡ Practice more to avoid race conditions!';
       performanceColor = '#FFA500';
     }
 
@@ -541,7 +559,7 @@ export class MutexGameL3Scene extends Phaser.Scene {
 
     // Learning summary
     const learningText = this.add.text(width / 2, resultsY + 160, 
-      'You learned about:\n• Mutex Locks\n• Critical Sections\n• Race Conditions', {
+      'You learned about:\nâ€¢ Mutex Locks\nâ€¢ Critical Sections\nâ€¢ Race Conditions', {
       fontSize: '16px',
       color: '#FFFFFF',
       align: 'center',
@@ -559,7 +577,7 @@ export class MutexGameL3Scene extends Phaser.Scene {
     restartButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 10);
     restartButton.setDepth(302);
 
-    const restartText = this.add.text(width / 2, buttonY + 25, '🔄 PLAY AGAIN', {
+    const restartText = this.add.text(width / 2, buttonY + 25, 'ðŸ”„ PLAY AGAIN', {
       fontSize: '20px',
       color: '#000000',
       fontStyle: 'bold'
@@ -593,3 +611,4 @@ export class MutexGameL3Scene extends Phaser.Scene {
     // Game loop updates if needed
   }
 }
+

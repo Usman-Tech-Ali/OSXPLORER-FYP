@@ -1,8 +1,9 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
+import { openAIFeedbackChat } from '../../shared/aiFeedbackChat';
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //  Constants & Types
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const N = 5; // number of philosophers / valves
 const ASSET_PATH = '/games/process-synchronization/dining-philosopher/';
 
@@ -27,7 +28,7 @@ interface Philosopher {
 }
 
 interface Valve {
-  id: number;           // 0-4 — valve i is BETWEEN philosopher i and (i+1)%N
+  id: number;           // 0-4 â€” valve i is BETWEEN philosopher i and (i+1)%N
   state: ValveState;
   heldBy: number | null;
   sprite: Phaser.GameObjects.Image;
@@ -46,9 +47,9 @@ interface LevelConfig {
   levelId: string;
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //  Base Scene
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class DiningPhilosophersBase extends Phaser.Scene {
   protected cfg!: LevelConfig;
   protected philosophers: Philosopher[] = [];
@@ -76,7 +77,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     this.cfg = cfg;
   }
 
-  // ── preload ──────────────────────────────────
+  // â”€â”€ preload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   preload() {
     this.load.image('reactor-bg', `${ASSET_PATH}Nuclear-Reactor-Core.png`);
     this.load.image('console-idle', `${ASSET_PATH}Cooling-Sector-Console-Idle.png`);
@@ -88,7 +89,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     this.load.image('heat-gauge', `${ASSET_PATH}Sector-Temperature-Indicator.png`);
   }
 
-  // ── create ───────────────────────────────────
+  // â”€â”€ create â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   create() {
     const { width, height } = this.scale;
     this.cx = width / 2;
@@ -110,7 +111,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     this.showIntroModal();
   }
 
-  // ── background ────────────────────────────────
+  // â”€â”€ background â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private buildBackground(w: number, h: number) {
     // dark bg
     this.add.rectangle(w / 2, h / 2, w, h, 0x080c10).setDepth(0);
@@ -118,7 +119,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
       .setDisplaySize(this.ringR * 2.6, this.ringR * 2.6).setDepth(1).setAlpha(0.92);
   }
 
-  // ── valves (forks) ────────────────────────────
+  // â”€â”€ valves (forks) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private buildValves() {
     for (let i = 0; i < N; i++) {
       const angle = (2 * Math.PI * i) / N - Math.PI / 2 + Math.PI / N;
@@ -140,7 +141,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     }
   }
 
-  // ── philosophers ──────────────────────────────
+  // â”€â”€ philosophers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private buildPhilosophers() {
     const labels = ['S-1', 'S-2', 'S-3', 'S-4', 'S-5'];
     for (let i = 0; i < N; i++) {
@@ -161,7 +162,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
 
       const heatBarFill = this.add.graphics().setDepth(9);
 
-      const heatText = this.add.text(px, py + 44, '0°', {
+      const heatText = this.add.text(px, py + 44, '0Â°', {
         fontSize: '11px', color: '#AAFFAA', fontFamily: 'monospace',
         backgroundColor: '#00000088', padding: { x: 3, y: 1 },
       }).setOrigin(0.5).setDepth(10);
@@ -193,7 +194,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     }
   }
 
-  // ── SCRAM button ──────────────────────────────
+  // â”€â”€ SCRAM button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private buildScram(w: number, h: number) {
     this.scramBtn = this.add.image(w * 0.5, h * 0.93, 'scram')
       .setDisplaySize(80, 80).setDepth(12)
@@ -207,7 +208,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(12);
   }
 
-  // ── HUD ──────────────────────────────────────
+  // â”€â”€ HUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private buildHUD(w: number, h: number) {
     const style = (c = '#FFFFFF') => ({
       fontSize: '14px', color: c, fontFamily: 'monospace',
@@ -227,7 +228,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     this.deadlockText?.setText(`Deadlocks: ${this.deadlockCount}  |  Meltdowns: ${this.meltdownCount}`);
   }
 
-  // ── valve colour helpers ──────────────────────
+  // â”€â”€ valve colour helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   protected refreshValveSprite(v: Valve) {
     if (v.state === 'held') {
       v.sprite.setTexture('valve-normal').setTint(0x00FFCC);
@@ -260,7 +261,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     p.heatBarFill.fillStyle(fillColor, 1);
     p.heatBarFill.fillRect(px - barW / 2, py + 52, barW * pct, barH);
 
-    p.heatText.setText(`${Math.floor(p.heat)}°`);
+    p.heatText.setText(`${Math.floor(p.heat)}Â°`);
     p.heatText.setColor(pct > 0.85 ? '#FF4444' : pct > 0.55 ? '#FFAA00' : '#AAFFAA');
 
     const stateColors: Record<PhilosopherState, string> = {
@@ -272,7 +273,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     p.stateLabel.setText(`S-${p.id + 1} [${p.state.toUpperCase().replace('_', ' ')}]`);
   }
 
-  // ── intro modal ───────────────────────────────
+  // â”€â”€ intro modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private showIntroModal() {
     const { width, height } = this.scale;
     const ov = this.add.graphics().setDepth(100);
@@ -286,7 +287,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     box.lineStyle(3, 0x00FFCC, 1);
     box.strokeRoundedRect(bx, by, bw, bh, 18);
 
-    this.add.text(width / 2, by + 44, '⚛️ DINING PHILOSOPHERS', {
+    this.add.text(width / 2, by + 44, 'âš›ï¸ DINING PHILOSOPHERS', {
       fontSize: '26px', color: '#00FFCC', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(102);
 
@@ -304,7 +305,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     const btn = this.add.graphics().setDepth(102);
     btn.fillStyle(0x006633, 1); btn.fillRoundedRect(btnX, btnY, btnW, btnH, 10);
     btn.setInteractive(new Phaser.Geom.Rectangle(btnX, btnY, btnW, btnH), Phaser.Geom.Rectangle.Contains);
-    this.add.text(width / 2, btnY + 24, '⚛️ INITIATE', {
+    this.add.text(width / 2, btnY + 24, 'âš›ï¸ INITIATE', {
       fontSize: '20px', color: '#FFFFFF', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(103);
     btn.on('pointerdown', () => {
@@ -317,33 +318,33 @@ class DiningPhilosophersBase extends Phaser.Scene {
   protected levelSubtitle(): string { return 'Nuclear Cooling Logic'; }
   protected introBody(): string {
     return [
-      '⚛️ THE SETUP — 5 Reactor Sectors, 5 Cooling Valves:',
-      '  • Each SECTOR (Philosopher) sits between two VALVES (Forks)',
-      '  • A sector needs BOTH its left and right valve to start COOLING',
-      '  • A valve can only be held by ONE sector at a time',
+      'âš›ï¸ THE SETUP â€” 5 Reactor Sectors, 5 Cooling Valves:',
+      '  â€¢ Each SECTOR (Philosopher) sits between two VALVES (Forks)',
+      '  â€¢ A sector needs BOTH its left and right valve to start COOLING',
+      '  â€¢ A valve can only be held by ONE sector at a time',
       '',
-      '🔄 PHILOSOPHER STATES:',
-      '  THINKING → heat stable  |  HUNGRY → heat rising  |  EATING (cooling) → heat falling',
+      'ðŸ”„ PHILOSOPHER STATES:',
+      '  THINKING â†’ heat stable  |  HUNGRY â†’ heat rising  |  EATING (cooling) â†’ heat falling',
       '',
-      '⚠️ DEADLOCK: All 5 sectors hold one valve each → no one can cool → system stalls',
-      '⚠️ STARVATION: A sector never gets both valves → heat reaches 100° → MELTDOWN',
+      'âš ï¸ DEADLOCK: All 5 sectors hold one valve each â†’ no one can cool â†’ system stalls',
+      'âš ï¸ STARVATION: A sector never gets both valves â†’ heat reaches 100Â° â†’ MELTDOWN',
       '',
-      '🎮 HOW TO PLAY:',
+      'ðŸŽ® HOW TO PLAY:',
       ...this.howToPlayLines(),
       '',
-      `🎯 GOAL: Complete ${this.cfg.targetCycles} cooling cycles before a meltdown!`,
+      `ðŸŽ¯ GOAL: Complete ${this.cfg.targetCycles} cooling cycles before a meltdown!`,
     ].join('\n');
   }
 
   protected howToPlayLines(): string[] {
     return [
-      '  • Click a VALVE to assign it to the adjacent hungry sector',
-      '  • Click a SECTOR to manually start cooling (if it holds both valves)',
-      '  • Hit SCRAM to force-release all valves if you detect a deadlock',
+      '  â€¢ Click a VALVE to assign it to the adjacent hungry sector',
+      '  â€¢ Click a SECTOR to manually start cooling (if it holds both valves)',
+      '  â€¢ Hit SCRAM to force-release all valves if you detect a deadlock',
     ];
   }
 
-  // ── game start ────────────────────────────────
+  // â”€â”€ game start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   protected startGame() {
     this.gamePhase = 'playing';
     this.gameStartTime = Date.now();
@@ -370,7 +371,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     return 'Click VALVES to assign them to hungry sectors. Both valves needed to cool!';
   }
 
-  // ── hunger event ──────────────────────────────
+  // â”€â”€ hunger event â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private makePhilosophersHungry() {
     for (const p of this.philosophers) {
       if (p.state === 'thinking' && Math.random() < 0.55) {
@@ -383,7 +384,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     }
   }
 
-  // ── L2: auto-grab left valve ──────────────────
+  // â”€â”€ L2: auto-grab left valve â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   protected autoGrabLeft(p: Philosopher) {
     if (p.state !== 'hungry' && p.state !== 'waiting_right') return;
     const leftValve = this.valves[p.id];
@@ -397,7 +398,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     }
   }
 
-  // ── tick ──────────────────────────────────────
+  // â”€â”€ tick â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private tick() {
     if (this.gamePhase !== 'playing') return;
 
@@ -407,7 +408,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
         p.heat = Math.min(100, p.heat + p.hungerRate * 0.5);
         if (p.heat >= 100) {
           this.meltdownCount++;
-          this.showMessage(`🔴 MELTDOWN! Sector ${p.id + 1} overheated! (Starvation)`, '#FF2222', 3000);
+          this.showMessage(`ðŸ”´ MELTDOWN! Sector ${p.id + 1} overheated! (Starvation)`, '#FF2222', 3000);
           this.cameras.main.shake(500, 0.015);
           this.resetPhilosopher(p);
           this.updateHUD();
@@ -433,7 +434,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     this.updateHUD();
   }
 
-  // ── deadlock detection ────────────────────────
+  // â”€â”€ deadlock detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private detectDeadlock() {
     const eatingCount = this.philosophers.filter(p => p.state === 'eating').length;
     const heldTotal = this.valves.filter(v => v.state === 'held').length;
@@ -445,14 +446,14 @@ class DiningPhilosophersBase extends Phaser.Scene {
       // DEADLOCK
       this.deadlockCount++;
       for (const v of this.valves) v.sprite.setTexture('valve-deadlocked').clearTint();
-      this.showMessage('🔒 DEADLOCK DETECTED! All sectors hold one valve. Hit SCRAM!', '#FF2222', 3000);
+      this.showMessage('ðŸ”’ DEADLOCK DETECTED! All sectors hold one valve. Hit SCRAM!', '#FF2222', 3000);
       this.time.delayedCall(3200, () => {
         for (const v of this.valves) this.refreshValveSprite(v);
       });
     }
   }
 
-  // ── SCRAM: release all valves ─────────────────
+  // â”€â”€ SCRAM: release all valves â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   protected triggerScram() {
     if (this.gamePhase !== 'playing') return;
     for (const v of this.valves) {
@@ -466,10 +467,10 @@ class DiningPhilosophersBase extends Phaser.Scene {
         this.refreshConsole(p);
       }
     }
-    this.showMessage('🔓 SCRAM! All valves released — system reset.', '#FFD700', 2000);
+    this.showMessage('ðŸ”“ SCRAM! All valves released â€” system reset.', '#FFD700', 2000);
   }
 
-  // ── valve click (L1 manual) ───────────────────
+  // â”€â”€ valve click (L1 manual) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   protected onValveClick(v: Valve) {
     if (!this.cfg.isManual || this.gamePhase !== 'playing') return;
 
@@ -520,7 +521,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     }
   }
 
-  // ── philosopher click ─────────────────────────
+  // â”€â”€ philosopher click â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   protected onPhilosopherClick(p: Philosopher) {
     if (this.gamePhase !== 'playing') return;
     if (p.state === 'eating') return;
@@ -539,16 +540,16 @@ class DiningPhilosophersBase extends Phaser.Scene {
     }
   }
 
-  // ── cooling start ─────────────────────────────
+  // â”€â”€ cooling start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   protected startCooling(p: Philosopher) {
     p.state = 'eating';
     p.cooldownMs = 4000;
     p.consoleSprite.setTexture('console-cooling').clearTint();
-    this.showMessage(`✅ Sector ${p.id + 1} COOLING — both valves acquired!`, '#00FFCC', 1500);
+    this.showMessage(`âœ… Sector ${p.id + 1} COOLING â€” both valves acquired!`, '#00FFCC', 1500);
     this.refreshConsole(p);
   }
 
-  // ── cooling done ──────────────────────────────
+  // â”€â”€ cooling done â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private finishCooling(p: Philosopher) {
     this.completedCycles++;
 
@@ -571,7 +572,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     }
   }
 
-  // ── reset single philosopher ──────────────────
+  // â”€â”€ reset single philosopher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private resetPhilosopher(p: Philosopher) {
     const lv = this.valves[p.id];
     const rv = this.valves[(p.id + N - 1) % N];
@@ -583,7 +584,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     p.consoleSprite.setTexture('console-idle').clearTint();
   }
 
-  // ── helpers ───────────────────────────────────
+  // â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   protected showMessage(text: string, color: string, duration = 2000) {
     const { width, height } = this.scale;
     const msg = this.add.text(width / 2, height * 0.13, text, {
@@ -594,12 +595,29 @@ class DiningPhilosophersBase extends Phaser.Scene {
     this.tweens.add({ targets: msg, alpha: 0, y: msg.y - 30, duration, onComplete: () => msg.destroy() });
   }
 
-  // ── win / lose ────────────────────────────────
+  // â”€â”€ win / lose â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private gameWon() {
     if (this.gamePhase === 'completed') return;
     this.gamePhase = 'completed';
     this.mainTicker?.remove();
-    this.submitScore();
+
+    const aiFeedbackBtn = this.add.text(140, height - 36, '💬 Chat with AI', {
+      fontSize: '16px',
+      color: '#FFFFFF',
+      backgroundColor: '#4CAF50',
+      padding: { x: 12, y: 8 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(500).setInteractive({ useHandCursor: true });
+
+    aiFeedbackBtn.on('pointerdown', () => {
+      const sceneAny = this as any;
+      openAIFeedbackChat({
+        gameType: this.scene.key,
+        score: sceneAny.totalScore ?? sceneAny.score ?? 0,
+        wrongAttempts: sceneAny.wrongAttempts ?? 0,
+        phase: sceneAny.gamePhase ?? 'results'
+      });
+    });
     this.showEndModal(true);
   }
 
@@ -623,7 +641,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     box.lineStyle(3, won ? 0x00FF88 : 0xFF4444, 1);
     box.strokeRoundedRect(bx, by, bw, bh, 18);
 
-    this.add.text(width / 2, by + 50, won ? '✅ COOLING COMPLETE!' : '💀 REACTOR FAILURE', {
+    this.add.text(width / 2, by + 50, won ? 'âœ… COOLING COMPLETE!' : 'ðŸ’€ REACTOR FAILURE', {
       fontSize: '28px', color: won ? '#00FF88' : '#FF4444', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(202);
 
@@ -642,7 +660,7 @@ class DiningPhilosophersBase extends Phaser.Scene {
     btn.fillStyle(won ? 0x00AA55 : 0xAA2200, 1);
     btn.fillRoundedRect(btnX, btnY, 180, 46, 10);
     btn.setInteractive(new Phaser.Geom.Rectangle(btnX, btnY, 180, 46), Phaser.Geom.Rectangle.Contains);
-    this.add.text(width / 2, btnY + 23, '🔄 PLAY AGAIN', {
+    this.add.text(width / 2, btnY + 23, 'ðŸ”„ PLAY AGAIN', {
       fontSize: '18px', color: '#FFFFFF', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(203);
     btn.on('pointerdown', () => this.scene.restart());
@@ -669,10 +687,10 @@ class DiningPhilosophersBase extends Phaser.Scene {
   }
 }
 
-// ─────────────────────────────────────────────
-//  Level 1 – The Training Run (Manual, no auto-grab)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  Level 1 â€“ The Training Run (Manual, no auto-grab)
 //  Player manually assigns valves to hungry sectors
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export class DiningPhilosophersL1Scene extends DiningPhilosophersBase {
   constructor() {
     super({
@@ -689,15 +707,15 @@ export class DiningPhilosophersL1Scene extends DiningPhilosophersBase {
     });
   }
 
-  protected levelSubtitle() { return 'Level 1 — The Training Run: Resource Contention'; }
+  protected levelSubtitle() { return 'Level 1 â€” The Training Run: Resource Contention'; }
 
   protected howToPlayLines(): string[] {
     return [
-      '  • Sectors heat up and become HUNGRY (yellow glow)',
-      '  • Click a VALVE to assign it to the adjacent hungry sector',
-      '  • Once a sector holds BOTH its valves → it auto-starts COOLING',
-      '  • Two ADJACENT sectors share a valve — they CANNOT cool at the same time',
-      '  • Click SCRAM if things get stuck (costs no penalty at L1)',
+      '  â€¢ Sectors heat up and become HUNGRY (yellow glow)',
+      '  â€¢ Click a VALVE to assign it to the adjacent hungry sector',
+      '  â€¢ Once a sector holds BOTH its valves â†’ it auto-starts COOLING',
+      '  â€¢ Two ADJACENT sectors share a valve â€” they CANNOT cool at the same time',
+      '  â€¢ Click SCRAM if things get stuck (costs no penalty at L1)',
     ];
   }
 
@@ -706,10 +724,10 @@ export class DiningPhilosophersL1Scene extends DiningPhilosophersBase {
   }
 }
 
-// ─────────────────────────────────────────────
-//  Level 2 – The Logic Lock (Deadlock)
-//  Sectors auto-grab their left valve → deadlock risk
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  Level 2 â€“ The Logic Lock (Deadlock)
+//  Sectors auto-grab their left valve â†’ deadlock risk
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export class DiningPhilosophersL2Scene extends DiningPhilosophersBase {
   constructor() {
     super({
@@ -726,21 +744,21 @@ export class DiningPhilosophersL2Scene extends DiningPhilosophersBase {
     });
   }
 
-  protected levelSubtitle() { return 'Level 2 — The Logic Lock: Deadlock Management'; }
+  protected levelSubtitle() { return 'Level 2 â€” The Logic Lock: Deadlock Management'; }
 
   protected howToPlayLines(): string[] {
     return [
-      '  • Sectors NOW auto-grab their LEFT valve when hungry',
-      '  • If all 5 grab their left valve simultaneously → DEADLOCK (no one can get the right!)',
-      '  • Deadlocked valves turn RED and hiss steam',
-      '  • Click SCRAM immediately to release all valves and break the deadlock',
-      '  • Click a SECTOR to manually grant it the right valve before deadlock forms',
-      '  • 3 meltdowns = failure!',
+      '  â€¢ Sectors NOW auto-grab their LEFT valve when hungry',
+      '  â€¢ If all 5 grab their left valve simultaneously â†’ DEADLOCK (no one can get the right!)',
+      '  â€¢ Deadlocked valves turn RED and hiss steam',
+      '  â€¢ Click SCRAM immediately to release all valves and break the deadlock',
+      '  â€¢ Click a SECTOR to manually grant it the right valve before deadlock forms',
+      '  â€¢ 3 meltdowns = failure!',
     ];
   }
 
   protected playingInstruction(): string {
-    return 'Sectors auto-grab left valve! Prevent deadlock — click SCRAM if all 5 go red!';
+    return 'Sectors auto-grab left valve! Prevent deadlock â€” click SCRAM if all 5 go red!';
   }
 
   protected onPhilosopherClick(p: Philosopher) {
@@ -762,10 +780,10 @@ export class DiningPhilosophersL2Scene extends DiningPhilosophersBase {
   }
 }
 
-// ─────────────────────────────────────────────
-//  Level 3 – Critical Mass (Starvation Prevention)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  Level 3 â€“ Critical Mass (Starvation Prevention)
 //  Random heat rates; player must prioritise starving sectors
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export class DiningPhilosophersL3Scene extends DiningPhilosophersBase {
   private starvationAlerts = 0;
 
@@ -784,21 +802,21 @@ export class DiningPhilosophersL3Scene extends DiningPhilosophersBase {
     });
   }
 
-  protected levelSubtitle() { return 'Level 3 — Critical Mass: Starvation Prevention'; }
+  protected levelSubtitle() { return 'Level 3 â€” Critical Mass: Starvation Prevention'; }
 
   protected howToPlayLines(): string[] {
     return [
-      '  • Each sector heats at a DIFFERENT random rate — some burn faster!',
-      '  • Sectors in the RED ZONE (>80°) are STARVING — prioritise them!',
-      '  • Adjacent sectors share a valve; favouring one may starve its neighbour',
-      '  • Flashing red sector = imminent meltdown if you ignore it',
-      '  • Click SCRAM releases all valves (use when a slow sector blocks a starving one)',
-      '  • 3 meltdowns = reactor failure!',
+      '  â€¢ Each sector heats at a DIFFERENT random rate â€” some burn faster!',
+      '  â€¢ Sectors in the RED ZONE (>80Â°) are STARVING â€” prioritise them!',
+      '  â€¢ Adjacent sectors share a valve; favouring one may starve its neighbour',
+      '  â€¢ Flashing red sector = imminent meltdown if you ignore it',
+      '  â€¢ Click SCRAM releases all valves (use when a slow sector blocks a starving one)',
+      '  â€¢ 3 meltdowns = reactor failure!',
     ];
   }
 
   protected playingInstruction(): string {
-    return 'Watch heat gauges! Prioritise RED/ORANGE sectors — starvation causes meltdown!';
+    return 'Watch heat gauges! Prioritise RED/ORANGE sectors â€” starvation causes meltdown!';
   }
 
   protected startGame() {
@@ -815,7 +833,7 @@ export class DiningPhilosophersL3Scene extends DiningPhilosophersBase {
             flash.fillStyle(0xFF0000, 0.18);
             flash.fillRect(0, 0, this.scale.width, this.scale.height);
             this.tweens.add({ targets: flash, alpha: 0, duration: 800, onComplete: () => flash.destroy() });
-            this.showMessage(`⚠️ STARVATION! Sector ${p.id + 1} critical — assign valves NOW!`, '#FF2222', 2500);
+            this.showMessage(`âš ï¸ STARVATION! Sector ${p.id + 1} critical â€” assign valves NOW!`, '#FF2222', 2500);
             break;
           }
         }

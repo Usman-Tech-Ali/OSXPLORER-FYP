@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { miniQuestData } from "@/app/modules/miniQuestData"
 import { miniQuestQuizData } from "@/app/modules/miniQuestQuizData"
+import { useSession } from "next-auth/react"
 import {
   Clock,
   CheckCircle,
@@ -21,6 +22,7 @@ import {
 export default function MiniQuestPage() {
   const params = useParams()
   const router = useRouter()
+  const { data: session } = useSession()
   const moduleId = params.moduleId as string
   const miniQuestId = params.miniQuestOverviewId as string
 
@@ -32,6 +34,7 @@ export default function MiniQuestPage() {
   const [score, setScore] = useState(0)
   const [showReview, setShowReview] = useState(false)
   const [wrongAnswers, setWrongAnswers] = useState<any[]>([])
+  const [previousAttempt, setPreviousAttempt] = useState<any>(null)
 
   // Get quest and quiz data
   const questData = (miniQuestData as any)[moduleId]?.[miniQuestId]
@@ -45,6 +48,27 @@ export default function MiniQuestPage() {
       handleSubmitQuiz()
     }
   }, [timeLeft, quizStarted, quizCompleted])
+
+  useEffect(() => {
+    const loadPreviousAttempt = async () => {
+      if (!session?.user) return
+
+      try {
+        const response = await fetch('/api/user/progress')
+        if (!response.ok) return
+
+        const data = await response.json()
+        const latest = (data.recentScores || []).find((item: any) => item.gameId === `miniquest-${miniQuestId}`)
+        if (latest) {
+          setPreviousAttempt(latest)
+        }
+      } catch (error) {
+        console.error('Failed to load previous mini-quest attempt:', error)
+      }
+    }
+
+    loadPreviousAttempt()
+  }, [session, miniQuestId])
 
   if (!questData || !quizData) {
     return (
@@ -151,6 +175,26 @@ export default function MiniQuestPage() {
                   {questData.difficulty}
                 </Badge>
               </div>
+
+              {previousAttempt && (
+                <div className="mt-4 p-4 rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-left">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <p className="text-cyan-300 font-semibold">Previous Record</p>
+                      <p className="text-sm text-gray-400">
+                        Best recent score: {previousAttempt.score}% · Wrong attempts: {previousAttempt.wrongAttempts || 0}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white font-bold">{previousAttempt.score}%</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(previousAttempt.completedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <CardTitle className="text-3xl text-white">{questData.title}</CardTitle>
               <p className="text-gray-400 mt-2">{questData.description}</p>
             </CardHeader>
@@ -223,7 +267,7 @@ export default function MiniQuestPage() {
                 size="lg"
               >
                 <Flag className="w-5 h-5 mr-2" />
-                Start Mini-Quest
+                {previousAttempt ? "Retake Mini-Quest" : "Start Mini-Quest"}
               </Button>
             </CardContent>
           </Card>
@@ -441,6 +485,22 @@ export default function MiniQuestPage() {
             </Badge>
           </div>
           <Progress value={progress} className="h-2" />
+
+          {previousAttempt && (
+            <div className="mt-4 p-4 rounded-lg border border-cyan-500/30 bg-cyan-500/10">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-cyan-300 font-semibold">Previous Attempt</p>
+                  <p className="text-sm text-gray-400">
+                    Score: {previousAttempt.score}% · Wrong attempts: {previousAttempt.wrongAttempts || 0}
+                  </p>
+                </div>
+                <p className="text-xs text-gray-400">
+                  {new Date(previousAttempt.completedAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Question Card */}

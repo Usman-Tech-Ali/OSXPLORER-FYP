@@ -33,7 +33,7 @@ const SEGMENT_SPRITE_KEY: Record<SegmentType, string> = {
   mainstage: 'main-stage',
 };
 
-export class SegmentationGame extends Phaser.Scene {
+export class SegmentationGameL3 extends Phaser.Scene {
   private gamePhase: 'intro' | 'playing' | 'results' = 'intro';
 
   private clown!: Phaser.GameObjects.Sprite;
@@ -78,7 +78,7 @@ export class SegmentationGame extends Phaser.Scene {
   private lastZoneCheck = 0;
 
   constructor() {
-    super({ key: 'SegmentationGame' });
+    super({ key: 'SegmentationGameL3' });
   }
 
   preload() {
@@ -586,9 +586,9 @@ export class SegmentationGame extends Phaser.Scene {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gameId: 'segmentation-l1',
+          gameId: 'segmentation-l3',
           moduleId: 'memory-management',
-          levelId: 'l1',
+          levelId: 'l3',
           score: Math.max(0, 100 - this.segFaults * 10),
           timeSpent: 1,
           accuracy: Math.max(0, 100 - this.segFaults * 10),

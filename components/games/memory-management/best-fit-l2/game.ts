@@ -867,7 +867,7 @@ when many small unusable spaces accumulate!`;
     });
   }
 
-  private showMessage(message: string, color: string) {
+  private showMessage(message: string, color: string, duration: number = 2000) {
     const { width, height } = this.sys.game.canvas;
     
     const messageText = this.add.text(width / 2, height / 2 - 120, message, {
@@ -887,7 +887,7 @@ when many small unusable spaces accumulate!`;
       targets: messageText,
       alpha: 0,
       y: messageText.y - 60,
-      duration: 2500,
+      duration,
       ease: 'Power2',
       onComplete: () => messageText.destroy()
     });
@@ -923,6 +923,10 @@ when many small unusable spaces accumulate!`;
   private showResults() {
     this.gamePhase = 'results';
     this.phaseText.setText('Phase: Results & Analysis');
+    
+    if (this.isChatbotOpen) {
+      this.closeChatbot();
+    }
     
     const { width, height } = this.sys.game.canvas;
 
@@ -1040,13 +1044,69 @@ when many small unusable spaces accumulate!`;
     // Submit score to backend
     this.submitScore();
 
+    // AI Feedback Button (Left side)
+    const aiFeedbackButtonWidth = 220;
+    const aiFeedbackButtonHeight = 50;
+    const aiFeedbackButtonX = boxX + 50;
+    const aiFeedbackButtonY = boxY + boxHeight - 70;
+
+    const aiFeedbackButton = this.add.graphics();
+    aiFeedbackButton.fillStyle(0x4CAF50, 1);
+    aiFeedbackButton.fillRoundedRect(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight, 10);
+    aiFeedbackButton.lineStyle(3, 0x2E7D32, 1);
+    aiFeedbackButton.strokeRoundedRect(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight, 10);
+    aiFeedbackButton.setDepth(402);
+    aiFeedbackButton.setInteractive(
+      new Phaser.Geom.Rectangle(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight),
+      Phaser.Geom.Rectangle.Contains
+    );
+    aiFeedbackButton.setData('isAIButton', true);
+
+    const aiFeedbackButtonText = this.add.text(aiFeedbackButtonX + aiFeedbackButtonWidth / 2, aiFeedbackButtonY + 25, '💬 Chat with AI', {
+      fontSize: '18px',
+      color: '#FFFFFF',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    aiFeedbackButtonText.setDepth(403);
+
+    aiFeedbackButton.on('pointerover', () => {
+      aiFeedbackButton.clear();
+      aiFeedbackButton.fillStyle(0x66BB6A, 1);
+      aiFeedbackButton.fillRoundedRect(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight, 10);
+      aiFeedbackButton.lineStyle(3, 0x2E7D32, 1);
+      aiFeedbackButton.strokeRoundedRect(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight, 10);
+      this.sys.canvas.style.cursor = 'pointer';
+    });
+
+    aiFeedbackButton.on('pointerout', () => {
+      aiFeedbackButton.clear();
+      aiFeedbackButton.fillStyle(0x4CAF50, 1);
+      aiFeedbackButton.fillRoundedRect(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight, 10);
+      aiFeedbackButton.lineStyle(3, 0x2E7D32, 1);
+      aiFeedbackButton.strokeRoundedRect(aiFeedbackButtonX, aiFeedbackButtonY, aiFeedbackButtonWidth, aiFeedbackButtonHeight, 10);
+      this.sys.canvas.style.cursor = 'default';
+    });
+
+    aiFeedbackButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      if (aiFeedbackButton.getData('isProcessing')) return;
+      aiFeedbackButton.setData('isProcessing', true);
+
+      this.showAIFeedback().finally(() => {
+        aiFeedbackButton.setData('isProcessing', false);
+      });
+    });
+
     // Buttons
     const buttonY = boxY + boxHeight - 70;
-    this.createResultButton(width / 2 - 100, buttonY, 'Restart', () => {
+    this.createResultButton(width / 2 - 150, buttonY, 'Mini-Quest', () => {
+      window.location.assign('/modules/memory-management/mini-quest/best-fit');
+    });
+    this.createResultButton(width / 2 + 50, buttonY, 'Restart', () => {
       this.scene.restart();
     });
 
-    this.createResultButton(width / 2 + 100, buttonY, 'Exit', () => {
+    this.createResultButton(width / 2 + 250, buttonY, 'Exit', () => {
       this.showMessage('Exiting game...', '#FFD700');
     });
   }
@@ -1094,6 +1154,432 @@ when many small unusable spaces accumulate!`;
     });
 
     button.on('pointerdown', callback);
+  }
+
+  private async showAIFeedback() {
+    if (this.isChatbotOpen) {
+      this.closeChatbot();
+      return;
+    }
+
+    this.isChatbotOpen = true;
+    this.chatMessages = [];
+    this.chatScrollOffset = 0;
+    this.maxChatScroll = 0;
+
+    this.createChatbotUI();
+
+    const placedGifts = this.gifts.filter(g => g.isPlaced).length;
+    const totalGiftsGenerated = this.GIFTS_CONFIG.length;
+    const rejectedGifts = this.externalFragmentationCount;
+    const internalFragmentation = this.totalFragmentation;
+    const internalFragPercent = this.totalAllocated > 0
+      ? (internalFragmentation / this.totalAllocated) * 100
+      : 0;
+    const efficiency = 100 - internalFragPercent;
+    const utilization = (this.totalAllocated / this.totalCompartmentSpace) * 100;
+
+    const initialMessage = `I just completed a Best Fit memory allocation game.
+
+Gifts: ${totalGiftsGenerated} generated, ${placedGifts} placed, ${rejectedGifts} rejected
+Internal Fragmentation: ${internalFragmentation} units (${internalFragPercent.toFixed(1)}%)
+External Fragmentation: ${rejectedGifts} gift(s)
+Efficiency: ${efficiency.toFixed(1)}%
+Utilization: ${utilization.toFixed(1)}%
+Final Score: ${Math.max(0, this.score)}
+
+Please analyze my performance and suggest improvements for Best Fit strategy.`;
+
+    await this.sendMessageToAI(initialMessage, true);
+  }
+
+  private createChatbotUI() {
+    const { width, height } = this.sys.game.canvas;
+    const chatWidth = 500;
+    const chatHeight = 680;
+    const chatX = width - chatWidth - 10;
+    const chatY = (height - chatHeight) / 2;
+
+    this.chatbotContainer = this.add.container(chatX, chatY);
+    this.chatbotContainer.setDepth(500);
+    this.chatbotContainer.setVisible(true);
+
+    const blockingLayer = this.add.graphics();
+    blockingLayer.fillStyle(0x000000, 0.01);
+    blockingLayer.fillRect(0, 0, chatWidth, chatHeight);
+    blockingLayer.setInteractive(new Phaser.Geom.Rectangle(0, 0, chatWidth, chatHeight), Phaser.Geom.Rectangle.Contains);
+    blockingLayer.on('pointerdown', (_pointer: any, _localX: number, _localY: number, event: any) => {
+      event.stopPropagation();
+    });
+    this.chatbotContainer.add(blockingLayer);
+
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.5);
+    shadow.fillRoundedRect(5, 5, chatWidth, chatHeight, 15);
+    this.chatbotContainer.add(shadow);
+
+    const chatBg = this.add.graphics();
+    chatBg.fillStyle(0x1a1a2e, 0.98);
+    chatBg.fillRoundedRect(0, 0, chatWidth, chatHeight, 15);
+    chatBg.lineStyle(3, 0x4CAF50, 1);
+    chatBg.strokeRoundedRect(0, 0, chatWidth, chatHeight, 15);
+    this.chatbotContainer.add(chatBg);
+
+    const headerBg = this.add.graphics();
+    headerBg.fillStyle(0x4CAF50, 1);
+    headerBg.fillRoundedRect(0, 0, chatWidth, 60, 15);
+    headerBg.fillRect(0, 45, chatWidth, 15);
+    headerBg.setData('isHeader', true);
+    this.chatbotContainer.add(headerBg);
+
+    const headerText = this.add.text(20, 20, '🤖 AI Memory Coach', {
+      fontSize: '22px',
+      color: '#FFFFFF',
+      fontStyle: 'bold'
+    });
+    headerText.setData('isHeader', true);
+    this.chatbotContainer.add(headerText);
+
+    const closeBtn = this.add.text(chatWidth - 40, 15, '✕', {
+      fontSize: '28px',
+      color: '#FFFFFF',
+      fontStyle: 'bold'
+    });
+    closeBtn.setInteractive({ useHandCursor: true });
+    closeBtn.on('pointerdown', (_pointer: any, _localX: number, _localY: number, event: any) => {
+      event.stopPropagation();
+      this.closeChatbot();
+    });
+    closeBtn.on('pointerover', () => closeBtn.setColor('#FF5555'));
+    closeBtn.on('pointerout', () => closeBtn.setColor('#FFFFFF'));
+    closeBtn.setData('isHeader', true);
+    this.chatbotContainer.add(closeBtn);
+
+    const messagesAreaHeight = chatHeight - 140;
+    this.chatbotContainer.setData('messagesY', 70);
+    this.chatbotContainer.setData('messagesHeight', messagesAreaHeight);
+    this.chatbotContainer.setData('chatWidth', chatWidth);
+
+    const messagesArea = this.add.graphics();
+    messagesArea.fillStyle(0x000000, 0.01);
+    messagesArea.fillRect(0, 70, chatWidth, messagesAreaHeight);
+    messagesArea.setInteractive(new Phaser.Geom.Rectangle(0, 70, chatWidth, messagesAreaHeight), Phaser.Geom.Rectangle.Contains);
+    messagesArea.on('pointerdown', (_pointer: any, _localX: number, _localY: number, event: any) => {
+      event.stopPropagation();
+    });
+    this.chatbotContainer.add(messagesArea);
+
+    messagesArea.on('wheel', (_pointer: any, _deltaX: number, deltaY: number, _deltaZ: number, event: any) => {
+      event.stopPropagation();
+      this.handleChatScroll(deltaY);
+    });
+
+    const topOverlay = this.add.graphics();
+    topOverlay.fillStyle(0x1a1a2e, 1);
+    topOverlay.fillRect(0, 0, chatWidth, 70);
+    topOverlay.setData('isOverlay', true);
+    topOverlay.setDepth(510);
+    this.chatbotContainer.add(topOverlay);
+
+    const bottomOverlay = this.add.graphics();
+    bottomOverlay.fillStyle(0x1a1a2e, 1);
+    bottomOverlay.fillRect(0, chatHeight - 70, chatWidth, 70);
+    bottomOverlay.setData('isOverlay', true);
+    bottomOverlay.setDepth(510);
+    this.chatbotContainer.add(bottomOverlay);
+
+    this.chatbotContainer.bringToTop(headerBg);
+    this.chatbotContainer.bringToTop(headerText);
+    this.chatbotContainer.bringToTop(closeBtn);
+
+    const inputBg = this.add.graphics();
+    inputBg.fillStyle(0x2a2a3e, 1);
+    inputBg.fillRoundedRect(0, chatHeight - 70, chatWidth, 70, 0);
+    inputBg.lineStyle(2, 0x4CAF50, 0.5);
+    inputBg.strokeRoundedRect(10, chatHeight - 60, chatWidth - 20, 50, 10);
+    inputBg.setData('isInput', true);
+    this.chatbotContainer.add(inputBg);
+
+    this.createDOMInput(chatX + 10, chatY + chatHeight - 60, chatWidth - 100);
+
+    const sendBtn = this.add.graphics();
+    sendBtn.fillStyle(0x4CAF50, 1);
+    sendBtn.fillRoundedRect(chatWidth - 70, chatHeight - 55, 55, 40, 8);
+    sendBtn.setData('isInput', true);
+    this.chatbotContainer.add(sendBtn);
+
+    const sendIcon = this.add.text(chatWidth - 50, chatHeight - 35, '➤', {
+      fontSize: '20px',
+      color: '#FFFFFF',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    sendIcon.setData('isInput', true);
+    this.chatbotContainer.add(sendIcon);
+
+    sendBtn.setInteractive(
+      new Phaser.Geom.Rectangle(chatWidth - 70, chatHeight - 55, 55, 40),
+      Phaser.Geom.Rectangle.Contains
+    );
+    sendBtn.on('pointerdown', (_pointer: any, _localX: number, _localY: number, event: any) => {
+      event.stopPropagation();
+      this.handleSendMessage();
+    });
+    sendBtn.on('pointerover', () => {
+      sendBtn.clear();
+      sendBtn.fillStyle(0x66BB6A, 1);
+      sendBtn.fillRoundedRect(chatWidth - 70, chatHeight - 55, 55, 40, 8);
+    });
+    sendBtn.on('pointerout', () => {
+      sendBtn.clear();
+      sendBtn.fillStyle(0x4CAF50, 1);
+      sendBtn.fillRoundedRect(chatWidth - 70, chatHeight - 55, 55, 40, 8);
+    });
+
+    this.chatbotContainer.bringToTop(inputBg);
+    this.chatbotContainer.bringToTop(sendBtn);
+    this.chatbotContainer.bringToTop(sendIcon);
+  }
+
+  private handleChatScroll(deltaY: number) {
+    if (!this.chatbotContainer || this.maxChatScroll === 0) return;
+
+    const scrollSpeed = 30;
+    this.chatScrollOffset = Math.max(0, Math.min(this.maxChatScroll, this.chatScrollOffset + deltaY * scrollSpeed * 0.01));
+    this.addMessageToChat(null, '');
+  }
+
+  private createDOMInput(x: number, y: number, width: number) {
+    this.removeDOMInput();
+
+    const input = document.createElement('input');
+    input.id = 'chatbot-input';
+    input.type = 'text';
+    input.placeholder = 'Ask me anything...';
+    input.style.position = 'absolute';
+    input.style.left = `${x + 15}px`;
+    input.style.top = `${y + 10}px`;
+    input.style.width = `${width - 10}px`;
+    input.style.height = '35px';
+    input.style.backgroundColor = 'rgba(42, 42, 62, 0.9)';
+    input.style.border = '2px solid #4CAF50';
+    input.style.borderRadius = '8px';
+    input.style.outline = 'none';
+    input.style.color = '#FFFFFF';
+    input.style.fontSize = '15px';
+    input.style.fontFamily = 'Arial, sans-serif';
+    input.style.padding = '0 12px';
+    input.style.zIndex = '2000';
+
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        this.handleSendMessage();
+      }
+    });
+
+    try {
+      document.body.appendChild(input);
+      setTimeout(() => input.focus(), 100);
+    } catch (error) {
+      console.error('Error creating DOM input:', error);
+    }
+  }
+
+  private removeDOMInput() {
+    const input = document.getElementById('chatbot-input');
+    if (input) {
+      input.remove();
+    }
+    const allInputs = document.querySelectorAll('input[id="chatbot-input"]');
+    allInputs.forEach(inp => inp.remove());
+  }
+
+  private async handleSendMessage() {
+    const input = document.getElementById('chatbot-input') as HTMLInputElement;
+    if (!input || !input.value.trim()) return;
+
+    const userMessage = input.value.trim();
+    input.value = '';
+    input.focus();
+
+    this.addMessageToChat('user', userMessage);
+    await this.sendMessageToAI(userMessage, false);
+  }
+
+  private addMessageToChat(role: 'user' | 'ai' | null, message: string) {
+    if (!this.chatbotContainer) return;
+
+    if (role && message) {
+      this.chatMessages.push({ role, message });
+    }
+
+    const chatWidth = this.chatbotContainer.getData('chatWidth');
+    const messagesY = this.chatbotContainer.getData('messagesY');
+    const messagesHeight = this.chatbotContainer.getData('messagesHeight');
+
+    const existingMessages = this.chatbotContainer.list.filter((obj: any) => obj.getData && obj.getData('isMessage'));
+    existingMessages.forEach((obj: any) => obj.destroy());
+
+    let currentY = messagesY + 10;
+    const maxWidth = chatWidth - 60;
+    let totalContentHeight = 0;
+
+    this.chatMessages.forEach((msg) => {
+      const isUser = msg.role === 'user';
+      const bubbleColor = isUser ? 0x4CAF50 : 0x2a2a3e;
+      const align = isUser ? 'right' : 'left';
+      const xPos = isUser ? chatWidth - 30 : 30;
+      const yPos = currentY - this.chatScrollOffset;
+
+      const tempText = this.add.text(0, 0, msg.message, {
+        fontSize: '13px',
+        color: '#FFFFFF',
+        wordWrap: { width: maxWidth - 40 },
+        align
+      });
+      const padding = 10;
+      const bubbleHeight = tempText.height + padding * 2;
+      tempText.destroy();
+
+      const messageBottom = yPos + bubbleHeight;
+      const visibleTop = messagesY;
+      const visibleBottom = messagesY + messagesHeight;
+
+      if (yPos >= visibleTop && messageBottom <= visibleBottom) {
+        const messageText = this.add.text(xPos, yPos, msg.message, {
+          fontSize: '13px',
+          color: '#FFFFFF',
+          wordWrap: { width: maxWidth - 40 },
+          align
+        });
+        messageText.setOrigin(isUser ? 1 : 0, 0);
+        messageText.setData('isMessage', true);
+
+        const bubbleWidth = Math.min(messageText.width + padding * 2, maxWidth);
+
+        const bubble = this.add.graphics();
+        bubble.fillStyle(bubbleColor, 0.9);
+        if (isUser) {
+          bubble.fillRoundedRect(xPos - bubbleWidth, yPos - padding, bubbleWidth, bubbleHeight, 10);
+        } else {
+          bubble.fillRoundedRect(xPos - padding, yPos - padding, bubbleWidth, bubbleHeight, 10);
+        }
+        bubble.setData('isMessage', true);
+
+        if (this.chatbotContainer) {
+          this.chatbotContainer.add(bubble);
+          this.chatbotContainer.add(messageText);
+        }
+      }
+
+      currentY += bubbleHeight + 8;
+      totalContentHeight = currentY - messagesY;
+    });
+
+    this.maxChatScroll = Math.max(0, totalContentHeight - messagesHeight + 20);
+
+    if (role && message) {
+      this.chatScrollOffset = this.maxChatScroll;
+    }
+
+    const existingScrollbar = this.chatbotContainer.list.filter((obj: any) => obj.getData && obj.getData('isScrollbar'));
+    existingScrollbar.forEach((obj: any) => obj.destroy());
+
+    if (this.maxChatScroll > 0) {
+      const scrollbarWidth = 6;
+      const scrollbarX = chatWidth - 15;
+      const scrollbarHeight = Math.max(30, (messagesHeight / totalContentHeight) * messagesHeight);
+      const scrollbarY = messagesY + (this.chatScrollOffset / this.maxChatScroll) * (messagesHeight - scrollbarHeight);
+
+      const scrollbar = this.add.graphics();
+      scrollbar.fillStyle(0x4CAF50, 0.6);
+      scrollbar.fillRoundedRect(scrollbarX, scrollbarY, scrollbarWidth, scrollbarHeight, 3);
+      scrollbar.setData('isScrollbar', true);
+      scrollbar.setDepth(515);
+
+      this.chatbotContainer.add(scrollbar);
+    }
+  }
+
+  private async sendMessageToAI(message: string, isInitial: boolean) {
+    if (!this.chatbotContainer) return;
+
+    this.addMessageToChat('ai', '💭 Thinking...');
+
+    const placedGifts = this.gifts.filter(g => g.isPlaced).length;
+    const totalGiftsGenerated = this.GIFTS_CONFIG.length;
+    const rejectedGifts = this.externalFragmentationCount;
+    const internalFragmentation = this.totalFragmentation;
+    const internalFragPercent = this.totalAllocated > 0
+      ? (internalFragmentation / this.totalAllocated) * 100
+      : 0;
+    const efficiency = 100 - internalFragPercent;
+    const utilization = (this.totalAllocated / this.totalCompartmentSpace) * 100;
+
+    const gameData = {
+      gameType: 'memory-management-best-fit',
+      totalGifts: totalGiftsGenerated,
+      placedGifts,
+      rejectedGifts,
+      internalFragmentation,
+      internalFragmentationPercent: internalFragPercent,
+      externalFragmentation: rejectedGifts,
+      efficiency,
+      utilization,
+      totalCompartmentSpace: this.totalCompartmentSpace,
+      totalAllocated: this.totalAllocated,
+      finalScore: Math.max(0, this.score),
+      wrongAttempts: this.wrongAttempts,
+      compartments: this.compartments.map(compartment => ({
+        compartmentNumber: compartment.compartmentNumber,
+        size: compartment.size,
+        remainingSpace: compartment.remainingSpace,
+        occupied: compartment.occupied,
+        giftCount: compartment.gifts.length,
+        gifts: compartment.gifts.map(gift => ({
+          giftNumber: gift.giftNumber,
+          size: gift.size,
+          name: gift.name
+        }))
+      })),
+      conversationHistory: this.chatMessages.slice(0, -1),
+      userQuestion: message,
+      isInitial
+    };
+
+    try {
+      const response = await fetch('/api/ai-feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(gameData)
+      });
+
+      const result = await response.json();
+      this.chatMessages.pop();
+
+      if (result.success && result.data.feedback) {
+        this.addMessageToChat('ai', result.data.feedback);
+      } else {
+        this.addMessageToChat('ai', '❌ Sorry, I had trouble processing that. Can you try again?');
+      }
+    } catch (error) {
+      console.error('Error fetching AI response:', error);
+      this.chatMessages.pop();
+      this.addMessageToChat('ai', '❌ Network error. Please check your connection and try again.');
+    }
+  }
+
+  private closeChatbot() {
+    if (this.chatbotContainer) {
+      this.chatbotContainer.destroy();
+      this.chatbotContainer = undefined;
+    }
+    this.removeDOMInput();
+    this.isChatbotOpen = false;
+    this.chatMessages = [];
+    this.chatScrollOffset = 0;
+    this.maxChatScroll = 0;
   }
 
   private async submitScore() {
@@ -1150,24 +1636,5 @@ when many small unusable spaces accumulate!`;
     }
   }
 
-  private showMessage(text: string, color: string, duration: number = 2000) {
-    const { width, height } = this.sys.game.canvas;
-    const message = this.add.text(width / 2, height / 2, text, {
-      fontSize: '24px',
-      color,
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 4,
-      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
-    }).setOrigin(0.5).setDepth(500);
-
-    this.tweens.add({
-      targets: message,
-      alpha: 0,
-      y: message.y - 50,
-      duration,
-      onComplete: () => message.destroy()
-    });
-  }
 }
 

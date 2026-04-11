@@ -1,4 +1,5 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
+import { openAIFeedbackChat } from '../../shared/aiFeedbackChat';
 
 interface Box {
   id: string;
@@ -126,7 +127,7 @@ export class WorstFitGameL2 extends Phaser.Scene {
     scenarioBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     scenarioBox.setDepth(301);
 
-    const title = this.add.text(width / 2, boxY + 50, '📦 WORST FIT', {
+    const title = this.add.text(width / 2, boxY + 50, 'ðŸ“¦ WORST FIT', {
       fontSize: '36px',
       color: '#FFD700',
       fontStyle: 'bold'
@@ -139,10 +140,10 @@ export class WorstFitGameL2 extends Phaser.Scene {
 
     const contentY = boxY + 145;
 
-    const howToPlay = `🎮 How to Play:
-   • Boxes move on the conveyor belt from left to right
-   • Tools appear above - drag them into boxes
-   • Each tool has a size, each box has capacity`;
+    const howToPlay = `ðŸŽ® How to Play:
+   â€¢ Boxes move on the conveyor belt from left to right
+   â€¢ Tools appear above - drag them into boxes
+   â€¢ Each tool has a size, each box has capacity`;
 
     const howToPlayText = this.add.text(boxX + 50, contentY, howToPlay, {
       fontSize: '16px',
@@ -150,11 +151,11 @@ export class WorstFitGameL2 extends Phaser.Scene {
       lineSpacing: 6
     }).setDepth(302);
 
-    const rules = `⚠️ Worst Fit Rules:
-   • Always place tool in the LARGEST available box
-   • This leaves maximum remaining space
-   • Reduces small unusable fragments
-   • Correct placement: +20 pts | Wrong: -10 pts`;
+    const rules = `âš ï¸ Worst Fit Rules:
+   â€¢ Always place tool in the LARGEST available box
+   â€¢ This leaves maximum remaining space
+   â€¢ Reduces small unusable fragments
+   â€¢ Correct placement: +20 pts | Wrong: -10 pts`;
 
     const rulesText = this.add.text(boxX + 50, contentY + 120, rules, {
       fontSize: '16px',
@@ -162,7 +163,7 @@ export class WorstFitGameL2 extends Phaser.Scene {
       lineSpacing: 6
     }).setDepth(302);
 
-    const goal = `🎯 Goal: Place all tools using Worst Fit strategy!`;
+    const goal = `ðŸŽ¯ Goal: Place all tools using Worst Fit strategy!`;
 
     const goalText = this.add.text(boxX + 50, contentY + 250, goal, {
       fontSize: '16px',
@@ -180,7 +181,7 @@ export class WorstFitGameL2 extends Phaser.Scene {
     startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
     startButton.setDepth(302);
 
-    const buttonText = this.add.text(width / 2, buttonY + 27, '🚀 START GAME', {
+    const buttonText = this.add.text(width / 2, buttonY + 27, 'ðŸš€ START GAME', {
       fontSize: '22px',
       color: '#000000',
       fontStyle: 'bold'
@@ -383,7 +384,7 @@ export class WorstFitGameL2 extends Phaser.Scene {
           this.score = Math.max(0, this.score - 15);
           this.scoreText.setText(`Score: ${this.score}`);
           this.missedText.setText(`Missed: ${this.missedBoxes}`);
-          this.showMessage('⚠️ Box left empty! -15 pts', '#FF6600');
+          this.showMessage('âš ï¸ Box left empty! -15 pts', '#FF6600');
         }
         
         box.sprite?.destroy();
@@ -437,7 +438,7 @@ export class WorstFitGameL2 extends Phaser.Scene {
     
     // Check if tool fits
     if (tool.size > box.remainingSpace) {
-      this.showMessage('❌ Tool too large for this box!', '#FF0000');
+      this.showMessage('âŒ Tool too large for this box!', '#FF0000');
       this.wrongAttempts++;
       this.score = Math.max(0, this.score - 5);
       this.scoreText.setText(`Score: ${this.score}`);
@@ -455,7 +456,7 @@ export class WorstFitGameL2 extends Phaser.Scene {
     const availableBoxes = this.activeBoxes.filter(b => b.remainingSpace >= tool.size && b.sprite);
     
     if (availableBoxes.length === 0) {
-      this.showMessage('❌ No box can fit this tool!', '#FF0000');
+      this.showMessage('âŒ No box can fit this tool!', '#FF0000');
       const container = tool.sprite!.getData('container');
       if (container) {
         const originalX = container.getData('originalX');
@@ -474,7 +475,7 @@ export class WorstFitGameL2 extends Phaser.Scene {
       this.wrongAttempts++;
       this.score = Math.max(0, this.score - 10);
       this.scoreText.setText(`Score: ${this.score}`);
-      this.showMessage(`❌ Wrong! Use LARGEST box (${largestBox.remainingSpace} space left)`, '#FF0000');
+      this.showMessage(`âŒ Wrong! Use LARGEST box (${largestBox.remainingSpace} space left)`, '#FF0000');
       const container = tool.sprite!.getData('container');
       if (container) {
         const originalX = container.getData('originalX');
@@ -488,7 +489,7 @@ export class WorstFitGameL2 extends Phaser.Scene {
     // Correct placement
     this.score += 20;
     this.scoreText.setText(`Score: ${this.score}`);
-    this.showMessage('✅ Correct! Worst Fit!', '#00FF00');
+    this.showMessage('âœ… Correct! Worst Fit!', '#00FF00');
     
     // Place tool in box
     box.remainingSpace -= tool.size;
@@ -576,9 +577,26 @@ export class WorstFitGameL2 extends Phaser.Scene {
     resultsBox.setDepth(301);
 
     // Submit score to backend
-    this.submitScore();
 
-    const title = this.add.text(width / 2, boxY + 50, '🎉 GAME COMPLETE!', {
+    const aiFeedbackBtn = this.add.text(140, height - 36, '💬 Chat with AI', {
+      fontSize: '16px',
+      color: '#FFFFFF',
+      backgroundColor: '#4CAF50',
+      padding: { x: 12, y: 8 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(500).setInteractive({ useHandCursor: true });
+
+    aiFeedbackBtn.on('pointerdown', () => {
+      const sceneAny = this as any;
+      openAIFeedbackChat({
+        gameType: this.scene.key,
+        score: sceneAny.totalScore ?? sceneAny.score ?? 0,
+        wrongAttempts: sceneAny.wrongAttempts ?? 0,
+        phase: sceneAny.gamePhase ?? 'results'
+      });
+    });
+
+    const title = this.add.text(width / 2, boxY + 50, 'ðŸŽ‰ GAME COMPLETE!', {
       fontSize: '32px',
       color: '#00FF00',
       fontStyle: 'bold'
@@ -603,12 +621,33 @@ Wrong Attempts: ${this.wrongAttempts}
     const buttonX = width / 2 - buttonWidth / 2;
     const buttonY = boxY + boxHeight - 80;
 
+    const miniQuestButtonX = buttonX - 200;
+    const miniQuestButton = this.add.graphics();
+    miniQuestButton.fillGradientStyle(0x00E5FF, 0x00E5FF, 0x00A8CC, 0x00A8CC, 1);
+    miniQuestButton.fillRoundedRect(miniQuestButtonX, buttonY, buttonWidth, buttonHeight, 12);
+    miniQuestButton.setDepth(302);
+
+    this.add.text(miniQuestButtonX + buttonWidth / 2, buttonY + 25, 'MINI-QUEST', {
+      fontSize: '18px',
+      color: '#000000',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(303);
+
+    miniQuestButton.setInteractive(
+      new Phaser.Geom.Rectangle(miniQuestButtonX, buttonY, buttonWidth, buttonHeight),
+      Phaser.Geom.Rectangle.Contains
+    );
+
+    miniQuestButton.on('pointerdown', () => {
+      window.location.assign('/modules/memory-management/mini-quest/worst-fit');
+    });
+
     const restartButton = this.add.graphics();
     restartButton.fillGradientStyle(0x4CAF50, 0x4CAF50, 0x388E3C, 0x388E3C, 1);
     restartButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
     restartButton.setDepth(302);
 
-    const buttonText = this.add.text(width / 2, buttonY + 25, '🔄 PLAY AGAIN', {
+    const buttonText = this.add.text(width / 2, buttonY + 25, 'ðŸ”„ PLAY AGAIN', {
       fontSize: '20px',
       color: '#FFFFFF',
       fontStyle: 'bold'
@@ -651,7 +690,7 @@ Wrong Attempts: ${this.wrongAttempts}
         if (result.achievementsUnlocked && result.achievementsUnlocked.length > 0) {
           const { width, height } = this.scale;
           const message = this.add.text(width / 2, height / 2, 
-            `🎉 Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
+            `ðŸŽ‰ Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
             {
               fontSize: '24px',
               color: '#00FF00',
@@ -674,3 +713,4 @@ Wrong Attempts: ${this.wrongAttempts}
     }
   }
 }
+

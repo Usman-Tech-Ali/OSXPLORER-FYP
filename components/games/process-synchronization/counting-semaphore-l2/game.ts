@@ -1,8 +1,9 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
+import { openAIFeedbackChat } from '../../shared/aiFeedbackChat';
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //  Shared types & constants
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type DiverState = 'waiting' | 'jumping' | 'falling' | 'landed' | 'benched' | 'stuck';
 
 interface Diver {
@@ -10,7 +11,7 @@ interface Diver {
   sprite: Phaser.GameObjects.Image;
   state: DiverState;
   packSprite?: Phaser.GameObjects.Image;
-  stuckTimer?: number;          // L3 only – ms remaining before forced-land prompt
+  stuckTimer?: number;          // L3 only â€“ ms remaining before forced-land prompt
   stuckWarning?: Phaser.GameObjects.Text;
   benchIndex?: number;
 }
@@ -31,9 +32,9 @@ interface LevelConfig {
 
 const ASSET_PATH = '/games/process-synchronization/counting-semaphore/';
 
-// ─────────────────────────────────────────────
-//  Base scene – all game logic lives here
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  Base scene â€“ all game logic lives here
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class CountingSemaphoreBase extends Phaser.Scene {
   protected cfg!: LevelConfig;
 
@@ -76,7 +77,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     this.S = cfg.totalPacks;
   }
 
-  // ── preload ──────────────────────────────────
+  // â”€â”€ preload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   preload() {
     this.load.image('sky-bg', `${ASSET_PATH}Sky-Background.png`);
     this.load.image('main-bg', `${ASSET_PATH}Sky-Background_1.png`);
@@ -98,7 +99,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     this.load.image('ui-status', `${ASSET_PATH}UI-Parachute-Status.png`);
   }
 
-  // ── create ───────────────────────────────────
+  // â”€â”€ create â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   create() {
     const { width, height } = this.scale;
     this.S = this.cfg.totalPacks;
@@ -116,33 +117,33 @@ class CountingSemaphoreBase extends Phaser.Scene {
     this.showIntroModal();
   }
 
-  // ── scene layout ─────────────────────────────
+  // â”€â”€ scene layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private buildScene(width: number, height: number) {
     // backgrounds
     this.skyBg = this.add.image(width / 2, height / 2, 'sky-bg').setDisplaySize(width, height).setDepth(0);
     this.bg = this.add.image(width / 2, height * 0.85, 'main-bg').setDisplaySize(width, height * 0.35).setDepth(1);
 
-    // landing zone – bottom center
+    // landing zone â€“ bottom center
     this.landingZone = this.add.image(width / 2, height * 0.88, 'landing-zone')
       .setDisplaySize(160, 80).setDepth(2).setInteractive({ useHandCursor: true });
     this.landingZone.on('pointerdown', () => this.onLandingZoneClick());
     this.landingZone.on('pointerover', () => this.landingZone.setTint(0xaaffaa));
     this.landingZone.on('pointerout', () => this.landingZone.clearTint());
 
-    // plane – top right
+    // plane â€“ top right
     this.plane = this.add.image(width * 0.78, height * 0.12, 'plane')
       .setDisplaySize(220, 100).setDepth(3);
 
-    // rack – left side
+    // rack â€“ left side
     this.rack = this.add.image(width * 0.1, height * 0.52, 'rack')
       .setDisplaySize(80, 160).setDepth(3);
 
-    // bench – bottom left (L2+)
+    // bench â€“ bottom left (L2+)
     this.bench = this.add.image(width * 0.18, height * 0.82, 'bench')
       .setDisplaySize(200, 70).setDepth(2)
       .setVisible(this.cfg.enableBench);
 
-    // warning light – top left (L3)
+    // warning light â€“ top left (L3)
     this.warningLight = this.add.image(width * 0.05, height * 0.08, 'warning-light')
       .setDisplaySize(50, 60).setDepth(4)
       .setVisible(this.cfg.enableStuck)
@@ -155,7 +156,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(5);
   }
 
-  // ── HUD ──────────────────────────────────────
+  // â”€â”€ HUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private buildHUD(width: number, height: number) {
     const style = (size = '16px', color = '#ffffff') => ({
       fontSize: size, color, backgroundColor: '#000000CC',
@@ -184,7 +185,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     this.rackCountText.setColor(this.S === 0 ? '#FF4444' : '#00FFFF');
   }
 
-  // ── intro modal ──────────────────────────────
+  // â”€â”€ intro modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private showIntroModal() {
     const { width, height } = this.scale;
     const ov = this.add.graphics().setDepth(100);
@@ -199,7 +200,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     box.lineStyle(3, 0x00DDFF, 1);
     box.strokeRoundedRect(bx, by, bw, bh, 18);
 
-    this.add.text(width / 2, by + 44, '🪂 COUNTING SEMAPHORE', {
+    this.add.text(width / 2, by + 44, 'ðŸª‚ COUNTING SEMAPHORE', {
       fontSize: '28px', color: '#00DDFF', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(102);
 
@@ -218,7 +219,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     btn.fillStyle(0x00AAFF, 1);
     btn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     btn.setInteractive(new Phaser.Geom.Rectangle(btnX, btnY, btnW, btnH), Phaser.Geom.Rectangle.Contains);
-    this.add.text(width / 2, btnY + 25, '🚀 START GAME', {
+    this.add.text(width / 2, btnY + 25, 'ðŸš€ START GAME', {
       fontSize: '20px', color: '#000000', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(103);
 
@@ -234,31 +235,31 @@ class CountingSemaphoreBase extends Phaser.Scene {
   protected levelSubtitle(): string { return 'Skydiving Logistics'; }
   protected introBody(): string {
     return [
-      '📦 COUNTING SEMAPHORE RULES:',
+      'ðŸ“¦ COUNTING SEMAPHORE RULES:',
       `  S = ${this.cfg.totalPacks}  (available parachute packs = semaphore value)`,
-      '  wait(S):   S-- → diver grabs a pack and boards the plane',
-      '  signal(S): S++ → diver lands, returns pack, wakes next in queue',
+      '  wait(S):   S-- â†’ diver grabs a pack and boards the plane',
+      '  signal(S): S++ â†’ diver lands, returns pack, wakes next in queue',
       '',
-      '🎮 HOW TO PLAY:',
-      '  • Click the green [+] button (or a waiting diver) to spawn a diver → wait()',
-      `  • If S > 0: diver takes a pack and jumps immediately`,
-      `  • If S = 0: diver sits on the bench (blocked queue)`,
-      '  • When a diver lands on the landing zone, click it → signal()',
-      '  • Pack returns to rack, S++, and next queued diver auto-wakes',
+      'ðŸŽ® HOW TO PLAY:',
+      '  â€¢ Click the green [+] button (or a waiting diver) to spawn a diver â†’ wait()',
+      `  â€¢ If S > 0: diver takes a pack and jumps immediately`,
+      `  â€¢ If S = 0: diver sits on the bench (blocked queue)`,
+      '  â€¢ When a diver lands on the landing zone, click it â†’ signal()',
+      '  â€¢ Pack returns to rack, S++, and next queued diver auto-wakes',
       '',
-      `🎯 GOAL: Successfully launch ${this.cfg.targetDivers} divers!`,
+      `ðŸŽ¯ GOAL: Successfully launch ${this.cfg.targetDivers} divers!`,
       '',
       this.cfg.enableStuck
-        ? '⚠️  L3: Some divers may get STUCK mid-air (resource leak!). Click the\n     warning light or the stuck diver to force-land them.'
+        ? 'âš ï¸  L3: Some divers may get STUCK mid-air (resource leak!). Click the\n     warning light or the stuck diver to force-land them.'
         : '',
     ].join('\n');
   }
 
-  // ── game start ───────────────────────────────
+  // â”€â”€ game start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   protected startGame() {
     this.gamePhase = 'playing';
     this.gameStartTime = Date.now();
-    this.instructionText.setText('Click [+] to send a diver → wait(S)');
+    this.instructionText.setText('Click [+] to send a diver â†’ wait(S)');
 
     // add-diver button
     const { width, height } = this.scale;
@@ -289,7 +290,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     });
   }
 
-  // ── wait(S) ──────────────────────────────────
+  // â”€â”€ wait(S) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   protected spawnDiver() {
     if (this.gamePhase !== 'playing') return;
 
@@ -315,12 +316,12 @@ class CountingSemaphoreBase extends Phaser.Scene {
 
   protected performWait(diver: Diver) {
     if (this.S > 0) {
-      // resource available → decrement, launch
+      // resource available â†’ decrement, launch
       this.S--;
       this.attachPack(diver);
       this.launchDiver(diver);
     } else {
-      // S = 0 → block
+      // S = 0 â†’ block
       diver.state = 'benched';
       this.blockedQueue.push(diver);
       this.moveToBench(diver);
@@ -350,11 +351,11 @@ class CountingSemaphoreBase extends Phaser.Scene {
       onComplete: () => this.beginFreeFall(diver),
     });
 
-    this.showMessage(`wait(S) ✓  S = ${this.S}  — pack acquired!`, '#00FFCC', 1800);
+    this.showMessage(`wait(S) âœ“  S = ${this.S}  â€” pack acquired!`, '#00FFCC', 1800);
     this.updateHUD();
 
     if (this.diverLaunched >= this.cfg.targetDivers && this.blockedQueue.length === 0) {
-      this.instructionText.setText('All divers launched! Wait for landings…');
+      this.instructionText.setText('All divers launched! Wait for landingsâ€¦');
     }
   }
 
@@ -385,7 +386,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     });
   }
 
-  // ── L3: stuck / resource-leak ─────────────────
+  // â”€â”€ L3: stuck / resource-leak â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private scheduleStuck(diver: Diver) {
     diver.state = 'stuck';
     // diver floats in place
@@ -402,7 +403,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
   }
 
   private showStuckWarning(diver: Diver) {
-    diver.stuckWarning = this.add.text(diver.sprite.x, diver.sprite.y - 50, '⚠️ STUCK!', {
+    diver.stuckWarning = this.add.text(diver.sprite.x, diver.sprite.y - 50, 'âš ï¸ STUCK!', {
       fontSize: '14px', color: '#FF4444', fontStyle: 'bold',
       backgroundColor: '#000000CC', padding: { x: 6, y: 3 },
     }).setOrigin(0.5).setDepth(20);
@@ -416,7 +417,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     }
 
     diver.sprite.on('pointerdown', () => this.forceLandDiver(diver));
-    this.instructionText.setText('⚠️ Diver stuck! Click them or the warning light to force-land → signal(S)');
+    this.instructionText.setText('âš ï¸ Diver stuck! Click them or the warning light to force-land â†’ signal(S)');
   }
 
   protected forceRecoverStuck() {
@@ -446,7 +447,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     }
   }
 
-  // ── diver lands ──────────────────────────────
+  // â”€â”€ diver lands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private diverLandsOnGround(diver: Diver) {
     diver.state = 'landed';
     diver.sprite.setTexture('diver-landed');
@@ -463,7 +464,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     retBtn.on('pointerover', () => retBtn.setTint(0xaaffff));
     retBtn.on('pointerout', () => retBtn.clearTint());
 
-    this.instructionText.setText('Diver landed! Click return button → signal(S)');
+    this.instructionText.setText('Diver landed! Click return button â†’ signal(S)');
   }
 
   private onLandingZoneClick() {
@@ -484,13 +485,13 @@ class CountingSemaphoreBase extends Phaser.Scene {
     }
   }
 
-  // ── signal(S) ────────────────────────────────
+  // â”€â”€ signal(S) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   protected performSignal(diver: Diver) {
     diver.state = 'waiting'; // done
 
     this.S++;
     this.diverLanded++;
-    this.showMessage(`signal(S) ✓  S = ${this.S}  — pack returned!`, '#FFD700', 1800);
+    this.showMessage(`signal(S) âœ“  S = ${this.S}  â€” pack returned!`, '#FFD700', 1800);
 
     // tween diver off-screen
     this.tweens.add({
@@ -514,7 +515,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     this.checkWinCondition();
   }
 
-  // ── bench queue ──────────────────────────────
+  // â”€â”€ bench queue â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private moveToBench(diver: Diver) {
     const { width, height } = this.scale;
     diver.benchIndex = this.blockedQueue.indexOf(diver);
@@ -527,7 +528,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
       duration: 600, ease: 'Power1',
     });
 
-    this.showMessage(`S = 0  → diver blocked, joins queue (${this.blockedQueue.length})`, '#FF9900', 1800);
+    this.showMessage(`S = 0  â†’ diver blocked, joins queue (${this.blockedQueue.length})`, '#FF9900', 1800);
     this.updateHUD();
   }
 
@@ -555,7 +556,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     this.updateHUD();
   }
 
-  // ── win condition ────────────────────────────
+  // â”€â”€ win condition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private checkWinCondition() {
     if (this.diverLanded >= this.cfg.targetDivers) {
       this.time.delayedCall(600, () => this.gameWon());
@@ -566,7 +567,24 @@ class CountingSemaphoreBase extends Phaser.Scene {
     if (this.gamePhase === 'completed') return;
     this.gamePhase = 'completed';
     this.spawnTimer?.remove();
-    this.submitScore();
+
+    const aiFeedbackBtn = this.add.text(140, height - 36, '💬 Chat with AI', {
+      fontSize: '16px',
+      color: '#FFFFFF',
+      backgroundColor: '#4CAF50',
+      padding: { x: 12, y: 8 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(500).setInteractive({ useHandCursor: true });
+
+    aiFeedbackBtn.on('pointerdown', () => {
+      const sceneAny = this as any;
+      openAIFeedbackChat({
+        gameType: this.scene.key,
+        score: sceneAny.totalScore ?? sceneAny.score ?? 0,
+        wrongAttempts: sceneAny.wrongAttempts ?? 0,
+        phase: sceneAny.gamePhase ?? 'results'
+      });
+    });
     this.showWinModal();
   }
 
@@ -581,7 +599,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     box.fillStyle(0x021a05, 0.98); box.fillRoundedRect(bx, by, bw, bh, 18);
     box.lineStyle(3, 0x00FF88, 1); box.strokeRoundedRect(bx, by, bw, bh, 18);
 
-    this.add.text(width / 2, by + 50, '🎉 LEVEL COMPLETE!', {
+    this.add.text(width / 2, by + 50, 'ðŸŽ‰ LEVEL COMPLETE!', {
       fontSize: '30px', color: '#00FF88', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(202);
 
@@ -598,13 +616,13 @@ class CountingSemaphoreBase extends Phaser.Scene {
     const btn = this.add.graphics().setDepth(202);
     btn.fillStyle(0x00AA55, 1); btn.fillRoundedRect(btnX, btnY, 180, 48, 10);
     btn.setInteractive(new Phaser.Geom.Rectangle(btnX, btnY, 180, 48), Phaser.Geom.Rectangle.Contains);
-    this.add.text(width / 2, btnY + 24, '🔄 PLAY AGAIN', {
+    this.add.text(width / 2, btnY + 24, 'ðŸ”„ PLAY AGAIN', {
       fontSize: '20px', color: '#000000', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(203);
     btn.on('pointerdown', () => this.scene.restart());
   }
 
-  // ── helpers ──────────────────────────────────
+  // â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   protected showMessage(text: string, color: string, duration = 2000) {
     const { width, height } = this.scale;
     const msg = this.add.text(width / 2, height * 0.45, text, {
@@ -618,7 +636,7 @@ class CountingSemaphoreBase extends Phaser.Scene {
     });
   }
 
-  // ── score submission ──────────────────────────
+  // â”€â”€ score submission â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private async submitScore() {
     try {
       const timeSpent = Math.floor((Date.now() - this.gameStartTime) / 1000);
@@ -642,10 +660,10 @@ class CountingSemaphoreBase extends Phaser.Scene {
   }
 }
 
-// ─────────────────────────────────────────────
-//  Level 1 – Clear Skies (Basic Allocation)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  Level 1 â€“ Clear Skies (Basic Allocation)
 //  S=5, 5 packs, launch 5 divers, no bench
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export class CountingSemaphoreL1Scene extends CountingSemaphoreBase {
   constructor() {
     super({
@@ -663,33 +681,33 @@ export class CountingSemaphoreL1Scene extends CountingSemaphoreBase {
     });
   }
 
-  protected levelSubtitle() { return 'Level 1 — Clear Skies: Basic Allocation'; }
+  protected levelSubtitle() { return 'Level 1 â€” Clear Skies: Basic Allocation'; }
 
   protected introBody(): string {
     return [
-      '📦 COUNTING SEMAPHORE — BASICS:',
+      'ðŸ“¦ COUNTING SEMAPHORE â€” BASICS:',
       '  S = 5  (5 parachute packs available)',
-      '  wait(S):   S-- → diver grabs pack and jumps',
-      '  signal(S): S++ → diver lands and returns pack',
+      '  wait(S):   S-- â†’ diver grabs pack and jumps',
+      '  signal(S): S++ â†’ diver lands and returns pack',
       '',
-      '🎮 HOW TO PLAY:',
-      '  • Click the green [+] button to send a diver → wait(S)',
-      '  • Diver takes a pack (S decrements) and jumps from the plane',
-      '  • After landing, click the return button → signal(S)',
-      '  • S increments — pack is back on the rack!',
+      'ðŸŽ® HOW TO PLAY:',
+      '  â€¢ Click the green [+] button to send a diver â†’ wait(S)',
+      '  â€¢ Diver takes a pack (S decrements) and jumps from the plane',
+      '  â€¢ After landing, click the return button â†’ signal(S)',
+      '  â€¢ S increments â€” pack is back on the rack!',
       '',
-      '🎯 GOAL: Launch all 5 divers successfully!',
+      'ðŸŽ¯ GOAL: Launch all 5 divers successfully!',
       '',
-      '💡 KEY INSIGHT: S tracks available resources.',
+      'ðŸ’¡ KEY INSIGHT: S tracks available resources.',
       '   You cannot jump without a pack!',
     ].join('\n');
   }
 }
 
-// ─────────────────────────────────────────────
-//  Level 2 – The Hangar Jam (Blocked Queue)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  Level 2 â€“ The Hangar Jam (Blocked Queue)
 //  S=3, 10 divers, bench enabled
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export class CountingSemaphoreL2Scene extends CountingSemaphoreBase {
   constructor() {
     super({
@@ -707,33 +725,33 @@ export class CountingSemaphoreL2Scene extends CountingSemaphoreBase {
     });
   }
 
-  protected levelSubtitle() { return 'Level 2 — The Hangar Jam: Blocked Queue'; }
+  protected levelSubtitle() { return 'Level 2 â€” The Hangar Jam: Blocked Queue'; }
 
   protected introBody(): string {
     return [
-      '📦 COUNTING SEMAPHORE — BLOCKED QUEUE:',
+      'ðŸ“¦ COUNTING SEMAPHORE â€” BLOCKED QUEUE:',
       '  S = 3  (only 3 packs for 10 divers!)',
-      '  When S = 0: new divers BLOCK → bench (wait queue)',
-      '  signal(S): S++ → wakes the first diver on the bench (FIFO)',
+      '  When S = 0: new divers BLOCK â†’ bench (wait queue)',
+      '  signal(S): S++ â†’ wakes the first diver on the bench (FIFO)',
       '',
-      '🎮 HOW TO PLAY:',
-      '  • Divers auto-arrive — send them with wait(S)',
-      '  • With only 3 packs, the 4th diver will block onto the bench',
-      '  • Land a diver and click return → signal(S)',
-      '  • Pack returns, S++, bench diver auto-wakes and jumps!',
+      'ðŸŽ® HOW TO PLAY:',
+      '  â€¢ Divers auto-arrive â€” send them with wait(S)',
+      '  â€¢ With only 3 packs, the 4th diver will block onto the bench',
+      '  â€¢ Land a diver and click return â†’ signal(S)',
+      '  â€¢ Pack returns, S++, bench diver auto-wakes and jumps!',
       '',
-      '🎯 GOAL: Get all 10 divers through with only 3 packs!',
+      'ðŸŽ¯ GOAL: Get all 10 divers through with only 3 packs!',
       '',
-      '💡 KEY INSIGHT: When S ≤ 0, processes wait in a queue.',
+      'ðŸ’¡ KEY INSIGHT: When S â‰¤ 0, processes wait in a queue.',
       '   signal() always wakes the next blocked process (FIFO).',
     ].join('\n');
   }
 }
 
-// ─────────────────────────────────────────────
-//  Level 3 – The Infinite Fall (Resource Leak)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  Level 3 â€“ The Infinite Fall (Resource Leak)
 //  S=3, 15 divers, stuck divers simulate leaks
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export class CountingSemaphoreL3Scene extends CountingSemaphoreBase {
   private deadlockTimer?: Phaser.Time.TimerEvent;
   private deadlockWarned = false;
@@ -754,26 +772,26 @@ export class CountingSemaphoreL3Scene extends CountingSemaphoreBase {
     });
   }
 
-  protected levelSubtitle() { return 'Level 3 — The Infinite Fall: Resource Leak / Deadlock'; }
+  protected levelSubtitle() { return 'Level 3 â€” The Infinite Fall: Resource Leak / Deadlock'; }
 
   protected introBody(): string {
     return [
-      '📦 COUNTING SEMAPHORE — RESOURCE LEAK:',
+      'ðŸ“¦ COUNTING SEMAPHORE â€” RESOURCE LEAK:',
       '  S = 3  (3 packs, 15 divers, but some get STUCK!)',
       '',
       '  A "stuck" diver holds a pack indefinitely.',
       '  If all 3 packs are held by stuck divers, no one else can jump.',
-      '  This is a DEADLOCK — system freezes!',
+      '  This is a DEADLOCK â€” system freezes!',
       '',
-      '🎮 HOW TO PLAY:',
-      '  • Same as L2 — send divers, return packs',
-      '  • Watch for ⚠️ STUCK diver warnings in mid-air',
-      '  • Click a stuck diver OR the red warning light to force-land',
-      '  • This simulates OS killing/interrupting a stuck process',
+      'ðŸŽ® HOW TO PLAY:',
+      '  â€¢ Same as L2 â€” send divers, return packs',
+      '  â€¢ Watch for âš ï¸ STUCK diver warnings in mid-air',
+      '  â€¢ Click a stuck diver OR the red warning light to force-land',
+      '  â€¢ This simulates OS killing/interrupting a stuck process',
       '',
-      '🎯 GOAL: Launch 15 divers without hitting deadlock!',
+      'ðŸŽ¯ GOAL: Launch 15 divers without hitting deadlock!',
       '',
-      '💡 KEY INSIGHT: Resources held forever cause deadlock.',
+      'ðŸ’¡ KEY INSIGHT: Resources held forever cause deadlock.',
       '   The OS must be able to reclaim them (timeouts / signals).',
     ].join('\n');
   }
@@ -781,7 +799,7 @@ export class CountingSemaphoreL3Scene extends CountingSemaphoreBase {
   protected startGame() {
     super.startGame();
 
-    // deadlock watchdog — fires every 10s to check if all packs are stuck
+    // deadlock watchdog â€” fires every 10s to check if all packs are stuck
     this.deadlockTimer = this.time.addEvent({
       delay: 10000,
       callback: this.checkDeadlock,
@@ -803,7 +821,7 @@ export class CountingSemaphoreL3Scene extends CountingSemaphoreBase {
   private showDeadlockWarning() {
     const { width, height } = this.scale;
     const warn = this.add.text(width / 2, height / 2, [
-      '🔴 DEADLOCK DETECTED!',
+      'ðŸ”´ DEADLOCK DETECTED!',
       'All packs held by stuck divers.',
       'Click stuck divers to recover!',
     ].join('\n'), {

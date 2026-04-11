@@ -1,4 +1,5 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
+import { openAIFeedbackChat } from '../../shared/aiFeedbackChat';
 
 /** Plane priority: 1 = highest (Red Medical), 4 = lowest (Green Cargo). Lower number = higher priority. */
 type PriorityLevel = 1 | 2 | 3 | 4;
@@ -133,7 +134,7 @@ export class PriorityGameL1 extends Phaser.Scene {
     box.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     box.setDepth(301);
 
-    const title = this.add.text(width / 2, boxY + 48, '✈️ Sky Marshals – Priority L1', {
+    const title = this.add.text(width / 2, boxY + 48, 'âœˆï¸ Sky Marshals â€“ Priority L1', {
       fontSize: '32px',
       color: '#1E90FF',
       fontStyle: 'bold',
@@ -147,31 +148,31 @@ export class PriorityGameL1 extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(302);
 
     const contentY = boxY + 140;
-    const howTitle = this.add.text(boxX + 40, contentY, '🎮 How to Play', {
+    const howTitle = this.add.text(boxX + 40, contentY, 'ðŸŽ® How to Play', {
       fontSize: '18px',
       color: '#FFD700',
       fontStyle: 'bold',
     }).setDepth(302);
 
-    const howText = this.add.text(boxX + 40, contentY + 28, 'Planes wait on the Taxiway. Send them to the Runway by clicking.\nAlways send the HIGHEST priority first (P1 → P2 → P3 → P4).\nOnce on the runway, a plane cannot be stopped.', {
+    const howText = this.add.text(boxX + 40, contentY + 28, 'Planes wait on the Taxiway. Send them to the Runway by clicking.\nAlways send the HIGHEST priority first (P1 â†’ P2 â†’ P3 â†’ P4).\nOnce on the runway, a plane cannot be stopped.', {
       fontSize: '14px',
       color: '#E0E0E0',
       lineSpacing: 6,
     }).setDepth(302);
 
-    const rulesTitle = this.add.text(boxX + 40, contentY + 130, '⚠️ Rules', {
+    const rulesTitle = this.add.text(boxX + 40, contentY + 130, 'âš ï¸ Rules', {
       fontSize: '18px',
       color: '#FFD700',
       fontStyle: 'bold',
     }).setDepth(302);
 
-    const rulesText = this.add.text(boxX + 40, contentY + 158, '• P1 (Red Medical) > P2 (Gold VIP) > P3 (Blue) > P4 (Green Cargo)\n• Correct choice: +20 pts  |  Wrong: -10 pts', {
+    const rulesText = this.add.text(boxX + 40, contentY + 158, 'â€¢ P1 (Red Medical) > P2 (Gold VIP) > P3 (Blue) > P4 (Green Cargo)\nâ€¢ Correct choice: +20 pts  |  Wrong: -10 pts', {
       fontSize: '14px',
       color: '#E0E0E0',
       lineSpacing: 6,
     }).setDepth(302);
 
-    const goalTitle = this.add.text(boxX + 40, contentY + 230, '🎯 Goal', {
+    const goalTitle = this.add.text(boxX + 40, contentY + 230, 'ðŸŽ¯ Goal', {
       fontSize: '18px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -193,7 +194,7 @@ export class PriorityGameL1 extends Phaser.Scene {
     startBtn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     startBtn.setDepth(302);
 
-    const btnText = this.add.text(width / 2, btnY + 25, '🚀 START', {
+    const btnText = this.add.text(width / 2, btnY + 25, 'ðŸš€ START', {
       fontSize: '20px',
       color: '#FFFFFF',
       fontStyle: 'bold',
@@ -417,7 +418,7 @@ export class PriorityGameL1 extends Phaser.Scene {
     box.strokeRoundedRect(boxX, boxY, boxW, boxH, 20);
     box.setDepth(301);
 
-    const title = this.add.text(width / 2, boxY + 45, '✈️ Level Complete', {
+    const title = this.add.text(width / 2, boxY + 45, 'âœˆï¸ Level Complete', {
       fontSize: '28px',
       color: '#1E90FF',
       fontStyle: 'bold',
@@ -431,7 +432,23 @@ export class PriorityGameL1 extends Phaser.Scene {
       lineSpacing: 8,
     }).setOrigin(0.5).setDepth(302);
 
-    this.submitScore('priority-l1');
+    const aiFeedbackBtn = this.add.text(140, height - 36, '💬 Chat with AI', {
+      fontSize: '16px',
+      color: '#FFFFFF',
+      backgroundColor: '#4CAF50',
+      padding: { x: 12, y: 8 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(500).setInteractive({ useHandCursor: true });
+
+    aiFeedbackBtn.on('pointerdown', () => {
+      const sceneAny = this as any;
+      openAIFeedbackChat({
+        gameType: this.scene.key,
+        score: sceneAny.totalScore ?? sceneAny.score ?? 0,
+        wrongAttempts: sceneAny.wrongAttempts ?? 0,
+        phase: sceneAny.gamePhase ?? 'results'
+      });
+    });
 
     const btnW = 160;
     const btnH = 48;
@@ -441,7 +458,7 @@ export class PriorityGameL1 extends Phaser.Scene {
     restartBtn.fillStyle(0x1E90FF, 1);
     restartBtn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     restartBtn.setDepth(302);
-    const restartText = this.add.text(width / 2, btnY + 24, '🔄 Play Again', {
+    const restartText = this.add.text(width / 2, btnY + 24, 'ðŸ”„ Play Again', {
       fontSize: '18px',
       color: '#FFFFFF',
       fontStyle: 'bold',
@@ -477,3 +494,4 @@ export const PriorityGameL1Config = {
   type: Phaser.AUTO,
   scene: PriorityGameL1,
 };
+

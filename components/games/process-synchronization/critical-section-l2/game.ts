@@ -1,4 +1,5 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
+import { openAIFeedbackChat } from '../../shared/aiFeedbackChat';
 
 interface Person {
   id: number;
@@ -231,7 +232,7 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
 
   private createUI() {
     // Title - moved up slightly
-    const titleText = this.add.text(this.GAME_WIDTH / 2, 25, '🏦 Critical Section Simulation', {
+    const titleText = this.add.text(this.GAME_WIDTH / 2, 25, 'ðŸ¦ Critical Section Simulation', {
       fontSize: '24px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -300,7 +301,7 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
     scenarioBox.setDepth(301);
 
     // Title
-    const title = this.add.text(this.GAME_WIDTH / 2, boxY + 50, '🔒 CRITICAL SECTION', {
+    const title = this.add.text(this.GAME_WIDTH / 2, boxY + 50, 'ðŸ”’ CRITICAL SECTION', {
       fontSize: '36px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -320,7 +321,7 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
     const contentY = boxY + 145;
 
     // How to Play
-    const howToPlayTitle = this.add.text(boxX + 50, contentY, '🎮 How to Play', {
+    const howToPlayTitle = this.add.text(boxX + 50, contentY, 'ðŸŽ® How to Play', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -340,17 +341,17 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
     }).setDepth(302);
 
     // Rules
-    const rulesTitle = this.add.text(boxX + 50, contentY + 145, '⚠️ Mutual Exclusion Rules', {
+    const rulesTitle = this.add.text(boxX + 50, contentY + 145, 'âš ï¸ Mutual Exclusion Rules', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold',
       fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setDepth(302);
 
-    const rules = `   • ATM is a critical section (shared resource)
-   • Only one person can access it at a time
-   • Trying to access an occupied ATM = Error (-10 points)
-   • Correct access = +25 points | Perfect game = +100 bonus`;
+    const rules = `   â€¢ ATM is a critical section (shared resource)
+   â€¢ Only one person can access it at a time
+   â€¢ Trying to access an occupied ATM = Error (-10 points)
+   â€¢ Correct access = +25 points | Perfect game = +100 bonus`;
 
     const rulesText = this.add.text(boxX + 50, contentY + 180, rules, {
       fontSize: '16px',
@@ -360,7 +361,7 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
     }).setDepth(302);
 
     // Goals
-    const goalTitle = this.add.text(boxX + 50, contentY + 280, '🎯 Goal', {
+    const goalTitle = this.add.text(boxX + 50, contentY + 280, 'ðŸŽ¯ Goal', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -389,7 +390,7 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
     startButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
     startButton.setDepth(302);
 
-    const buttonText = this.add.text(this.GAME_WIDTH / 2, buttonY + 27, '🚀 START GAME', {
+    const buttonText = this.add.text(this.GAME_WIDTH / 2, buttonY + 27, 'ðŸš€ START GAME', {
       fontSize: '22px',
       color: '#000000',
       fontStyle: 'bold',
@@ -583,7 +584,7 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
   private onPersonClick(person: Person) {
     // Check if this specific person can be sent to ATM
     if (person.isAtAtm || person.isCompleted) {
-      this.showMessage('⚠️ This person is already at the ATM or has completed!', '#FF0000');
+      this.showMessage('âš ï¸ This person is already at the ATM or has completed!', '#FF0000');
       return;
     }
 
@@ -593,7 +594,7 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
       this.totalScore = Math.max(0, this.totalScore - 10);
       this.updateScoreDisplay();
       
-      this.showMessage('❌ ATM is occupied! Only one person can use it at a time! -10 points', '#FF0000');
+      this.showMessage('âŒ ATM is occupied! Only one person can use it at a time! -10 points', '#FF0000');
       
       // Shake the person sprite to indicate error
       this.tweens.add({
@@ -610,7 +611,7 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
     }
 
     if (!person.isInQueue) {
-      this.showMessage('⚠️ This person hasn\'t joined the queue yet!', '#FF0000');
+      this.showMessage('âš ï¸ This person hasn\'t joined the queue yet!', '#FF0000');
       return;
     }
 
@@ -761,7 +762,24 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
         // Check if all persons completed
         if (this.completedCount >= this.totalPersons) {
           this.time.delayedCall(3000, () => {
-            this.submitScore();
+
+    const aiFeedbackBtn = this.add.text(140, height - 36, '💬 Chat with AI', {
+      fontSize: '16px',
+      color: '#FFFFFF',
+      backgroundColor: '#4CAF50',
+      padding: { x: 12, y: 8 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(500).setInteractive({ useHandCursor: true });
+
+    aiFeedbackBtn.on('pointerdown', () => {
+      const sceneAny = this as any;
+      openAIFeedbackChat({
+        gameType: this.scene.key,
+        score: sceneAny.totalScore ?? sceneAny.score ?? 0,
+        wrongAttempts: sceneAny.wrongAttempts ?? 0,
+        phase: sceneAny.gamePhase ?? 'results'
+      });
+    });
             this.showEndGame();
           });
         }
@@ -829,7 +847,7 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
     scenarioBox.setDepth(301);
 
     // Title
-    const title = this.add.text(this.GAME_WIDTH / 2, boxY + 50, '🎉 GAME COMPLETE', {
+    const title = this.add.text(this.GAME_WIDTH / 2, boxY + 50, 'ðŸŽ‰ GAME COMPLETE', {
       fontSize: '36px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -849,17 +867,17 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
     const contentY = boxY + 150;
 
     // Results Summary
-    const resultsTitle = this.add.text(boxX + 50, contentY, '📊 Results', {
+    const resultsTitle = this.add.text(boxX + 50, contentY, 'ðŸ“Š Results', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold',
       fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }).setDepth(302);
 
-    const results = `   • All ${this.totalPersons} persons completed their transactions
-   • Base Score: ${this.totalScore} points
-   • Wrong Attempts: ${this.wrongAttempts}
-   • Perfect Bonus: ${perfectBonus} points`;
+    const results = `   â€¢ All ${this.totalPersons} persons completed their transactions
+   â€¢ Base Score: ${this.totalScore} points
+   â€¢ Wrong Attempts: ${this.wrongAttempts}
+   â€¢ Perfect Bonus: ${perfectBonus} points`;
 
     const resultsText = this.add.text(boxX + 50, contentY + 35, results, {
       fontSize: '16px',
@@ -871,26 +889,26 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
     // Performance rating
     let rating = '';
     let ratingColor = '#ff0000';
-    let ratingIcon = '📚';
+    let ratingIcon = 'ðŸ“š';
     if (finalScore >= 90) {
       rating = 'EXCELLENT!';
       ratingColor = '#00ff00';
-      ratingIcon = '🏆';
+      ratingIcon = 'ðŸ†';
     } else if (finalScore >= 70) {
       rating = 'GOOD!';
       ratingColor = '#ffff00';
-      ratingIcon = '🥈';
+      ratingIcon = 'ðŸ¥ˆ';
     } else if (finalScore >= 50) {
       rating = 'FAIR!';
       ratingColor = '#ff8800';
-      ratingIcon = '🥉';
+      ratingIcon = 'ðŸ¥‰';
     } else {
       rating = 'NEEDS IMPROVEMENT!';
       ratingColor = '#ff0000';
-      ratingIcon = '📚';
+      ratingIcon = 'ðŸ“š';
     }
 
-    const performanceTitle = this.add.text(boxX + 50, contentY + 150, '⭐ Performance', {
+    const performanceTitle = this.add.text(boxX + 50, contentY + 150, 'â­ Performance', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -905,7 +923,7 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
     }).setDepth(302);
 
     // Final Score - large display
-    const finalScoreTitle = this.add.text(boxX + 50, contentY + 240, '🎯 Final Score', {
+    const finalScoreTitle = this.add.text(boxX + 50, contentY + 240, 'ðŸŽ¯ Final Score', {
       fontSize: '20px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -932,7 +950,7 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
     restartButton.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
     restartButton.setDepth(302);
 
-    const buttonText = this.add.text(this.GAME_WIDTH / 2, buttonY + 27, '🔄 PLAY AGAIN', {
+    const buttonText = this.add.text(this.GAME_WIDTH / 2, buttonY + 27, 'ðŸ”„ PLAY AGAIN', {
       fontSize: '22px',
       color: '#000000',
       fontStyle: 'bold',
@@ -1037,7 +1055,7 @@ export class CriticalSectionGameL2 extends Phaser.Scene {
         const result = await response.json();
         if (result.achievementsUnlocked && result.achievementsUnlocked.length > 0) {
           this.showMessage(
-            `🎉 Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
+            `ðŸŽ‰ Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
             '#00FF00'
           );
         }
@@ -1061,3 +1079,4 @@ export const CriticalSectionGameL2Config = {
     }
   }
 };
+

@@ -1356,6 +1356,9 @@ Memory exists but not in a single block!`;
 
     // Buttons (adjusted positions)
     const buttonY = boxY + boxHeight - 70;
+    this.createResultButton(width / 2 - 150, buttonY, 'Mini-Quest', () => {
+      window.location.assign('/modules/memory-management/mini-quest/first-fit');
+    });
     this.createResultButton(width / 2 + 50, buttonY, 'Restart', () => {
       this.scene.restart();
     });

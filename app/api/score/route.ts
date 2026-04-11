@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
     // Update user's completed levels (if not already added)
     // Store in format: gameId (e.g., "fcfs-l1", "sjf-l2")
     // This matches the level IDs in modulesData
-    if (!user.completedLevels.includes(gameId)) {
+    const isMiniQuest = gameId.startsWith('miniquest-');
+    if (!isMiniQuest && !user.completedLevels.includes(gameId)) {
       user.completedLevels.push(gameId);
     }
 

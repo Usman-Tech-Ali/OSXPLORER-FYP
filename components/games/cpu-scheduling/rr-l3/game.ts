@@ -1,4 +1,5 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
+import { openAIFeedbackChat } from '../../shared/aiFeedbackChat';
 
 type PlayerType = 'rookie' | 'pro' | 'mvp';
 
@@ -148,21 +149,21 @@ export class RoundRobinL3Game extends Phaser.Scene {
     box.strokeRoundedRect(boxX, boxY, boxW, boxH, 20);
     box.setDepth(41);
 
-    const title = this.add.text(width / 2, boxY + 48, '🏀 Court Kings – Round Robin L3', {
+    const title = this.add.text(width / 2, boxY + 48, 'ðŸ€ Court Kings â€“ Round Robin L3', {
       fontSize: '28px', color: '#FFD700', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5).setDepth(42);
     const subtitle = this.add.text(width / 2, boxY + 90, 'The Tryouts: Continuous arrivals & queue overflow', {
       fontSize: '16px', color: '#FFFFFF',
     }).setOrigin(0.5).setDepth(42);
     const contentY = boxY + 132;
-    const cap1 = this.add.text(boxX + 40, contentY, '📥 New players join the line continuously.', {
+    const cap1 = this.add.text(boxX + 40, contentY, 'ðŸ“¥ New players join the line continuously.', {
       fontSize: '18px', color: '#FFD700', fontStyle: 'bold',
     }).setDepth(42);
     const cap2 = this.add.text(boxX + 40, contentY + 30,
       `If the line gets too long (more than ${MAX_QUEUE_LENGTH} waiting), it's Game Over.\nClear short tasks (Rookies) quickly to make space in the gym!`, {
       fontSize: '14px', color: '#E0E0E0', lineSpacing: 6,
     }).setDepth(42);
-    const cap3 = this.add.text(boxX + 40, contentY + 100, '🎯 Goal', {
+    const cap3 = this.add.text(boxX + 40, contentY + 100, 'ðŸŽ¯ Goal', {
       fontSize: '18px', color: '#FFD700', fontStyle: 'bold',
     }).setDepth(42);
     const cap4 = this.add.text(boxX + 40, contentY + 128,
@@ -178,7 +179,7 @@ export class RoundRobinL3Game extends Phaser.Scene {
     startBtn.fillStyle(0x9932cc, 1);
     startBtn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     startBtn.setDepth(42);
-    const btnText = this.add.text(width / 2, btnY + 25, '🚀 START DRILL', {
+    const btnText = this.add.text(width / 2, btnY + 25, 'ðŸš€ START DRILL', {
       fontSize: '20px', color: '#FFFFFF', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(43);
 
@@ -496,14 +497,31 @@ export class RoundRobinL3Game extends Phaser.Scene {
     box.strokeRoundedRect(boxX, boxY, boxW, boxH, 20);
     box.setDepth(51);
 
-    this.add.text(width / 2, boxY + 42, isGameOver ? '💥 Queue overflow!' : '🏀 Tryouts complete', {
+    this.add.text(width / 2, boxY + 42, isGameOver ? 'ðŸ’¥ Queue overflow!' : 'ðŸ€ Tryouts complete', {
       fontSize: '26px', color: isGameOver ? '#FF6666' : '#FFD700', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(52);
     this.add.text(width / 2, boxY + 110,
       `Score: ${this.totalScore}\nFinished: ${this.finishedPlayers.length}\nTime: ${this.currentTime}s`,
       { fontSize: '18px', color: '#FFFFFF', align: 'center', lineSpacing: 8 },
     ).setOrigin(0.5).setDepth(52);
-    this.submitScore('rr-l3', isGameOver);
+
+    const aiFeedbackBtn = this.add.text(140, height - 36, '💬 Chat with AI', {
+      fontSize: '16px',
+      color: '#FFFFFF',
+      backgroundColor: '#4CAF50',
+      padding: { x: 12, y: 8 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(500).setInteractive({ useHandCursor: true });
+
+    aiFeedbackBtn.on('pointerdown', () => {
+      const sceneAny = this as any;
+      openAIFeedbackChat({
+        gameType: this.scene.key,
+        score: sceneAny.totalScore ?? sceneAny.score ?? 0,
+        wrongAttempts: sceneAny.wrongAttempts ?? 0,
+        phase: sceneAny.gamePhase ?? 'results'
+      });
+    });
 
     const btnW = 160;
     const btnH = 44;
@@ -513,7 +531,7 @@ export class RoundRobinL3Game extends Phaser.Scene {
     restartBtn.fillStyle(isGameOver ? 0xcc0000 : 0x9932cc, 1);
     restartBtn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     restartBtn.setDepth(52);
-    this.add.text(width / 2, btnY + 22, '🔄 Play Again', { fontSize: '17px', color: '#FFFFFF', fontStyle: 'bold' }).setOrigin(0.5).setDepth(53);
+    this.add.text(width / 2, btnY + 22, 'ðŸ”„ Play Again', { fontSize: '17px', color: '#FFFFFF', fontStyle: 'bold' }).setOrigin(0.5).setDepth(53);
     restartBtn.setInteractive(new Phaser.Geom.Rectangle(btnX, btnY, btnW, btnH), Phaser.Geom.Rectangle.Contains);
     restartBtn.on('pointerdown', () => this.scene.restart());
   }
@@ -541,3 +559,4 @@ export class RoundRobinL3Game extends Phaser.Scene {
 }
 
 export const RoundRobinL3GameConfig = { type: Phaser.AUTO, scene: RoundRobinL3Game };
+

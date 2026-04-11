@@ -214,12 +214,15 @@ function getSidebar(module: any, realStats: any) {
               <span className="text-white font-bold">{realStats.totalXP}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Current Threshold:</span>
-              <span className="text-white font-bold">Level {realStats.currentThreshold || 2}</span>
+              <span className="text-gray-400">Levels Completed:</span>
+              <span className="text-white font-bold">{realStats.levelsCompleted}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Next Unlock:</span>
-              <span className="text-white font-bold">Level {realStats.nextUnlock || 3}</span>
+              <span className="text-gray-400">Current Streak:</span>
+              <span className="text-white font-bold flex items-center">
+                <Flame className="w-5 h-4 text-orange-500 mr-1" />
+                {realStats.currentStreak} days
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -303,7 +306,9 @@ function MiniQuestCard({ moduleId, sectionIndex, unlocked, topicId, completed }:
             <CardDescription className="text-gray-200 mt-1 text-xs">
               {completed 
                 ? "You've completed this mini-quest! Play again to improve your score."
-                : "Complete this Mini-Quest to unlock the next topic!"}
+                : unlocked
+                ? "Mini Quiz Unlocked! Test your knowledge with a fun quiz based on the levels you just completed."
+                : "Complete all levels in this section to unlock this Mini-Quest, then complete the Mini-Quest to unlock the next topic."}
             </CardDescription>
           </div>
           <div className="mt-4 sm:mt-0">
@@ -364,7 +369,8 @@ function LevelCard({ level, sectionId, moduleId }: { level: any; sectionId: stri
         return "Available"
     }
   }
-  const isPlayable = level.status === "available" || level.status === "in-progress"
+  const isPlayable = level.status !== "locked"
+  const actionLabel = level.status === "completed" ? "Play Again" : "Play"
 
   // Visualization for memory-management and process-synchronization
   let visualization = null
@@ -500,7 +506,7 @@ function LevelCard({ level, sectionId, moduleId }: { level: any; sectionId: stri
           {isPlayable ? (
             <Link href={`/modules/${moduleId}/games/${level.id}`}>
               <Play className="w-4 h-4 mr-2" />
-              Play
+              {actionLabel}
             </Link>
           ) : (
             <>
@@ -532,6 +538,7 @@ export default function ModulePage() {
   const [userProgress, setUserProgress] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [completedLevels, setCompletedLevels] = useState<string[]>([])
+  const [recentScores, setRecentScores] = useState<any[]>([])
 
   useEffect(() => {
     const fetchUserProgress = async () => {
@@ -546,6 +553,7 @@ export default function ModulePage() {
           const data = await response.json()
           setUserProgress(data)
           setCompletedLevels(data.user.completedLevels || [])
+          setRecentScores(data.recentScores || [])
         }
       } catch (error) {
         console.error('Failed to fetch user progress:', error)
@@ -625,6 +633,15 @@ export default function ModulePage() {
     return section.levels.every((lvl: any) => completedLevels.includes(lvl.id))
   }
 
+  const hasCompletedMiniQuest = (topicId: string) => {
+    const questData = (miniQuestData as any)[moduleId]?.[topicId]
+    if (!questData) return false
+
+    return recentScores.some((score: any) =>
+      score.gameId === `miniquest-${topicId}` && score.score >= questData.passingScore
+    )
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Animated Background */}
@@ -667,7 +684,7 @@ export default function ModulePage() {
                         sectionIndex={idx} 
                         unlocked={isSectionCompleted(idx)} 
                         topicId={section.id}
-                        completed={completedLevels.includes(`miniquest-${section.id}`)}
+                        completed={hasCompletedMiniQuest(section.id)}
                       />
                     </div>
                   )}

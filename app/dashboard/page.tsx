@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { OSGameLabLogo } from "@/components/ui/os-gamelab-logo"
+import { modulesData } from "../modules/modulesData"
 import {
   Cpu,
   HardDrive,
@@ -60,24 +61,24 @@ const modules = [
   {
     id: 1,
     title: "CPU Scheduling",
+    moduleKey: "cpu-scheduling",
     icon: <Cpu className="w-8 h-8" />,
-    completion: 75,
     color: "from-cyan-500 to-blue-600",
     glowColor: "shadow-cyan-500/50",
   },
   {
     id: 2,
     title: "Memory Management",
+    moduleKey: "memory-management",
     icon: <HardDrive className="w-8 h-8" />,
-    completion: 45,
     color: "from-purple-500 to-pink-600",
     glowColor: "shadow-purple-500/50",
   },
   {
     id: 3,
     title: "Process Synchronization",
+    moduleKey: "process-synchronization",
     icon: <Zap className="w-8 h-8" />,
-    completion: 20,
     color: "from-green-500 to-emerald-600",
     glowColor: "shadow-green-500/50",
   },
@@ -200,6 +201,14 @@ export default function Dashboard() {
 
   const xpProgress = (userData.currentXP / userData.nextLevelXP) * 100
 
+  const getModuleCompletion = (moduleKey: keyof typeof modulesData) => {
+    const module = modulesData[moduleKey]
+    const completedLevels = new Set(progress.user.completedLevels)
+    const allLevelIds = module.levelSections.flatMap((section: any) => section.levels.map((level: any) => level.id))
+    const completedCount = allLevelIds.filter((levelId) => completedLevels.has(levelId)).length
+    return allLevelIds.length > 0 ? Math.round((completedCount / allLevelIds.length) * 100) : 0
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Animated Background */}
@@ -254,6 +263,7 @@ export default function Dashboard() {
               <h2 className="text-2xl font-bold mb-6 text-white">Your Modules</h2>
               <div className="grid md:grid-cols-3 gap-6">
                 {modules.map((module) => {
+                  const completion = getModuleCompletion(module.moduleKey as keyof typeof modulesData)
                   const href =
                     module.title === "CPU Scheduling"
                       ? "/modules/cpu-scheduling"
@@ -279,7 +289,7 @@ export default function Dashboard() {
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="text-center space-y-6">
-                            <CircularProgress value={module.completion} />
+                            <CircularProgress value={completion} />
                             <Button className="w-full neon-button-primary group">Continue</Button>
                           </CardContent>
                         </Card>

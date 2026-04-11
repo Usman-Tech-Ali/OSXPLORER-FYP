@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { openAIFeedbackChat } from '../../shared/aiFeedbackChat';
 
 const ASSET_PATH = '/games/memory-management/Fragmentation_Compaction/';
 
@@ -707,5 +708,22 @@ export class FragL2Scene extends Phaser.Scene {
       fontSize: '16px', color: '#000', backgroundColor: '#00FF88', padding: { x: 18, y: 9 },
     }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(31)
       .on('pointerdown', () => this.scene.start('FragL3Scene'));
+
+    this.add.text(140, height - 36, '💬 Chat with AI', {
+      fontSize: '16px',
+      color: '#FFFFFF',
+      backgroundColor: '#4CAF50',
+      padding: { x: 12, y: 8 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(31).setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        openAIFeedbackChat({
+          gameType: this.scene.key,
+          score: this.score,
+          phase: this.gamePhase,
+          correctAnswers: this.correctAnswers,
+          totalQuestions: PLACEMENT_TASKS.length
+        });
+      });
   }
 }

@@ -18,6 +18,12 @@ const HeistGameL3 = dynamic(() => import("@/components/games/memory-management/p
 const SegmentationGameL1 = dynamic(() => import("@/components/games/memory-management/segmentation-l1/SegmentationGame"), {
   ssr: false,
 })
+const SegmentationGameL2 = dynamic(() => import("@/components/games/memory-management/segmentation-l2/SegmentationGame"), {
+  ssr: false,
+})
+const SegmentationGameL3 = dynamic(() => import("@/components/games/memory-management/segmentation-l3/SegmentationGame"), {
+  ssr: false,
+})
 const FragmentationGameL1 = dynamic(
   () =>
     import("@/components/games/memory-management/compaction-l1/FragmentationGame").then((m) => m.FragmentationGameL1),
@@ -85,6 +91,8 @@ export default function GamePage() {
   const isPagingL2 = moduleId === "memory-management" && gameId === "paging-l2"
   const isPagingL3 = moduleId === "memory-management" && gameId === "paging-l3"
   const isSegmentationL1 = moduleId === "memory-management" && gameId === "segmentation-l1"
+  const isSegmentationL2 = moduleId === "memory-management" && gameId === "segmentation-l2"
+  const isSegmentationL3 = moduleId === "memory-management" && gameId === "segmentation-l3"
   const isFragmentationL1 = moduleId === "memory-management" && gameId === "fragmentation-l1"
   const isFragmentationL2 = moduleId === "memory-management" && gameId === "fragmentation-l2"
   const isFragmentationL3 = moduleId === "memory-management" && gameId === "fragmentation-l3"
@@ -179,6 +187,14 @@ export default function GamePage() {
       ) : isSegmentationL1 ? (
         <div className="w-full h-screen overflow-hidden">
           <SegmentationGameL1 />
+        </div>
+      ) : isSegmentationL2 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <SegmentationGameL2 />
+        </div>
+      ) : isSegmentationL3 ? (
+        <div className="w-full h-screen overflow-hidden">
+          <SegmentationGameL3 />
         </div>
       ) : isFragmentationL1 ? (
         <div className="w-full h-screen overflow-hidden">

@@ -1,4 +1,5 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
+import { openAIFeedbackChat } from '../../shared/aiFeedbackChat';
 
 type PlayerType = 'rookie' | 'pro' | 'mvp';
 
@@ -140,21 +141,21 @@ export class RoundRobinL2Game extends Phaser.Scene {
     box.strokeRoundedRect(boxX, boxY, boxW, boxH, 20);
     box.setDepth(41);
 
-    const title = this.add.text(width / 2, boxY + 48, '🏀 Court Kings – Round Robin L2', {
+    const title = this.add.text(width / 2, boxY + 48, 'ðŸ€ Court Kings â€“ Round Robin L2', {
       fontSize: '28px', color: '#FFD700', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5).setDepth(42);
     const subtitle = this.add.text(width / 2, boxY + 90, 'The Fumble: Context Switch Overhead (1.5s delay)', {
       fontSize: '16px', color: '#FFFFFF',
     }).setOrigin(0.5).setDepth(42);
     const contentY = boxY + 135;
-    const cap1 = this.add.text(boxX + 40, contentY, '⏱️ Context switch cost', {
+    const cap1 = this.add.text(boxX + 40, contentY, 'â±ï¸ Context switch cost', {
       fontSize: '18px', color: '#FFD700', fontStyle: 'bold',
     }).setDepth(42);
     const cap2 = this.add.text(boxX + 40, contentY + 28,
       'When players switch places, the coach shows the sweat drop and there is a 1.5 second delay.\nIf the quantum is too short, players spend more time "fumbling" (switching) than shooting.', {
       fontSize: '14px', color: '#E0E0E0', lineSpacing: 6,
     }).setDepth(42);
-    const cap3 = this.add.text(boxX + 40, contentY + 115, '🎯 Goal', {
+    const cap3 = this.add.text(boxX + 40, contentY + 115, 'ðŸŽ¯ Goal', {
       fontSize: '18px', color: '#FFD700', fontStyle: 'bold',
     }).setDepth(42);
     const textGoal = this.add.text(boxX + 40, contentY + 143,
@@ -170,7 +171,7 @@ export class RoundRobinL2Game extends Phaser.Scene {
     startBtn.fillStyle(0xcc6600, 1);
     startBtn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     startBtn.setDepth(42);
-    const btnText = this.add.text(width / 2, btnY + 25, '🚀 START DRILL', {
+    const btnText = this.add.text(width / 2, btnY + 25, 'ðŸš€ START DRILL', {
       fontSize: '20px', color: '#FFFFFF', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(43);
     const introItems: Phaser.GameObjects.GameObject[] = [overlay, box, title, subtitle, cap1, cap2, cap3, textGoal, startBtn, btnText];
@@ -190,7 +191,7 @@ export class RoundRobinL2Game extends Phaser.Scene {
     this.finishedPlayers = [];
     this.currentPlayer = undefined;
 
-    this.phaseText.setText('Phase: Playing (Round Robin L2 – context switch delay)');
+    this.phaseText.setText('Phase: Playing (Round Robin L2 â€“ context switch delay)');
     this.instructionText.setText('Each switch has a 1.5s delay. Watch the sweat drop!');
     this.scoreText.setText('Score: 0');
     this.timeText.setText('Time: 0s');
@@ -412,7 +413,7 @@ export class RoundRobinL2Game extends Phaser.Scene {
     this.currentPlayer = undefined;
     const newIndex = this.readyQueue.length - 1;
 
-    this.instructionText.setText(`${player.name} – quantum used. Back of the line! (Then 1.5s switch delay)`);
+    this.instructionText.setText(`${player.name} â€“ quantum used. Back of the line! (Then 1.5s switch delay)`);
     if (player.container && player.sprite) {
       player.sprite.setTexture(this.getPlayerSpriteKey(player.type, 'running'));
       player.sprite.setFlipX(true);
@@ -452,13 +453,30 @@ export class RoundRobinL2Game extends Phaser.Scene {
     box.lineStyle(4, 0xcc6600, 1);
     box.strokeRoundedRect(boxX, boxY, boxW, boxH, 20);
     box.setDepth(51);
-    this.add.text(width / 2, boxY + 45, '🏀 L2 Complete', {
+    this.add.text(width / 2, boxY + 45, 'ðŸ€ L2 Complete', {
       fontSize: '28px', color: '#FFD700', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(52);
     this.add.text(width / 2, boxY + 120, `Score: ${this.totalScore}\nFinished: ${this.finishedPlayers.length}/${this.players.length}\nTime: ${this.currentTime}s`, {
       fontSize: '18px', color: '#FFFFFF', align: 'center', lineSpacing: 8,
     }).setOrigin(0.5).setDepth(52);
-    this.submitScore('rr-l2');
+
+    const aiFeedbackBtn = this.add.text(140, height - 36, '💬 Chat with AI', {
+      fontSize: '16px',
+      color: '#FFFFFF',
+      backgroundColor: '#4CAF50',
+      padding: { x: 12, y: 8 },
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(500).setInteractive({ useHandCursor: true });
+
+    aiFeedbackBtn.on('pointerdown', () => {
+      const sceneAny = this as any;
+      openAIFeedbackChat({
+        gameType: this.scene.key,
+        score: sceneAny.totalScore ?? sceneAny.score ?? 0,
+        wrongAttempts: sceneAny.wrongAttempts ?? 0,
+        phase: sceneAny.gamePhase ?? 'results'
+      });
+    });
     const btnW = 180;
     const btnH = 48;
     const btnX = width / 2 - btnW / 2;
@@ -467,7 +485,7 @@ export class RoundRobinL2Game extends Phaser.Scene {
     restartBtn.fillStyle(0xcc6600, 1);
     restartBtn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     restartBtn.setDepth(52);
-    this.add.text(width / 2, btnY + 24, '🔄 Play Again', { fontSize: '18px', color: '#FFFFFF', fontStyle: 'bold' }).setOrigin(0.5).setDepth(53);
+    this.add.text(width / 2, btnY + 24, 'ðŸ”„ Play Again', { fontSize: '18px', color: '#FFFFFF', fontStyle: 'bold' }).setOrigin(0.5).setDepth(53);
     restartBtn.setInteractive(new Phaser.Geom.Rectangle(btnX, btnY, btnW, btnH), Phaser.Geom.Rectangle.Contains);
     restartBtn.on('pointerdown', () => this.scene.restart());
   }
@@ -495,3 +513,4 @@ export class RoundRobinL2Game extends Phaser.Scene {
 }
 
 export const RoundRobinL2GameConfig = { type: Phaser.AUTO, scene: RoundRobinL2Game };
+
