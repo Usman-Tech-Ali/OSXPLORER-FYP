@@ -32,6 +32,7 @@ interface Valve {
   state: ValveState;
   heldBy: number | null;
   sprite: Phaser.GameObjects.Image;
+  label: Phaser.GameObjects.Text;
 }
 
 interface LevelConfig {
@@ -130,7 +131,14 @@ class DiningPhilosophersBase extends Phaser.Scene {
         .setDisplaySize(62, 62).setDepth(5)
         .setInteractive({ useHandCursor: true });
 
-      const valve: Valve = { id: i, state: 'free', heldBy: null, sprite };
+      const label = this.add.text(vx, vy, `${i + 1}`, {
+        fontSize: '18px',
+        color: '#FFFFFF',
+        fontStyle: 'bold',
+        shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 2, fill: true },
+      }).setOrigin(0.5).setDepth(6);
+
+      const valve: Valve = { id: i, state: 'free', heldBy: null, sprite, label };
       this.valves.push(valve);
 
       if (this.cfg.isManual) {
@@ -232,8 +240,10 @@ class DiningPhilosophersBase extends Phaser.Scene {
   protected refreshValveSprite(v: Valve) {
     if (v.state === 'held') {
       v.sprite.setTexture('valve-normal').setTint(0x00FFCC);
+      v.label.setColor('#001a1a');
     } else {
       v.sprite.setTexture('valve-normal').clearTint();
+      v.label.setColor('#FFFFFF');
     }
   }
 
@@ -477,12 +487,14 @@ class DiningPhilosophersBase extends Phaser.Scene {
     if (v.state === 'held') {
       // Free the valve
       const holder = this.philosophers[v.heldBy!];
+      const releasedSide = v.heldBy === v.id ? 'left' : 'right';
       if (v.heldBy === v.id) { holder.heldLeft = false; }
       else { holder.heldRight = false; }
       if (holder.state === 'waiting_right') holder.state = 'hungry';
       v.state = 'free'; v.heldBy = null;
       this.refreshValveSprite(v);
       this.refreshConsole(holder);
+      this.showMessage(`Valve ${v.id + 1} released from Sector ${holder.id + 1} (${releasedSide} valve)`, '#FFD700', 1400);
       return;
     }
 
@@ -507,8 +519,12 @@ class DiningPhilosophersBase extends Phaser.Scene {
     }
 
     v.state = 'held'; v.heldBy = target.id;
+    let assignedSide: 'left' | 'right';
     if (target.id === left) { target.heldLeft = true; }
     else { target.heldRight = true; }
+
+    assignedSide = target.id === left ? 'left' : 'right';
+    this.showMessage(`Valve ${v.id + 1} assigned to Sector ${target.id + 1} (${assignedSide} valve)`, '#88CCFF', 1500);
 
     this.refreshValveSprite(v);
 
