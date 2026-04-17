@@ -83,7 +83,7 @@ export class RoundRobinL1Game extends Phaser.Scene {
   }
 
   private createCourt(width: number, height: number) {
-    // Stand (hoop) at the end of the court â€“ smaller, further right, lower (stand on court)
+    // Stand (hoop) at the end of the court – smaller, further right, lower (stand on court)
     const hoopX = width * 0.82;
     const hoopY = height * 0.36;
     this.hoopSprite = this.add.sprite(hoopX+100, hoopY+50, 'hoop');
@@ -167,7 +167,7 @@ export class RoundRobinL1Game extends Phaser.Scene {
     box.strokeRoundedRect(boxX, boxY, boxW, boxH, 20);
     box.setDepth(41);
 
-    const title = this.add.text(width / 2, boxY + 50, 'ðŸ€ Court Kings â€“ Round Robin L1', {
+    const title = this.add.text(width / 2, boxY + 50, '🏀 Court Kings – Round Robin L1', {
       fontSize: '30px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -182,7 +182,7 @@ export class RoundRobinL1Game extends Phaser.Scene {
 
     const contentY = boxY + 140;
 
-    const t1 = this.add.text(boxX + 40, contentY, 'ðŸŽ® How it works', {
+    const t1 = this.add.text(boxX + 40, contentY, '🎮 How it works', {
       fontSize: '18px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -197,23 +197,23 @@ export class RoundRobinL1Game extends Phaser.Scene {
         lineSpacing: 6,
       }).setDepth(42);
 
-    const t2 = this.add.text(boxX + 40, contentY + 130, 'ðŸ” Round Robin Rule', {
+    const t2 = this.add.text(boxX + 40, contentY + 130, '🔁 Round Robin Rule', {
       fontSize: '18px',
       color: '#FFD700',
       fontStyle: 'bold',
     }).setDepth(42);
 
     const text2 = this.add.text(boxX + 40, contentY + 158,
-      'â€¢ Quantum = 3 balls per turn.\n' +
-      'â€¢ If a player finishes their target score, they cheer and leave the court.\n' +
-      'â€¢ If they still need points when balls run out, they go to BACK of the line.\n' +
-      'â€¢ CPU = Hoop, Process = Player, Burst Time = Target Score.', {
+      '• Quantum = 3 balls per turn.\n' +
+      '• If a player finishes their target score, they cheer and leave the court.\n' +
+      '• If they still need points when balls run out, they go to BACK of the line.\n' +
+      '• CPU = Hoop, Process = Player, Burst Time = Target Score.', {
         fontSize: '14px',
         color: '#E0E0E0',
         lineSpacing: 6,
       }).setDepth(42);
 
-    const t3 = this.add.text(boxX + 40, contentY + 255, 'ðŸŽ¯ Goal', {
+    const t3 = this.add.text(boxX + 40, contentY + 255, '🎯 Goal', {
       fontSize: '18px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -235,7 +235,7 @@ export class RoundRobinL1Game extends Phaser.Scene {
     startBtn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     startBtn.setDepth(42);
 
-    const btnText = this.add.text(width / 2, btnY + 25, 'ðŸš€ START DRILL', {
+    const btnText = this.add.text(width / 2, btnY + 25, ' START DRILL', {
       fontSize: '20px',
       color: '#000000',
       fontStyle: 'bold',
@@ -498,7 +498,7 @@ export class RoundRobinL1Game extends Phaser.Scene {
     this.currentPlayer = undefined;
 
     this.instructionText.setText(
-      `${player.name} used all ${this.QUANTUM} balls but still needs points. Coach blows whistle â€“ back of the line!`,
+      `${player.name} used all ${this.QUANTUM} balls but still needs points. Coach blows whistle – back of the line!`,
     );
 
     if (player.container && player.sprite) {
@@ -545,7 +545,7 @@ export class RoundRobinL1Game extends Phaser.Scene {
     box.strokeRoundedRect(boxX, boxY, boxW, boxH, 20);
     box.setDepth(51);
 
-    const title = this.add.text(width / 2, boxY + 50, 'ðŸ€ Drill Complete', {
+    const title = this.add.text(width / 2, boxY + 50, '🏀 Drill Complete', {
       fontSize: '28px',
       color: '#FFD700',
       fontStyle: 'bold',
@@ -589,7 +589,7 @@ Time: ${this.currentTime}s`;
     restartBtn.fillStyle(0xffa500, 1);
     restartBtn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     restartBtn.setDepth(52);
-    const btnText = this.add.text(width / 2, btnY + 24, 'ðŸ”„ Play Again', {
+    const btnText = this.add.text(width / 2, btnY + 24, '🔄 Play Again', {
       fontSize: '18px',
       color: '#000000',
       fontStyle: 'bold',

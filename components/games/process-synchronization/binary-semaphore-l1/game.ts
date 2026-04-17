@@ -108,7 +108,7 @@ export class BinarySemaphoreGameScene extends Phaser.Scene {
     bg.strokeRoundedRect(-80, -30, 160, 60, 10);
     this.waitButton.add(bg);
     
-    const text = this.add.text(0, 0, 'ðŸ”’ WAIT()', {
+    const text = this.add.text(0, 0, '🔒 WAIT()', {
       fontSize: '20px',
       color: '#FFFFFF',
       fontStyle: 'bold'
@@ -148,7 +148,7 @@ export class BinarySemaphoreGameScene extends Phaser.Scene {
     bg.strokeRoundedRect(-80, -30, 160, 60, 10);
     this.signalButton.add(bg);
     
-    const text = this.add.text(0, 0, 'ðŸŸ¢ SIGNAL()', {
+    const text = this.add.text(0, 0, '🟢 SIGNAL()', {
       fontSize: '20px',
       color: '#FFFFFF',
       fontStyle: 'bold'
@@ -195,7 +195,7 @@ export class BinarySemaphoreGameScene extends Phaser.Scene {
     box.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     box.setDepth(301);
 
-    const title = this.add.text(width / 2, boxY + 50, 'ðŸŒ‰ BINARY SEMAPHORE', {
+    const title = this.add.text(width / 2, boxY + 50, '🌉 BINARY SEMAPHORE', {
       fontSize: '32px',
       color: '#FFD700',
       fontStyle: 'bold'
@@ -206,19 +206,19 @@ export class BinarySemaphoreGameScene extends Phaser.Scene {
       color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(302);
 
-    const content = `ðŸŽ® How to Play:
-â€¢ Cars arrive ONE AT A TIME from left/right
-â€¢ Only ONE car can cross the bridge at a time
-â€¢ Press WAIT() to LOCK bridge and let car cross
-â€¢ Press SIGNAL() to UNLOCK bridge after crossing
+    const content = `🎮 How to Play:
+• Cars arrive ONE AT A TIME from left/right
+• Only ONE car can cross the bridge at a time
+• Press WAIT() to LOCK bridge and let car cross
+• Press SIGNAL() to UNLOCK bridge after crossing
 
-âš ï¸ Binary Semaphore Rules:
-â€¢ Semaphore value: 1 (unlocked) or 0 (locked)
-â€¢ WAIT(): Lock bridge (1â†’0) and allow car to cross
-â€¢ SIGNAL(): Unlock bridge (0â†’1) after car exits
-â€¢ Must SIGNAL() before next WAIT()
+⚠️ Binary Semaphore Rules:
+• Semaphore value: 1 (unlocked) or 0 (locked)
+• WAIT(): Lock bridge (1→0) and allow car to cross
+• SIGNAL(): Unlock bridge (0→1) after car exits
+• Must SIGNAL() before next WAIT()
 
-ðŸŽ¯ Goal: Pass 10 cars safely!`;
+🎯 Goal: Pass 10 cars safely!`;
 
     const contentText = this.add.text(boxX + 50, boxY + 140, content, {
       fontSize: '16px',
@@ -236,7 +236,7 @@ export class BinarySemaphoreGameScene extends Phaser.Scene {
     startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
     startButton.setDepth(302);
 
-    const buttonText = this.add.text(width / 2, buttonY + 27, 'ðŸš€ START GAME', {
+    const buttonText = this.add.text(width / 2, buttonY + 27, ' START GAME', {
       fontSize: '22px',
       color: '#000000',
       fontStyle: 'bold'
@@ -362,7 +362,7 @@ export class BinarySemaphoreGameScene extends Phaser.Scene {
 
   private onWaitPressed() {
     if (this.semaphoreValue === 0) {
-      this.showMessage('âš ï¸ Bridge already locked! Press SIGNAL() first!', '#FF6600');
+      this.showMessage('⚠️ Bridge already locked! Press SIGNAL() first!', '#FF6600');
       return;
     }
     
@@ -370,7 +370,7 @@ export class BinarySemaphoreGameScene extends Phaser.Scene {
     const waitingCar = this.cars.find(c => c.isWaiting && !c.isOnBridge);
     
     if (!waitingCar) {
-      this.showMessage('âš ï¸ No car waiting at bridge!', '#FF6600');
+      this.showMessage('⚠️ No car waiting at bridge!', '#FF6600');
       return;
     }
     
@@ -391,12 +391,12 @@ export class BinarySemaphoreGameScene extends Phaser.Scene {
 
   private onSignalPressed() {
     if (this.semaphoreValue === 1) {
-      this.showMessage('âš ï¸ Bridge already unlocked!', '#FF6600');
+      this.showMessage('⚠️ Bridge already unlocked!', '#FF6600');
       return;
     }
     
     if (this.bridgeCar && this.bridgeCar.isOnBridge) {
-      this.showMessage('âš ï¸ Wait for car to finish crossing!', '#FF6600');
+      this.showMessage('⚠️ Wait for car to finish crossing!', '#FF6600');
       return;
     }
     
@@ -499,7 +499,7 @@ export class BinarySemaphoreGameScene extends Phaser.Scene {
     box.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     box.setDepth(301);
 
-    const title = this.add.text(width / 2, boxY + 50, 'ðŸŽ‰ LEVEL COMPLETE!', {
+    const title = this.add.text(width / 2, boxY + 50, '🎉 LEVEL COMPLETE!', {
       fontSize: '32px',
       color: '#00FF00',
       fontStyle: 'bold'
@@ -528,7 +528,7 @@ Crashes: ${this.crashes}
     restartButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
     restartButton.setDepth(302);
 
-    const buttonText = this.add.text(width / 2, buttonY + 25, 'ðŸ”„ PLAY AGAIN', {
+    const buttonText = this.add.text(width / 2, buttonY + 25, '🔄 PLAY AGAIN', {
       fontSize: '20px',
       color: '#FFFFFF',
       fontStyle: 'bold'
@@ -570,7 +570,7 @@ Crashes: ${this.crashes}
         if (result.achievementsUnlocked && result.achievementsUnlocked.length > 0) {
           const { width, height } = this.scale;
           const message = this.add.text(width / 2, height / 2, 
-            `ðŸŽ‰ Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
+            `🎉 Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
             {
               fontSize: '24px',
               color: '#00FF00',

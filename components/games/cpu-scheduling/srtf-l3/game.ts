@@ -172,7 +172,7 @@ export class SRTFGameL3 extends Phaser.Scene {
     scenarioBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     scenarioBox.setDepth(301);
 
-    const title = this.add.text(width / 2, boxY + 50, 'ðŸš¨ SRTF SCHEDULING', {
+    const title = this.add.text(width / 2, boxY + 50, '🚨 SRTF SCHEDULING', {
       fontSize: '36px',
       color: '#FF4444',
       fontStyle: 'bold',
@@ -188,7 +188,7 @@ export class SRTFGameL3 extends Phaser.Scene {
 
     const contentY = boxY + 145;
 
-    const storyTitle = this.add.text(boxX + 50, contentY, 'ðŸ¥ SRTF Concept', {
+    const storyTitle = this.add.text(boxX + 50, contentY, '🏥 SRTF Concept', {
       fontSize: '20px',
       color: '#FF4444',
       fontStyle: 'bold'
@@ -205,17 +205,17 @@ export class SRTFGameL3 extends Phaser.Scene {
       lineSpacing: 6
     }).setDepth(302);
 
-    const rulesTitle = this.add.text(boxX + 50, contentY + 155, 'âš ï¸ SRTF Rules', {
+    const rulesTitle = this.add.text(boxX + 50, contentY + 155, '⚠️ SRTF Rules', {
       fontSize: '20px',
       color: '#FF4444',
       fontStyle: 'bold'
     }).setDepth(302);
 
-    const rules = `   â€¢ Always treat patient with SHORTEST remaining time
-   â€¢ Preemption: Switch if new patient has shorter time
-   â€¢ Paused patients: Time FREEZES when not being treated
-   â€¢ Only active patient's time decreases
-   â€¢ Correct selection: +20 pts | Wrong: -10 pts`;
+    const rules = `   • Always treat patient with SHORTEST remaining time
+   • Preemption: Switch if new patient has shorter time
+   • Paused patients: Time FREEZES when not being treated
+   • Only active patient's time decreases
+   • Correct selection: +20 pts | Wrong: -10 pts`;
 
     const rulesText = this.add.text(boxX + 50, contentY + 190, rules, {
       fontSize: '16px',
@@ -223,7 +223,7 @@ export class SRTFGameL3 extends Phaser.Scene {
       lineSpacing: 6
     }).setDepth(302);
 
-    const goalTitle = this.add.text(boxX + 50, contentY + 320, 'ðŸŽ¯ Goal', {
+    const goalTitle = this.add.text(boxX + 50, contentY + 320, '🎯 Goal', {
       fontSize: '20px',
       color: '#FF4444',
       fontStyle: 'bold'
@@ -247,7 +247,7 @@ export class SRTFGameL3 extends Phaser.Scene {
     startButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
     startButton.setDepth(302);
 
-    const buttonText = this.add.text(width / 2, buttonY + 27, 'ðŸš€ START GAME', {
+    const buttonText = this.add.text(width / 2, buttonY + 27, ' START GAME', {
       fontSize: '22px',
       color: '#FFFFFF',
       fontStyle: 'bold'
@@ -286,7 +286,7 @@ export class SRTFGameL3 extends Phaser.Scene {
     this.numPatients = Phaser.Math.Between(8, 10);
     
     this.phaseText.setText('Phase: Patients Arriving');
-    this.instructionText.setText(`ðŸš¨ ${this.numPatients} critical patients will arrive! Watch for preemption!`);
+    this.instructionText.setText(`🚨 ${this.numPatients} critical patients will arrive! Watch for preemption!`);
     
     this.timeEvent = this.time.addEvent({
       delay: 100,
@@ -399,7 +399,7 @@ export class SRTFGameL3 extends Phaser.Scene {
         this.createPatientUI(patient, pos.x, pos.y);
         this.readyQueue.push(patient);
         
-        this.showMessage(`ðŸš¨ ${patient.name} arrived! (${Math.ceil(patient.remainingTime)}s remaining)`, '#FF4444');
+        this.showMessage(`🚨 ${patient.name} arrived! (${Math.ceil(patient.remainingTime)}s remaining)`, '#FF4444');
         
         this.nextPatientIndex++;
         
@@ -410,18 +410,18 @@ export class SRTFGameL3 extends Phaser.Scene {
             // Preemption needed!
             this.needsPreemption = true;
             this.preemptionWarningShown = false; // Reset for new preemption scenario
-            this.instructionText.setText(`âš ï¸ PREEMPTION NEEDED! Click on ${patient.name} (${Math.ceil(patient.remainingTime)}s) - shorter than ${this.currentTreatingPatient.name} (${Math.ceil(this.currentTreatingPatient.remainingTime)}s)!`);
+            this.instructionText.setText(`⚠️ PREEMPTION NEEDED! Click on ${patient.name} (${Math.ceil(patient.remainingTime)}s) - shorter than ${this.currentTreatingPatient.name} (${Math.ceil(this.currentTreatingPatient.remainingTime)}s)!`);
             
             // Flash the patient that needs attention
             this.flashPatient(patient);
             
             // Show immediate warning
             this.showMessage(
-              `ðŸš¨ PREEMPT NOW! ${patient.name} has shorter time!\nYou'll lose ${this.penaltyPerSecond} pts/sec if you don't switch!`,
+              `🚨 PREEMPT NOW! ${patient.name} has shorter time!\nYou'll lose ${this.penaltyPerSecond} pts/sec if you don't switch!`,
               '#FF6600'
             );
           } else {
-            this.instructionText.setText(`ðŸ©º Treating ${this.currentTreatingPatient.name}... ${patient.name} will wait (${Math.ceil(patient.remainingTime)}s > ${Math.ceil(this.currentTreatingPatient.remainingTime)}s)`);
+            this.instructionText.setText(`🩺 Treating ${this.currentTreatingPatient.name}... ${patient.name} will wait (${Math.ceil(patient.remainingTime)}s > ${Math.ceil(this.currentTreatingPatient.remainingTime)}s)`);
           }
         } else {
           // No one being treated, auto-start treatment
@@ -449,7 +449,7 @@ export class SRTFGameL3 extends Phaser.Scene {
       curr.remainingTime < prev.remainingTime ? curr : prev
     );
     
-    this.instructionText.setText(`ðŸ©º Doctor automatically treating ${shortestPatient.name} (shortest time: ${Math.ceil(shortestPatient.remainingTime)}s)`);
+    this.instructionText.setText(`🩺 Doctor automatically treating ${shortestPatient.name} (shortest time: ${Math.ceil(shortestPatient.remainingTime)}s)`);
     
     this.time.delayedCall(1000, () => {
       this.treatPatient(shortestPatient, true);
@@ -585,7 +585,7 @@ export class SRTFGameL3 extends Phaser.Scene {
 
   private onPatientClick(clickedPatient: Patient) {
     if (clickedPatient.isCompleted) {
-      this.showMessage('âœ… Patient already treated!', '#00FF00');
+      this.showMessage('✅ Patient already treated!', '#00FF00');
       return;
     }
 
@@ -612,7 +612,7 @@ export class SRTFGameL3 extends Phaser.Scene {
       this.totalScore = Math.max(0, this.totalScore - 10);
       this.scoreText.setText(`Score: ${this.totalScore}`);
       this.showMessage(
-        `âŒ WRONG! SRTF Rule: Always treat SHORTEST remaining time!\n${shortestPatient.name} has ${Math.ceil(shortestPatient.remainingTime)}s < ${clickedPatient.name} has ${Math.ceil(clickedPatient.remainingTime)}s`,
+        `❌ WRONG! SRTF Rule: Always treat SHORTEST remaining time!\n${shortestPatient.name} has ${Math.ceil(shortestPatient.remainingTime)}s < ${clickedPatient.name} has ${Math.ceil(clickedPatient.remainingTime)}s`,
         '#FF0000'
       );
       
@@ -626,14 +626,14 @@ export class SRTFGameL3 extends Phaser.Scene {
       // Check if this is a preemption scenario
       if (clickedPatient.remainingTime < this.currentTreatingPatient.remainingTime) {
         // Preemption scenario
-        this.showMessage(`âœ… Correct! Preempting ${this.currentTreatingPatient.name} for ${clickedPatient.name}`, '#00FF00');
+        this.showMessage(`✅ Correct! Preempting ${this.currentTreatingPatient.name} for ${clickedPatient.name}`, '#00FF00');
         this.preemptCurrentPatient(clickedPatient);
       } else if (clickedPatient.id === this.currentTreatingPatient.id) {
         // Clicking on current patient
-        this.showMessage('âš ï¸ Doctor is already treating this patient!', '#FFA500');
+        this.showMessage('⚠️ Doctor is already treating this patient!', '#FFA500');
       } else {
         // Trying to switch to longer patient
-        this.showMessage('âš ï¸ No preemption needed! Current patient has shorter time!', '#FFA500');
+        this.showMessage('⚠️ No preemption needed! Current patient has shorter time!', '#FFA500');
       }
     } else {
       // No one being treated, start new treatment
@@ -657,7 +657,7 @@ export class SRTFGameL3 extends Phaser.Scene {
       this.scoreText.setText(`Score: ${this.totalScore}`);
     }
 
-    this.instructionText.setText(`ðŸ©º Treating ${patient.name}... (${Math.ceil(patient.remainingTime)}s remaining)`);
+    this.instructionText.setText(`🩺 Treating ${patient.name}... (${Math.ceil(patient.remainingTime)}s remaining)`);
 
     // Move doctor to patient
     const patientX = patient.bedSprite!.x;
@@ -719,13 +719,13 @@ export class SRTFGameL3 extends Phaser.Scene {
         if (!this.preemptionWarningShown) {
           this.preemptionWarningShown = true;
           this.showMessage(
-            `âš ï¸ LOSING POINTS! Switch to ${shortestWaiting.name} (${Math.ceil(shortestWaiting.remainingTime)}s)!\n-${this.penaltyPerSecond} pts/sec`,
+            `⚠️ LOSING POINTS! Switch to ${shortestWaiting.name} (${Math.ceil(shortestWaiting.remainingTime)}s)!\n-${this.penaltyPerSecond} pts/sec`,
             '#FF6600'
           );
           this.flashPatient(shortestWaiting);
         }
         
-        this.instructionText.setText(`âš ï¸ SWITCH NOW! ${shortestWaiting.name} (${Math.ceil(shortestWaiting.remainingTime)}s) < ${this.currentTreatingPatient.name} (${Math.ceil(this.currentTreatingPatient.remainingTime)}s) | -${this.penaltyPerSecond} pts/sec`);
+        this.instructionText.setText(`⚠️ SWITCH NOW! ${shortestWaiting.name} (${Math.ceil(shortestWaiting.remainingTime)}s) < ${this.currentTreatingPatient.name} (${Math.ceil(this.currentTreatingPatient.remainingTime)}s) | -${this.penaltyPerSecond} pts/sec`);
       } else {
         this.needsPreemption = false;
         this.preemptionWarningShown = false;
@@ -735,7 +735,7 @@ export class SRTFGameL3 extends Phaser.Scene {
     if (this.currentTreatingPatient.remainingTime <= 0) {
       this.completeTreatment(this.currentTreatingPatient);
     } else if (!this.needsPreemption) {
-      this.instructionText.setText(`ðŸ©º Treating ${this.currentTreatingPatient.name}... (${Math.ceil(this.currentTreatingPatient.remainingTime)}s remaining)`);
+      this.instructionText.setText(`🩺 Treating ${this.currentTreatingPatient.name}... (${Math.ceil(this.currentTreatingPatient.remainingTime)}s remaining)`);
     }
   }
 
@@ -777,7 +777,7 @@ export class SRTFGameL3 extends Phaser.Scene {
       });
     }
 
-    this.showMessage(`âœ… ${patient.name} saved! +50 pts`, '#00FF00');
+    this.showMessage(`✅ ${patient.name} saved! +50 pts`, '#00FF00');
 
     // Check if all patients processed
     const allProcessed = this.completedPatients.length + this.patientsDied >= this.numPatients;
@@ -792,7 +792,7 @@ export class SRTFGameL3 extends Phaser.Scene {
         if (this.readyQueue.length > 0) {
           this.autoStartTreatment();
         } else {
-          this.instructionText.setText('â³ Waiting for next patient to arrive...');
+          this.instructionText.setText('⏳ Waiting for next patient to arrive...');
         }
       });
     }
@@ -840,7 +840,7 @@ export class SRTFGameL3 extends Phaser.Scene {
       });
     }
 
-    this.showMessage(`ðŸ’€ ${patient.name} died! -50 pts`, '#FF0000');
+    this.showMessage(`💀 ${patient.name} died! -50 pts`, '#FF0000');
     
     this.totalScore = Math.max(0, this.totalScore - 50); // Penalty for death
     this.scoreText.setText(`Score: ${this.totalScore}`);
@@ -923,9 +923,9 @@ export class SRTFGameL3 extends Phaser.Scene {
     const successRate = Math.round((patientsSaved / this.numPatients) * 100);
     
     const title = this.add.text(width / 2, boxY + 50, 
-      this.patientsDied === 0 ? 'âœ… PERFECT! ALL SAVED!' : 
-      this.patientsDied >= this.numPatients / 2 ? 'ðŸ’€ MANY DIED!' : 
-      'âš ï¸ GAME COMPLETE', {
+      this.patientsDied === 0 ? '✅ PERFECT! ALL SAVED!' : 
+      this.patientsDied >= this.numPatients / 2 ? '💀 MANY DIED!' : 
+      '⚠️ GAME COMPLETE', {
       fontSize: '32px',
       color: this.patientsDied === 0 ? '#00FF00' : 
              this.patientsDied >= this.numPatients / 2 ? '#FF0000' : '#FFA500',
@@ -941,8 +941,8 @@ Patients Died: ${this.patientsDied}
 Wrong Attempts: ${this.wrongAttempts}
 Total Time: ${this.currentTime}s
 
-${this.patientsDied === 0 ? 'ðŸŽ‰ Perfect SRTF execution!' : 
-  this.patientsDied > 0 ? 'ðŸ’¡ Remember: Always treat shortest remaining time!' : ''}
+${this.patientsDied === 0 ? '🎉 Perfect SRTF execution!' : 
+  this.patientsDied > 0 ? '💡 Remember: Always treat shortest remaining time!' : ''}
     `;
 
     // Submit score to backend
@@ -983,7 +983,7 @@ ${this.patientsDied === 0 ? 'ðŸŽ‰ Perfect SRTF execution!' :
     restartButton.fillRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 12);
     restartButton.setDepth(302);
 
-    const buttonText = this.add.text(width / 2, buttonY + 25, 'ðŸ”„ PLAY AGAIN', {
+    const buttonText = this.add.text(width / 2, buttonY + 25, '🔄 PLAY AGAIN', {
       fontSize: '20px',
       color: '#FFFFFF',
       fontStyle: 'bold'
@@ -1025,7 +1025,7 @@ ${this.patientsDied === 0 ? 'ðŸŽ‰ Perfect SRTF execution!' :
         const result = await response.json();
         if (result.achievementsUnlocked && result.achievementsUnlocked.length > 0) {
           this.showMessage(
-            `ðŸŽ‰ Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
+            `🎉 Achievement Unlocked! ${result.achievementsUnlocked.length} new achievement(s)`,
             '#00FF00',
             3000
           );

@@ -5,6 +5,8 @@ import User from '@/lib/models/User';
 import Score from '@/lib/models/Score';
 import { authOptions } from '../../auth/[...nextauth]/route';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -83,6 +85,10 @@ export async function GET(req: NextRequest) {
       },
       recentScores,
       bestScores
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+      }
     });
   } catch (error: any) {
     console.error('User progress fetch error:', error);

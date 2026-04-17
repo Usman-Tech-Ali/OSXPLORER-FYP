@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -53,7 +53,7 @@ interface BadgeData {
   icon: any
   color: string
   requiredAchievements: number
-  currentAchievements: number
+  currentAchievements?: number
   isUnlocked: boolean
   rarity: "bronze" | "silver" | "gold" | "platinum"
 }
@@ -237,8 +237,8 @@ const achievements: Achievement[] = [
   },
 ]
 
-// Badge data
-const badges: BadgeData[] = [
+// Badge definitions (progress is computed per user)
+const badgeDefinitions: Omit<BadgeData, "currentAchievements" | "isUnlocked">[] = [
   {
     id: "bronze-collector",
     title: "Bronze Collector",
@@ -246,8 +246,6 @@ const badges: BadgeData[] = [
     icon: Award,
     color: "text-orange-600",
     requiredAchievements: 5,
-    currentAchievements: 6,
-    isUnlocked: true,
     rarity: "bronze",
   },
   {
@@ -257,8 +255,6 @@ const badges: BadgeData[] = [
     icon: Award,
     color: "text-gray-400",
     requiredAchievements: 15,
-    currentAchievements: 6,
-    isUnlocked: false,
     rarity: "silver",
   },
   {
@@ -268,8 +264,6 @@ const badges: BadgeData[] = [
     icon: Crown,
     color: "text-yellow-400",
     requiredAchievements: 30,
-    currentAchievements: 6,
-    isUnlocked: false,
     rarity: "gold",
   },
   {
@@ -279,19 +273,9 @@ const badges: BadgeData[] = [
     icon: Crown,
     color: "text-purple-400",
     requiredAchievements: 50,
-    currentAchievements: 6,
-    isUnlocked: false,
     rarity: "platinum",
   },
 ]
-
-// User stats
-const userStats = {
-  totalAchievements: achievements.filter((a) => a.status === "completed").length,
-  totalPoints: achievements.filter((a) => a.status === "completed").reduce((sum, a) => sum + a.points, 0),
-  completionRate: Math.round((achievements.filter((a) => a.status === "completed").length / achievements.length) * 100),
-  rank: "Achievement Hunter",
-}
 
 function AchievementCard({ achievement }: { achievement: Achievement }) {
   const getRarityBorder = () => {
@@ -488,7 +472,7 @@ export default function AchievementsPage() {
 
   const fetchUserProgress = async () => {
     try {
-      const response = await fetch("/api/user/progress")
+      const response = await fetch("/api/user/progress", { cache: "no-store" })
       if (response.ok) {
         const data = await response.json()
         setUserProgress(data)
@@ -539,7 +523,7 @@ export default function AchievementsPage() {
 
   const fetchAchievements = async () => {
     try {
-      const response = await fetch("/api/achievements")
+      const response = await fetch("/api/achievements", { cache: "no-store" })
       if (response.ok) {
         const data = await response.json()
         // Map API data to include icons and colors
@@ -585,14 +569,24 @@ export default function AchievementsPage() {
     return null
   }
 
-  // Use real achievement data from API, fallback to mock data if not loaded yet
-  const achievementsToUse = achievementsData.length > 0 ? achievementsData : achievements
+  // Use achievement data from API
+  const achievementsToUse = achievementsData
   const realUserStats = achievementsData.length > 0 ? achievementStats : {
     totalAchievements: userProgress?.user?.achievements?.length || 0,
     totalPoints: userProgress?.user?.totalXP || 0,
     completionRate: userProgress ? Math.round((userProgress.stats.completedLevelsCount / 18) * 100) : 0,
     rank: userProgress?.user?.level >= 10 ? "Achievement Hunter" : "Beginner"
   }
+
+  const badges = useMemo(
+    () =>
+      badgeDefinitions.map((badge) => ({
+        ...badge,
+        currentAchievements: realUserStats.totalAchievements,
+        isUnlocked: realUserStats.totalAchievements >= badge.requiredAchievements,
+      })),
+    [realUserStats.totalAchievements],
+  )
 
   const filteredAchievements = achievementsToUse.filter((achievement) => {
     const matchesStatus = filterStatus === "all" || achievement.status === filterStatus

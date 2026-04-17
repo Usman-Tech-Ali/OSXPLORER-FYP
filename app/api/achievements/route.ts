@@ -6,6 +6,8 @@ import Score from '@/lib/models/Score';
 import { ACHIEVEMENT_DEFINITIONS, getUserAchievementStatus } from '@/lib/achievements';
 import { authOptions } from '../auth/[...nextauth]/route';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -98,6 +100,10 @@ export async function GET(req: NextRequest) {
         totalPoints,
         completionRate,
         rank
+      }
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
       }
     });
 

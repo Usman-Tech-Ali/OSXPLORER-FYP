@@ -29,7 +29,7 @@ const PRIORITY_LABELS: Record<PriorityLevel, string> = {
 /** Spawn schedule: [time in seconds, priority] */
 const SPAWN_SCHEDULE_L2: Array<[number, PriorityLevel]> = [
   [0, 4],   // P4 Green Cargo first
-  [3, 1],   // P1 Red Medical â€“ preempt P4!
+  [3, 1],   // P1 Red Medical – preempt P4!
   [6, 2],   // P2 Gold VIP
   [9, 3],   // P3 Blue
 ];
@@ -115,28 +115,28 @@ export class PriorityGameL2 extends Phaser.Scene {
     box.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     box.setDepth(301);
 
-    const title = this.add.text(width / 2, boxY + 48, 'âœˆï¸ Sky Marshals â€“ Priority L2', {
+    const title = this.add.text(width / 2, boxY + 48, '✈️ Sky Marshals – Priority L2', {
       fontSize: '32px', color: '#FF6600', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5).setDepth(302);
     const subtitle = this.add.text(width / 2, boxY + 90, 'Preemptive: Higher priority can take the runway!', {
       fontSize: '16px', color: '#E0E0E0',
     }).setOrigin(0.5).setDepth(302);
     const contentY = boxY + 140;
-    const howTitle = this.add.text(boxX + 40, contentY, 'ðŸŽ® Crisis Mode', {
+    const howTitle = this.add.text(boxX + 40, contentY, '🎮 Crisis Mode', {
       fontSize: '18px', color: '#FFD700', fontStyle: 'bold',
     }).setDepth(302);
     const howText = this.add.text(boxX + 40, contentY + 28,
       'A lower-priority plane may be on the runway. When a higher-priority plane appears, click it to preempt: the current plane stops, turns back, and returns to the queue. The new plane takes the runway.', {
       fontSize: '14px', color: '#E0E0E0', lineSpacing: 6,
     }).setDepth(302);
-    const rulesTitle = this.add.text(boxX + 40, contentY + 130, 'âš ï¸ Rules', {
+    const rulesTitle = this.add.text(boxX + 40, contentY + 130, '⚠️ Rules', {
       fontSize: '18px', color: '#FFD700', fontStyle: 'bold',
     }).setDepth(302);
     const rulesText = this.add.text(boxX + 40, contentY + 158,
-      'â€¢ Lower number = higher priority. Click highest-priority plane (queue or preempt).\nâ€¢ Correct: +20 pts  |  Wrong: -10 pts', {
+      '• Lower number = higher priority. Click highest-priority plane (queue or preempt).\n• Correct: +20 pts  |  Wrong: -10 pts', {
       fontSize: '14px', color: '#E0E0E0', lineSpacing: 6,
     }).setDepth(302);
-    const goalTitle = this.add.text(boxX + 40, contentY + 230, 'ðŸŽ¯ Goal', {
+    const goalTitle = this.add.text(boxX + 40, contentY + 230, '🎯 Goal', {
       fontSize: '18px', color: '#FFD700', fontStyle: 'bold',
     }).setDepth(302);
     const goalText = this.add.text(boxX + 40, contentY + 258,
@@ -152,7 +152,7 @@ export class PriorityGameL2 extends Phaser.Scene {
     startBtn.fillStyle(0xFF6600, 1);
     startBtn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     startBtn.setDepth(302);
-    const btnText = this.add.text(width / 2, btnY + 25, 'ðŸš€ START', {
+    const btnText = this.add.text(width / 2, btnY + 25, ' START', {
       fontSize: '20px', color: '#FFFFFF', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(303);
     startBtn.setInteractive(new Phaser.Geom.Rectangle(btnX, btnY, btnW, btnH), Phaser.Geom.Rectangle.Contains);
@@ -244,7 +244,7 @@ export class PriorityGameL2 extends Phaser.Scene {
     if (!this.currentOnRunway && this.readyQueue.length > 0) {
       this.time.delayedCall(400, () => this.sendHighestToRunway());
     } else if (this.currentOnRunway && plane.priority < this.currentOnRunway.priority) {
-      this.instructionText.setText(`âš ï¸ Preempt! Click P${plane.priority} to take the runway from P${this.currentOnRunway.priority}.`);
+      this.instructionText.setText(`⚠️ Preempt! Click P${plane.priority} to take the runway from P${this.currentOnRunway.priority}.`);
     }
   }
 
@@ -421,7 +421,7 @@ export class PriorityGameL2 extends Phaser.Scene {
     box.lineStyle(4, 0xFF6600, 1);
     box.strokeRoundedRect(boxX, boxY, boxW, boxH, 20);
     box.setDepth(301);
-    this.add.text(width / 2, boxY + 45, 'âœˆï¸ Level Complete', {
+    this.add.text(width / 2, boxY + 45, '✈️ Level Complete', {
       fontSize: '28px', color: '#FF6600', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(302);
     const stats = `Score: ${this.totalScore}\nPlanes: ${this.completedPlanes.length}/${SPAWN_SCHEDULE_L2.length}\nWrong: ${this.wrongAttempts}\nTime: ${this.currentTime}s`;
@@ -455,7 +455,7 @@ export class PriorityGameL2 extends Phaser.Scene {
     restartBtn.fillStyle(0xFF6600, 1);
     restartBtn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     restartBtn.setDepth(302);
-    this.add.text(width / 2, btnY + 24, 'ðŸ”„ Play Again', { fontSize: '18px', color: '#FFFFFF', fontStyle: 'bold' }).setOrigin(0.5).setDepth(303);
+    this.add.text(width / 2, btnY + 24, '🔄 Play Again', { fontSize: '18px', color: '#FFFFFF', fontStyle: 'bold' }).setOrigin(0.5).setDepth(303);
     restartBtn.setInteractive(new Phaser.Geom.Rectangle(btnX, btnY, btnW, btnH), Phaser.Geom.Rectangle.Contains);
     restartBtn.on('pointerdown', () => this.scene.restart());
   }

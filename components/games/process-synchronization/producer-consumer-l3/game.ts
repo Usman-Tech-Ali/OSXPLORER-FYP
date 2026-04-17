@@ -1,9 +1,9 @@
 ﻿import Phaser from 'phaser';
 import { openAIFeedbackChat } from '../../shared/aiFeedbackChat';
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 //  Shared types
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 type ActorState = 'idle' | 'moving' | 'depositing' | 'consuming' | 'blocked';
 
 interface LevelConfig {
@@ -22,9 +22,9 @@ interface LevelConfig {
 const ASSET_PATH = '/games/process-synchronization/producer-consumer/';
 const BUFFER_SIZE = 10;
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 //  Base Scene
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 class ProducerConsumerBase extends Phaser.Scene {
   protected cfg!: LevelConfig;
 
@@ -83,7 +83,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     this.cfg = cfg;
   }
 
-  // â”€â”€ preload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── preload ──────────────────────────────────
   preload() {
     this.load.image('space-bg', `${ASSET_PATH}Space-Background.png`);
     this.load.image('pedestal', `${ASSET_PATH}Space-Storage-Pedestal.png`);
@@ -99,7 +99,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     this.load.image('ui-semaphore-2', `${ASSET_PATH}UI-Semaphore-Counter-2.png`);
   }
 
-  // â”€â”€ create â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── create ───────────────────────────────────
   create() {
     const { width, height } = this.scale;
 
@@ -128,7 +128,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     this.showIntroModal();
   }
 
-  // â”€â”€ scene layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── scene layout ─────────────────────────────
   private buildScene(w: number, h: number) {
     // background
     this.bg = this.add.image(w / 2, h / 2, 'space-bg').setDisplaySize(w, h).setDepth(0);
@@ -175,7 +175,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     this.bufferBarFill = this.add.graphics().setDepth(4);
   }
 
-  // â”€â”€ buffer slot visuals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── buffer slot visuals ───────────────────────
   private buildBufferSlots(w: number, h: number) {
     const slotW = 36, slotH = 36, gap = 4;
     const totalW = this.cfg.bufferSize * (slotW + gap) - gap;
@@ -236,7 +236,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     this.bufferBarFill.fillRoundedRect(barX + 4, barY + 3, (barW - 8) * pct, 16, 6);
   }
 
-  // â”€â”€ HUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── HUD ──────────────────────────────────────
   private buildHUD(w: number, h: number) {
     const mono = (size = '15px', color = '#00FFFF') => ({
       fontSize: size, color, fontFamily: 'monospace',
@@ -273,16 +273,16 @@ class ProducerConsumerBase extends Phaser.Scene {
     this.sFullText.setText(`S_full  (data ready):  ${this.sFull}`);
     this.mutexText.setText(
       this.cfg.mutexRequired
-        ? `MUTEX: ${this.mutexLocked ? 'ðŸ”’ LOCKED' : 'ðŸ”“ UNLOCKED'}`
+        ? `MUTEX: ${this.mutexLocked ? '🔒 LOCKED' : '🔓 UNLOCKED'}`
         : 'MUTEX: auto'
     );
-    this.livesText.setText(`Lives: ${'â™¥ '.repeat(this.lives).trim()}`);
+    this.livesText.setText(`Lives: ${'♥ '.repeat(this.lives).trim()}`);
     this.scoreText.setText(`Score: ${this.score}`);
     this.progressText.setText(`Consumed: ${this.totalConsumed} / ${this.cfg.targetProduced}`);
     this.refreshBufferVisuals();
   }
 
-  // â”€â”€ intro modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── intro modal ──────────────────────────────
   private showIntroModal() {
     const { width, height } = this.scale;
     const ov = this.add.graphics().setDepth(100);
@@ -297,7 +297,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     box.lineStyle(3, 0xAA44FF, 1);
     box.strokeRoundedRect(bx, by, bw, bh, 18);
 
-    this.add.text(width / 2, by + 44, 'ðŸ›¸ PRODUCERâ€“CONSUMER PROBLEM', {
+    this.add.text(width / 2, by + 44, '🛸 PRODUCER–CONSUMER PROBLEM', {
       fontSize: '26px', color: '#AA44FF', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(102);
 
@@ -315,7 +315,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     const btn = this.add.graphics().setDepth(102);
     btn.fillStyle(0x6600CC, 1); btn.fillRoundedRect(btnX, btnY, btnW, btnH, 10);
     btn.setInteractive(new Phaser.Geom.Rectangle(btnX, btnY, btnW, btnH), Phaser.Geom.Rectangle.Contains);
-    this.add.text(width / 2, btnY + 24, 'ðŸš€ START', {
+    this.add.text(width / 2, btnY + 24, ' START', {
       fontSize: '20px', color: '#FFFFFF', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(103);
 
@@ -331,34 +331,34 @@ class ProducerConsumerBase extends Phaser.Scene {
   protected levelSubtitle(): string { return 'Bounded Buffer Problem'; }
   protected introBody(): string {
     return [
-      'ðŸ“¡ THE SETUP:',
+      '📡 THE SETUP:',
       `  Buffer (Pedestal) = ${this.cfg.bufferSize} slots  |  Drone = Producer  |  Satellite = Consumer`,
       '',
-      'ðŸ”¢ THREE SEMAPHORES:',
-      '  S_empty = 10   (tracks free buffer slots â€” Producer waits when 0)',
-      '  S_full  = 0    (tracks filled slots â€” Consumer waits when 0)',
-      '  mutex   = 1    (guards the critical section â€” only one at a time)',
+      '🔢 THREE SEMAPHORES:',
+      '  S_empty = 10   (tracks free buffer slots — Producer waits when 0)',
+      '  S_full  = 0    (tracks filled slots — Consumer waits when 0)',
+      '  mutex   = 1    (guards the critical section — only one at a time)',
       '',
-      'ðŸ”„ PRODUCER sequence:  wait(S_empty) â†’ wait(mutex) â†’ deposit â†’ signal(mutex) â†’ signal(S_full)',
-      'ðŸ”„ CONSUMER sequence:  wait(S_full)  â†’ wait(mutex) â†’ consume â†’ signal(mutex) â†’ signal(S_empty)',
+      '🔄 PRODUCER sequence:  wait(S_empty) → wait(mutex) → deposit → signal(mutex) → signal(S_full)',
+      '🔄 CONSUMER sequence:  wait(S_full)  → wait(mutex) → consume → signal(mutex) → signal(S_empty)',
       '',
-      'ðŸŽ® HOW TO PLAY:',
+      '🎮 HOW TO PLAY:',
       ...this.howToPlayLines(),
       '',
-      `ðŸŽ¯ GOAL: Successfully transmit ${this.cfg.targetProduced} data packets!`,
+      `🎯 GOAL: Successfully transmit ${this.cfg.targetProduced} data packets!`,
     ].join('\n');
   }
 
   protected howToPlayLines(): string[] {
     return [
-      '  â€¢ Click the DRONE to produce a data packet â†’ wait(S_empty)',
-      '  â€¢ Click the SATELLITE to consume a packet â†’ wait(S_full)',
-      '  â€¢ If buffer is FULL, drone is blocked (S_empty = 0)',
-      '  â€¢ If buffer is EMPTY, satellite is blocked (S_full = 0)',
+      '  • Click the DRONE to produce a data packet → wait(S_empty)',
+      '  • Click the SATELLITE to consume a packet → wait(S_full)',
+      '  • If buffer is FULL, drone is blocked (S_empty = 0)',
+      '  • If buffer is EMPTY, satellite is blocked (S_full = 0)',
     ];
   }
 
-  // â”€â”€ game start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── game start ───────────────────────────────
   protected startGame() {
     this.gamePhase = 'playing';
     this.gameStartTime = Date.now();
@@ -376,7 +376,7 @@ class ProducerConsumerBase extends Phaser.Scene {
   }
 
   protected playingInstruction(): string {
-    return 'Click DRONE to produce â†’ Click SATELLITE to consume';
+    return 'Click DRONE to produce → Click SATELLITE to consume';
   }
 
   protected startAutomation() {
@@ -392,7 +392,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     });
   }
 
-  // â”€â”€ produce (wait S_empty â†’ deposit â†’ signal S_full) â”€
+  // ── produce (wait S_empty → deposit → signal S_full) ─
   protected onDroneClick() {
     if (this.gamePhase !== 'playing' || !this.cfg.isManual) return;
     this.tryProduce();
@@ -403,17 +403,17 @@ class ProducerConsumerBase extends Phaser.Scene {
       // Producer BLOCKED
       this.droneBlocked = true;
       this.showBlockedIndicator('producer');
-      this.showMessage('â›” Buffer FULL! S_empty = 0 â†’ Producer blocks', '#FF6644', 2000);
+      this.showMessage('⛔ Buffer FULL! S_empty = 0 → Producer blocks', '#FF6644', 2000);
       return;
     }
     if (this.cfg.mutexRequired && this.mutexLocked) {
-      this.showMessage('ðŸ”’ Mutex locked â€” wait for release', '#CC88FF', 1500);
+      this.showMessage('🔒 Mutex locked — wait for release', '#CC88FF', 1500);
       return;
     }
 
     this.droneBlocked = false;
 
-    // If mutex required but not locked â†’ race condition penalty
+    // If mutex required but not locked → race condition penalty
     if (this.cfg.mutexRequired && !this.mutexLocked && this.satelliteState === 'consuming') {
       this.raceConditionPenalty();
       return;
@@ -451,7 +451,7 @@ class ProducerConsumerBase extends Phaser.Scene {
         this.totalProduced++;
         this.score += 5;
 
-        this.showMessage(`wait(S_empty)â†’depositâ†’signal(S_full)  S_empty=${this.sEmpty} S_full=${this.sFull}`, '#00FFAA', 1600);
+        this.showMessage(`wait(S_empty)→deposit→signal(S_full)  S_empty=${this.sEmpty} S_full=${this.sFull}`, '#00FFAA', 1600);
 
         if (!this.cfg.mutexRequired) this.mutexLocked = false;
         this.droneState = 'idle';
@@ -475,7 +475,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     });
   }
 
-  // â”€â”€ consume (wait S_full â†’ consume â†’ signal S_empty) â”€
+  // ── consume (wait S_full → consume → signal S_empty) ─
   protected onSatelliteClick() {
     if (this.gamePhase !== 'playing' || !this.cfg.isManual) return;
     this.tryConsume();
@@ -485,11 +485,11 @@ class ProducerConsumerBase extends Phaser.Scene {
     if (this.sFull === 0) {
       this.satelliteBlocked = true;
       this.showBlockedIndicator('consumer');
-      this.showMessage('â›” Buffer EMPTY! S_full = 0 â†’ Consumer blocks', '#4488FF', 2000);
+      this.showMessage('⛔ Buffer EMPTY! S_full = 0 → Consumer blocks', '#4488FF', 2000);
       return;
     }
     if (this.cfg.mutexRequired && this.mutexLocked) {
-      this.showMessage('ðŸ”’ Mutex locked â€” wait for release', '#CC88FF', 1500);
+      this.showMessage('🔒 Mutex locked — wait for release', '#CC88FF', 1500);
       return;
     }
 
@@ -531,7 +531,7 @@ class ProducerConsumerBase extends Phaser.Scene {
 
         // Show beam effect
         this.showTransmitBeam();
-        this.showMessage(`wait(S_full)â†’consumeâ†’signal(S_empty)  S_full=${this.sFull} S_empty=${this.sEmpty}`, '#FFD700', 1600);
+        this.showMessage(`wait(S_full)→consume→signal(S_empty)  S_full=${this.sFull} S_empty=${this.sEmpty}`, '#FFD700', 1600);
 
         if (!this.cfg.mutexRequired) this.mutexLocked = false;
         this.satelliteState = 'idle';
@@ -554,7 +554,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     });
   }
 
-  // â”€â”€ mutex (L2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── mutex (L2) ────────────────────────────────
   protected onMutexClick() {
     if (!this.cfg.mutexRequired || this.gamePhase !== 'playing') return;
 
@@ -564,21 +564,21 @@ class ProducerConsumerBase extends Phaser.Scene {
       this.mutexShield.setAlpha(0.15);
       this.mutexShield.clearTint();
       this.updateHUD();
-      this.showMessage('signal(mutex) â€” Critical section released', '#CC88FF', 1200);
+      this.showMessage('signal(mutex) — Critical section released', '#CC88FF', 1200);
     } else {
       // manual lock
       this.mutexLocked = true;
       this.mutexShield.setAlpha(0.9);
       this.mutexShield.setTint(0xCC88FF);
       this.updateHUD();
-      this.showMessage('wait(mutex) â€” Critical section locked', '#CC88FF', 1200);
+      this.showMessage('wait(mutex) — Critical section locked', '#CC88FF', 1200);
     }
   }
 
-  // â”€â”€ L2 race condition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── L2 race condition ─────────────────────────
   private raceConditionPenalty() {
     this.lives--;
-    this.showMessage('ðŸ’¥ RACE CONDITION! Data corrupted! Mutex required!', '#FF2222', 3000);
+    this.showMessage('💥 RACE CONDITION! Data corrupted! Mutex required!', '#FF2222', 3000);
     this.cameras.main.shake(500, 0.012);
 
     // Flash red
@@ -590,7 +590,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     if (this.lives <= 0) this.gameLost();
   }
 
-  // â”€â”€ L3 solar storm â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── L3 solar storm ────────────────────────────
   protected triggerSolarStorm() {
     if (this.gamePhase !== 'playing') return;
     this.stormActive = true;
@@ -599,8 +599,8 @@ class ProducerConsumerBase extends Phaser.Scene {
     this.stormOverlay.fillStyle(0xFF6600, 0.12);
     this.stormOverlay.fillRect(0, 0, this.scale.width, this.scale.height);
 
-    this.showMessage('â˜€ï¸ SOLAR STORM! Drone production 3x faster!', '#FF8800', 3000);
-    this.instructionText.setText('âš¡ Storm active! Click SATELLITE rapidly or click OVERCLOCK!');
+    this.showMessage('☀️ SOLAR STORM! Drone production 3x faster!', '#FF8800', 3000);
+    this.instructionText.setText('⚡ Storm active! Click SATELLITE rapidly or click OVERCLOCK!');
 
     // Triple producer speed
     if (this.producerTimer) {
@@ -623,7 +623,7 @@ class ProducerConsumerBase extends Phaser.Scene {
       new Phaser.Geom.Rectangle(width * 0.88 - 60, height * 0.62, 120, 40),
       Phaser.Geom.Rectangle.Contains
     );
-    const lbl = this.add.text(width * 0.88, height * 0.62 + 20, 'âš¡ OVERCLOCK', {
+    const lbl = this.add.text(width * 0.88, height * 0.62 + 20, '⚡ OVERCLOCK', {
       fontSize: '13px', color: '#FFFFFF', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(11);
 
@@ -638,7 +638,7 @@ class ProducerConsumerBase extends Phaser.Scene {
           loop: true,
         });
       }
-      this.showMessage('âš¡ Consumer overclocked! Draining buffer fast!', '#FFAA00', 2000);
+      this.showMessage('⚡ Consumer overclocked! Draining buffer fast!', '#FFAA00', 2000);
       this.time.delayedCall(10000, () => {
         this.overclockActive = false;
         if (this.consumerTimer) {
@@ -656,7 +656,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     btn.on('pointerout', () => btn.setAlpha(1));
   }
 
-  // â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── helpers ───────────────────────────────────
   private showBlockedIndicator(who: 'producer' | 'consumer') {
     const { width, height } = this.scale;
     const key = who === 'producer' ? 'ui-producer-blocked' : 'ui-consumer-blocked';
@@ -688,7 +688,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     this.tweens.add({ targets: msg, alpha: 0, y: msg.y - 30, duration, onComplete: () => msg.destroy() });
   }
 
-  // â”€â”€ win / lose â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── win / lose ────────────────────────────────
   private checkWin() {
     if (this.totalConsumed >= this.cfg.targetProduced) {
       this.time.delayedCall(500, () => this.gameWon());
@@ -742,7 +742,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     box.lineStyle(3, borderColor, 1);
     box.strokeRoundedRect(bx, by, bw, bh, 18);
 
-    this.add.text(width / 2, by + 50, won ? 'ðŸŽ‰ LEVEL COMPLETE!' : 'ðŸ’€ SYSTEM FAILURE', {
+    this.add.text(width / 2, by + 50, won ? '🎉 LEVEL COMPLETE!' : '💀 SYSTEM FAILURE', {
       fontSize: '30px', color: won ? '#00FF88' : '#FF4444', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(202);
 
@@ -760,7 +760,7 @@ class ProducerConsumerBase extends Phaser.Scene {
     btn.fillStyle(won ? 0x00AA55 : 0xAA2200, 1);
     btn.fillRoundedRect(btnX, btnY, 180, 46, 10);
     btn.setInteractive(new Phaser.Geom.Rectangle(btnX, btnY, 180, 46), Phaser.Geom.Rectangle.Contains);
-    this.add.text(width / 2, btnY + 23, 'ðŸ”„ PLAY AGAIN', {
+    this.add.text(width / 2, btnY + 23, '🔄 PLAY AGAIN', {
       fontSize: '19px', color: '#FFFFFF', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(203);
     btn.on('pointerdown', () => this.scene.restart());
@@ -787,10 +787,10 @@ class ProducerConsumerBase extends Phaser.Scene {
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-//  Level 1 â€“ Manual Transmission
+// ─────────────────────────────────────────────
+//  Level 1 – Manual Transmission
 //  Player clicks drone to produce, satellite to consume
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 export class ProducerConsumerL1Scene extends ProducerConsumerBase {
   constructor() {
     super({
@@ -807,15 +807,15 @@ export class ProducerConsumerL1Scene extends ProducerConsumerBase {
     });
   }
 
-  protected levelSubtitle() { return 'Level 1 â€” Manual Transmission: The Bounded Buffer'; }
+  protected levelSubtitle() { return 'Level 1 — Manual Transmission: The Bounded Buffer'; }
 
   protected howToPlayLines(): string[] {
     return [
-      '  â€¢ Click the DRONE (left) to drop a data packet â†’ wait(S_empty) â†’ deposit â†’ signal(S_full)',
-      '  â€¢ Click the SATELLITE (right) to transmit a packet â†’ wait(S_full) â†’ consume â†’ signal(S_empty)',
-      '  â€¢ Try to DROP when buffer is FULL â†’ see the block!',
-      '  â€¢ Try to TRANSMIT when buffer is EMPTY â†’ see the stall!',
-      '  â€¢ No mutex needed yet â€” you are the scheduler!',
+      '  • Click the DRONE (left) to drop a data packet → wait(S_empty) → deposit → signal(S_full)',
+      '  • Click the SATELLITE (right) to transmit a packet → wait(S_full) → consume → signal(S_empty)',
+      '  • Try to DROP when buffer is FULL → see the block!',
+      '  • Try to TRANSMIT when buffer is EMPTY → see the stall!',
+      '  • No mutex needed yet — you are the scheduler!',
     ];
   }
 
@@ -824,10 +824,10 @@ export class ProducerConsumerL1Scene extends ProducerConsumerBase {
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-//  Level 2 â€“ Automated Sync (Race Conditions & Mutex)
+// ─────────────────────────────────────────────
+//  Level 2 – Automated Sync (Race Conditions & Mutex)
 //  Auto-timers run; player must manage mutex shield
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 export class ProducerConsumerL2Scene extends ProducerConsumerBase {
   constructor() {
     super({
@@ -844,16 +844,16 @@ export class ProducerConsumerL2Scene extends ProducerConsumerBase {
     });
   }
 
-  protected levelSubtitle() { return 'Level 2 â€” Automated Sync: Race Conditions & Mutex'; }
+  protected levelSubtitle() { return 'Level 2 — Automated Sync: Race Conditions & Mutex'; }
 
   protected howToPlayLines(): string[] {
     return [
-      '  â€¢ Drone and Satellite now operate AUTOMATICALLY on timers',
-      '  â€¢ Click the MUTEX SHIELD (center glowing dome) to LOCK before an operation',
-      '  â€¢ If both touch the buffer at the same time WITHOUT the shield â†’ Race Condition! (-1 life)',
-      '  â€¢ Click shield again to UNLOCK after the operation completes',
-      '  â€¢ 0 lives = system failure!',
-      '  â€¢ Tip: Lock before the operation, unlock immediately after',
+      '  • Drone and Satellite now operate AUTOMATICALLY on timers',
+      '  • Click the MUTEX SHIELD (center glowing dome) to LOCK before an operation',
+      '  • If both touch the buffer at the same time WITHOUT the shield → Race Condition! (-1 life)',
+      '  • Click shield again to UNLOCK after the operation completes',
+      '  • 0 lives = system failure!',
+      '  • Tip: Lock before the operation, unlock immediately after',
     ];
   }
 
@@ -862,10 +862,10 @@ export class ProducerConsumerL2Scene extends ProducerConsumerBase {
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-//  Level 3 â€“ The Solar Storm (Throughput & Congestion)
+// ─────────────────────────────────────────────
+//  Level 3 – The Solar Storm (Throughput & Congestion)
 //  After 8s a storm triples producer speed; player must overclock consumer
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 export class ProducerConsumerL3Scene extends ProducerConsumerBase {
   private bufferOverflowWarned = false;
 
@@ -884,26 +884,26 @@ export class ProducerConsumerL3Scene extends ProducerConsumerBase {
     });
   }
 
-  protected levelSubtitle() { return 'Level 3 â€” The Solar Storm: Throughput & Congestion'; }
+  protected levelSubtitle() { return 'Level 3 — The Solar Storm: Throughput & Congestion'; }
 
   protected howToPlayLines(): string[] {
     return [
-      '  â€¢ System runs automatically â€” drone produces, satellite consumes',
-      '  â€¢ After ~8 seconds, a SOLAR STORM triples the drone\'s production rate!',
-      '  â€¢ The buffer will fill up â†’ S_empty = 0 â†’ Producer blocks â†’ congestion!',
-      '  â€¢ Click âš¡ OVERCLOCK button when it appears to triple consumer speed',
-      '  â€¢ Balance production vs consumption to prevent total overflow',
-      '  â€¢ If the system stalls (buffer full, nothing consumed for 10s) â†’ lives lost',
+      '  • System runs automatically — drone produces, satellite consumes',
+      '  • After ~8 seconds, a SOLAR STORM triples the drone\'s production rate!',
+      '  • The buffer will fill up → S_empty = 0 → Producer blocks → congestion!',
+      '  • Click ⚡ OVERCLOCK button when it appears to triple consumer speed',
+      '  • Balance production vs consumption to prevent total overflow',
+      '  • If the system stalls (buffer full, nothing consumed for 10s) → lives lost',
     ];
   }
 
   protected playingInstruction(): string {
-    return 'System auto-running â€” watch for SOLAR STORM! Use âš¡ OVERCLOCK when needed';
+    return 'System auto-running — watch for SOLAR STORM! Use ⚡ OVERCLOCK when needed';
   }
 
   protected startGame() {
     super.startGame();
-    // Deadlock watchdog â€” if buffer has been full for too long
+    // Deadlock watchdog — if buffer has been full for too long
     this.time.addEvent({
       delay: 10000,
       loop: true,
@@ -911,7 +911,7 @@ export class ProducerConsumerL3Scene extends ProducerConsumerBase {
         if (this.gamePhase !== 'playing') return;
         if (this.sFull >= this.cfg.bufferSize && !this.bufferOverflowWarned) {
           this.bufferOverflowWarned = true;
-          this.showMessage('ðŸ”´ BUFFER OVERFLOW! Reduce production or overclock consumer!', '#FF4444', 3000);
+          this.showMessage('🔴 BUFFER OVERFLOW! Reduce production or overclock consumer!', '#FF4444', 3000);
           this.lives--;
           this.updateHUD();
           if (this.lives <= 0) {
@@ -921,7 +921,7 @@ export class ProducerConsumerL3Scene extends ProducerConsumerBase {
             const { width, height } = this.scale;
             const ov = this.add.graphics().setDepth(200);
             ov.fillStyle(0x000000, 0.88); ov.fillRect(0, 0, width, height);
-            this.add.text(width / 2, height / 2, 'ðŸ’€ SYSTEM OVERLOAD\nBuffer congestion killed the station', {
+            this.add.text(width / 2, height / 2, '💀 SYSTEM OVERLOAD\nBuffer congestion killed the station', {
               fontSize: '26px', color: '#FF4444', align: 'center',
               backgroundColor: '#000000CC', padding: { x: 20, y: 14 },
             }).setOrigin(0.5).setDepth(201);

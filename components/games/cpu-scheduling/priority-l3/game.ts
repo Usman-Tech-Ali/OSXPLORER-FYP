@@ -119,28 +119,28 @@ export class PriorityGameL3 extends Phaser.Scene {
     box.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 20);
     box.setDepth(301);
 
-    const title = this.add.text(width / 2, boxY + 48, 'âœˆï¸ Sky Marshals â€“ Priority L3', {
+    const title = this.add.text(width / 2, boxY + 48, '✈️ Sky Marshals – Priority L3', {
       fontSize: '32px', color: '#4B0082', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5).setDepth(302);
-    const subtitle = this.add.text(width / 2, boxY + 90, 'Aging: Starvation prevention â€“ clear the thundercloud!', {
+    const subtitle = this.add.text(width / 2, boxY + 90, 'Aging: Starvation prevention – clear the thundercloud!', {
       fontSize: '16px', color: '#E0E0E0',
     }).setOrigin(0.5).setDepth(302);
     const contentY = boxY + 140;
-    const t1 = this.add.text(boxX + 40, contentY, 'ðŸŽ® Gridlock (Aging)', {
+    const t1 = this.add.text(boxX + 40, contentY, '🎮 Gridlock (Aging)', {
       fontSize: '18px', color: '#FFD700', fontStyle: 'bold',
     }).setDepth(302);
     const t2 = this.add.text(boxX + 40, contentY + 28,
-      'High-priority planes keep arriving. Low-priority planes can get stuck. After 10 seconds in the queue, a THUNDERCLOUD appears â€“ that plane is starving! You must send it to the runway before the grace time runs out or it\'s Game Over.', {
+      'High-priority planes keep arriving. Low-priority planes can get stuck. After 10 seconds in the queue, a THUNDERCLOUD appears – that plane is starving! You must send it to the runway before the grace time runs out or it\'s Game Over.', {
       fontSize: '14px', color: '#E0E0E0', lineSpacing: 6,
     }).setDepth(302);
-    const t3 = this.add.text(boxX + 40, contentY + 125, 'âš ï¸ Rules', {
+    const t3 = this.add.text(boxX + 40, contentY + 125, '⚠️ Rules', {
       fontSize: '18px', color: '#FFD700', fontStyle: 'bold',
     }).setDepth(302);
     const t4 = this.add.text(boxX + 40, contentY + 153,
-      'â€¢ Priority: lower number = higher priority. When a plane has a thundercloud, prioritize it!\nâ€¢ Correct: +20 pts  |  Wrong: -10 pts  |  Starvation: Game Over', {
+      '• Priority: lower number = higher priority. When a plane has a thundercloud, prioritize it!\n• Correct: +20 pts  |  Wrong: -10 pts  |  Starvation: Game Over', {
       fontSize: '14px', color: '#E0E0E0', lineSpacing: 6,
     }).setDepth(302);
-    const t5 = this.add.text(boxX + 40, contentY + 235, 'ðŸŽ¯ Goal', {
+    const t5 = this.add.text(boxX + 40, contentY + 235, '🎯 Goal', {
       fontSize: '18px', color: '#FFD700', fontStyle: 'bold',
     }).setDepth(302);
     const t6 = this.add.text(boxX + 40, contentY + 263,
@@ -156,7 +156,7 @@ export class PriorityGameL3 extends Phaser.Scene {
     startBtn.fillStyle(0x4B0082, 1);
     startBtn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     startBtn.setDepth(302);
-    const btnText = this.add.text(width / 2, btnY + 25, 'ðŸš€ START', {
+    const btnText = this.add.text(width / 2, btnY + 25, ' START', {
       fontSize: '20px', color: '#FFFFFF', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(303);
 
@@ -183,7 +183,7 @@ export class PriorityGameL3 extends Phaser.Scene {
     this.planeCounter = 0;
 
     this.phaseText.setText('Phase: Aging (Starvation prevention)');
-    this.instructionText.setText('Send highest priority to runway. Watch for thunderclouds â€“ prioritize starving planes!');
+    this.instructionText.setText('Send highest priority to runway. Watch for thunderclouds – prioritize starving planes!');
     this.scoreText.setText('Score: 0');
     this.timeText.setText('Time: 0s');
 
@@ -233,8 +233,8 @@ export class PriorityGameL3 extends Phaser.Scene {
     cloud.setScale(0.35);
     plane.container.add(cloud);
     plane.cloudSprite = cloud;
-    this.instructionText.setText(`âš ï¸ Starving plane! Send P${plane.priority} to runway before it\'s too late!`);
-    this.showMessage(`Thundercloud! P${plane.priority} is starving â€“ prioritize it!`, '#FF6600');
+    this.instructionText.setText(`⚠️ Starving plane! Send P${plane.priority} to runway before it\'s too late!`);
+    this.showMessage(`Thundercloud! P${plane.priority} is starving – prioritize it!`, '#FF6600');
   }
 
   private triggerStarvation(plane: Plane) {
@@ -440,7 +440,7 @@ export class PriorityGameL3 extends Phaser.Scene {
       if (this.readyQueue.length > 0) {
         const starving = this.readyQueue.find(p => p.cloudSprite);
         if (starving) {
-          this.instructionText.setText(`âš ï¸ Starving plane P${starving.priority} â€“ send it to runway!`);
+          this.instructionText.setText(`⚠️ Starving plane P${starving.priority} – send it to runway!`);
         } else {
           this.instructionText.setText('Send highest-priority plane to runway (watch for thunderclouds!).');
         }
@@ -481,7 +481,7 @@ export class PriorityGameL3 extends Phaser.Scene {
     box.strokeRoundedRect(boxX, boxY, boxW, boxH, 20);
     box.setDepth(301);
 
-    this.add.text(width / 2, boxY + 45, isGameOver ? 'ðŸ’¥ Game Over â€“ Starvation!' : 'âœˆï¸ Level Complete', {
+    this.add.text(width / 2, boxY + 45, isGameOver ? '💥 Game Over – Starvation!' : '✈️ Level Complete', {
       fontSize: '28px', color: isGameOver ? '#FF0000' : '#4B0082', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(302);
     const stats = `Score: ${this.totalScore}\nPlanes: ${this.completedPlanes.length}/${SPAWN_SCHEDULE_L3.length}\nWrong: ${this.wrongAttempts}\nTime: ${this.currentTime}s`;
@@ -515,7 +515,7 @@ export class PriorityGameL3 extends Phaser.Scene {
     restartBtn.fillStyle(isGameOver ? 0xCC0000 : 0x4B0082, 1);
     restartBtn.fillRoundedRect(btnX, btnY, btnW, btnH, 12);
     restartBtn.setDepth(302);
-    this.add.text(width / 2, btnY + 24, 'ðŸ”„ Play Again', { fontSize: '18px', color: '#FFFFFF', fontStyle: 'bold' }).setOrigin(0.5).setDepth(303);
+    this.add.text(width / 2, btnY + 24, '🔄 Play Again', { fontSize: '18px', color: '#FFFFFF', fontStyle: 'bold' }).setOrigin(0.5).setDepth(303);
     restartBtn.setInteractive(new Phaser.Geom.Rectangle(btnX, btnY, btnW, btnH), Phaser.Geom.Rectangle.Contains);
     restartBtn.on('pointerdown', () => this.scene.restart());
   }
