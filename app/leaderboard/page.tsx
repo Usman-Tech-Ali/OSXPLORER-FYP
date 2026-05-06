@@ -11,6 +11,8 @@ import {
   TrendingUp,
   Users,
   RefreshCw,
+  Award,
+  Shield,
 } from "lucide-react"
 
 interface Player {
@@ -20,6 +22,7 @@ interface Player {
   totalPoints: number
   level: number
   achievements: number
+  badges: string[]
   levelsCompleted: number
   lastActive: string
   rank: number
@@ -76,6 +79,21 @@ export default function LeaderboardPage() {
         return "bg-gradient-to-r from-orange-400 to-orange-600"
       default:
         return "bg-gray-700"
+    }
+  }
+
+  const getBadgeIcon = (badgeType: string) => {
+    switch (badgeType) {
+      case 'platinum':
+        return <Shield className="w-4 h-4 text-purple-400" title="Platinum Badge (50+ achievements)" />
+      case 'gold':
+        return <Crown className="w-4 h-4 text-yellow-400" title="Gold Badge (30+ achievements)" />
+      case 'silver':
+        return <Award className="w-4 h-4 text-gray-300" title="Silver Badge (15+ achievements)" />
+      case 'bronze':
+        return <Medal className="w-4 h-4 text-orange-600" title="Bronze Badge (5+ achievements)" />
+      default:
+        return null
     }
   }
 
@@ -191,6 +209,15 @@ export default function LeaderboardPage() {
                                 You
                               </Badge>
                             )}
+                            {player.badges && player.badges.length > 0 && (
+                              <div className="flex items-center space-x-1">
+                                {player.badges.map((badge) => (
+                                  <div key={badge} className="inline-flex">
+                                    {getBadgeIcon(badge)}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <p className="text-sm text-gray-400">@{player.username}</p>
                         </div>
@@ -206,7 +233,10 @@ export default function LeaderboardPage() {
                           </div>
                           <div className="text-center">
                             <p className="text-gray-400">Achievements</p>
-                            <p className="font-bold text-white">{player.achievements}</p>
+                            <div className="flex items-center justify-center space-x-1">
+                              <Trophy className="w-4 h-4 text-yellow-400" />
+                              <p className="font-bold text-white">{player.achievements}</p>
+                            </div>
                           </div>
                         </div>
 

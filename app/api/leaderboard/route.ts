@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import User from '@/lib/models/User';
 
+// Badge thresholds
+const getBadges = (achievementCount: number) => {
+  const badges = [];
+  if (achievementCount >= 50) badges.push('platinum');
+  if (achievementCount >= 30) badges.push('gold');
+  if (achievementCount >= 15) badges.push('silver');
+  if (achievementCount >= 5) badges.push('bronze');
+  return badges;
+};
+
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
@@ -20,6 +30,7 @@ export async function GET(req: NextRequest) {
       totalPoints: user.totalXP,
       level: user.level,
       achievements: user.achievements.length,
+      badges: getBadges(user.achievements.length),
       levelsCompleted: user.completedLevels.length,
       lastActive: user.lastLogin || user.createdAt,
       rank: index + 1,

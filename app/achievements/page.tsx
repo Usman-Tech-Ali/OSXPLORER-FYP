@@ -534,6 +534,8 @@ export default function AchievementsPage() {
         }))
         setAchievementsData(mappedAchievements)
         setAchievementStats(data.stats)
+      } else {
+        console.error('Failed to fetch achievements:', response.status, response.statusText)
       }
     } catch (error) {
       console.error("Failed to fetch achievements:", error)
@@ -557,20 +559,8 @@ export default function AchievementsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, mounted, router])
 
-  if (!mounted || status === "loading" || loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-cyan-500"></div>
-      </div>
-    )
-  }
-
-  if (!session) {
-    return null
-  }
-
-  // Use achievement data from API
-  const achievementsToUse = achievementsData
+  // Calculate derived data - must be before conditional returns
+  const achievementsToUse = achievementsData.length > 0 ? achievementsData : achievements
   const realUserStats = achievementsData.length > 0 ? achievementStats : {
     totalAchievements: userProgress?.user?.achievements?.length || 0,
     totalPoints: userProgress?.user?.totalXP || 0,
@@ -617,6 +607,18 @@ export default function AchievementsPage() {
   })
 
   const modules = [...new Set(achievementsToUse.filter((a) => a.module).map((a) => a.module))]
+
+  if (!mounted || status === "loading" || loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-cyan-500"></div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">

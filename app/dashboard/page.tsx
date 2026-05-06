@@ -20,6 +20,9 @@ import {
   Crown,
   Users,
   Flame,
+  Award,
+  Medal,
+  Shield,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -135,6 +138,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const [streakData, setStreakData] = useState({ currentStreak: 0, longestStreak: 0 })
+  const [leaderboard, setLeaderboard] = useState<any[]>([])
 
   useEffect(() => {
     setMounted(true)
@@ -150,6 +154,7 @@ export default function Dashboard() {
 
     if (status === "authenticated") {
       fetchProgress()
+      fetchLeaderboard()
     }
   }, [status, router, mounted])
 
@@ -174,6 +179,18 @@ export default function Dashboard() {
     }
   }
 
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await fetch("/api/leaderboard")
+      if (response.ok) {
+        const data = await response.json()
+        setLeaderboard(data.leaderboard.slice(0, 5)) // Get top 5
+      }
+    } catch (error) {
+      console.error("Failed to fetch leaderboard:", error)
+    }
+  }
+
   if (!mounted || status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -184,6 +201,21 @@ export default function Dashboard() {
 
   if (!session || !progress) {
     return null
+  }
+
+  const getBadgeIcon = (badgeType: string) => {
+    switch (badgeType) {
+      case 'platinum':
+        return <Shield className="w-3 h-3 text-purple-400" />
+      case 'gold':
+        return <Crown className="w-3 h-3 text-yellow-400" />
+      case 'silver':
+        return <Award className="w-3 h-3 text-gray-300" />
+      case 'bronze':
+        return <Medal className="w-3 h-3 text-orange-600" />
+      default:
+        return null
+    }
   }
 
   const userData = {
@@ -403,16 +435,65 @@ export default function Dashboard() {
                     <Crown className="w-5 h-5 mr-2 text-yellow-500" />
                     Leaderboard Preview
                   </CardTitle>
-                  <CardDescription className="text-gray-400">Coming soon!</CardDescription>
+                  <CardDescription className="text-gray-400">Top 5 Players</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-500 text-center py-8">
-                    Leaderboard will be available once more players join
-                  </p>
+                  {leaderboard.length > 0 ? (
+                    <div className="space-y-3">
+                      {leaderboard.map((player, index) => (
+                        <div
+                          key={player.id}
+                          className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800/70 transition-colors"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                                index === 0
+                                  ? "bg-yellow-500 text-black"
+                                  : index === 1
+                                    ? "bg-gray-400 text-black"
+                                    : index === 2
+                                      ? "bg-orange-600 text-white"
+                                      : "bg-gray-700 text-gray-300"
+                              }`}
+                            >
+                              {player.rank}
+                            </div>
+                            <div>
+                              <div className="flex items-center space-x-1">
+                                <p className="text-white font-medium">{player.username}</p>
+                                {player.badges && player.badges.length > 0 && (
+                                  <div className="flex items-center space-x-0.5">
+                                    {player.badges.slice(0, 2).map((badge: string) => (
+                                      <div key={badge} className="inline-flex">
+                                        {getBadgeIcon(badge)}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-400">Level {player.level}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-cyan-400 font-bold">{player.totalPoints.toLocaleString()} XP</p>
+                            <div className="flex items-center justify-end space-x-1">
+                              <Trophy className="w-3 h-3 text-yellow-400" />
+                              <p className="text-xs text-gray-400">{player.achievements}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-8">
+                      Leaderboard will be available once more players join
+                    </p>
+                  )}
                   <Link href="/leaderboard">
                     <Button
                       variant="outline"
-                      className="w-full border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 bg-transparent"
+                      className="w-full mt-4 border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 bg-transparent"
                     >
                       <Users className="w-4 h-4 mr-2" />
                       View All

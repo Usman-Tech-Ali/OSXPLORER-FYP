@@ -332,7 +332,7 @@ function MiniQuestCard({ moduleId, sectionIndex, unlocked, topicId, completed }:
   )
 }
 
-function LevelCard({ level, sectionId, moduleId }: { level: any; sectionId: string; moduleId: string }) {
+function LevelCard({ level, sectionId, moduleId, userScore }: { level: any; sectionId: string; moduleId: string; userScore?: number }) {
   const getStatusIcon = () => {
     switch (level.status) {
       case "completed":
@@ -369,6 +369,19 @@ function LevelCard({ level, sectionId, moduleId }: { level: any; sectionId: stri
         return "Available"
     }
   }
+  
+  // Calculate stars based on user score (0-100 maps to 0-5 stars)
+  const getStarCount = () => {
+    if (!userScore || userScore === 0) return 0
+    if (userScore >= 90) return 5
+    if (userScore >= 75) return 4
+    if (userScore >= 60) return 3
+    if (userScore >= 40) return 2
+    return 1
+  }
+  
+  const starCount = level.status === "completed" ? getStarCount() : 0
+  
   const isPlayable = level.status !== "locked"
   const actionLabel = level.status === "completed" ? "Play Again" : "Play"
 
@@ -490,7 +503,7 @@ function LevelCard({ level, sectionId, moduleId }: { level: any; sectionId: stri
             {Array.from({ length: 5 }).map((_, i) => (
               <Star
                 key={i}
-                className={`w-3 h-3 ${i < level.difficulty ? "text-yellow-400 fill-current" : "text-gray-600"}`}
+                className={`w-3 h-3 ${i < starCount ? "text-yellow-400 fill-current" : "text-gray-600"}`}
               />
             ))}
           </div>
@@ -625,6 +638,14 @@ export default function ModulePage() {
     }
   }
 
+  // Get user's best score for a level
+  const getLevelScore = (levelId: string) => {
+    if (!recentScores || recentScores.length === 0) return 0
+    const levelScores = recentScores.filter((score: any) => score.gameId === levelId)
+    if (levelScores.length === 0) return 0
+    return Math.max(...levelScores.map((s: any) => s.score))
+  }
+
   const realStats = getRealStats()
 
   // Determine unlock state for each section's mini-quest
@@ -673,7 +694,13 @@ export default function ModulePage() {
                   </div>
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {section.levels.map((level: any) => (
-                      <LevelCard key={level.id} level={level} sectionId={section.id} moduleId={moduleId} />
+                      <LevelCard 
+                        key={level.id} 
+                        level={level} 
+                        sectionId={section.id} 
+                        moduleId={moduleId}
+                        userScore={getLevelScore(level.id)}
+                      />
                     ))}
                   </div>
                   {/* Mini-Quest Card after the end of each topic/section if mini-quest exists for this topic in any module */}
